@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ssh root@188.245.245.42 \"node -v 2>/dev/null; npm -v 2>/dev/null; which pnpm 2>/dev/null; pnpm -v 2>/dev/null; which pm2 2>/dev/null; pm2 -v 2>/dev/null; which nginx 2>/dev/null; nginx -v 2>&1; cat /etc/os-release | head -4; pm2 list 2>/dev/null\")",
+      "Bash(ssh -o ConnectTimeout=10 -o BatchMode=yes root@188.245.245.42 \"echo OK_CONNECTED && hostname\")",
+      "Bash(ssh -o ConnectTimeout=10 -o BatchMode=yes -i ~/.ssh/id_ed25519 root@188.245.245.42 \"echo OK\")",
+      "Bash(ssh -o ConnectTimeout=10 -o BatchMode=yes -i ~/.ssh/id_rsa root@188.245.245.42 \"echo OK\")",
+      "Bash(ssh -v -o ConnectTimeout=10 -o BatchMode=yes root@188.245.245.42 \"echo OK\")",
+      "Bash(ssh root@188.245.245.42 \"node -v 2>/dev/null; npm -v 2>/dev/null; which pnpm 2>/dev/null; pnpm -v 2>/dev/null; which pm2 2>/dev/null; pm2 -v 2>/dev/null; which nginx 2>/dev/null; nginx -v 2>&1; cat /etc/os-release | head -2; pm2 list 2>/dev/null; ls /var/www/ 2>/dev/null\")",
+      "Bash(ssh root@188.245.245.42 'curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && apt-get install -y nodejs && node -v && npm -v')",
+      "Bash(ssh root@188.245.245.42 \"npm install -g pnpm pm2 && apt-get install -y nginx && pnpm -v && pm2 -v && nginx -v\")",
+      "Bash(pnpm build)",
+      "Bash(npx pnpm install)",
+      "Bash(npx pnpm build)",
+      "Bash(ssh root@188.245.245.42 \"cd /home/projets && git clone https://github.com/LucBruz/encore-game.git && cd encore-game && pnpm install && pnpm build\")",
+      "Bash(ssh root@188.245.245.42 \"mkdir -p /home/projets/encore-game\")",
+      "Bash(rsync -avz --delete .output/ root@188.245.245.42:/home/projets/encore-game/.output/)",
+      "Bash(scp -r .output root@188.245.245.42:/home/projets/encore-game/)",
+      "Bash(scp /tmp/encore-output.tar.gz root@188.245.245.42:/home/projets/encore-game/)",
+      "Bash(ssh root@188.245.245.42 \"cd /home/projets/encore-game && tar -xzf encore-output.tar.gz && rm encore-output.tar.gz && ls -la .output/\")",
+      "Bash(ssh root@188.245.245.42:*)"
+    ]
+  }
+}
