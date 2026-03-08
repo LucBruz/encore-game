@@ -327,7 +327,7 @@ onMounted(async () => {
         .order('seat', { ascending: true }),
       supabase
         .from('games')
-        .select('grid_id')
+        .select('grid_id, turn_duration')
         .eq('id', gameId)
         .single(),
     ])
@@ -346,7 +346,7 @@ onMounted(async () => {
 
     lobby.gameId = gameId
     lobby.gridId = game?.grid_id ?? '01'
-    // lobby.turnDuration = game?.turn_duration ?? 60  // décommenter après ALTER TABLE
+    lobby.turnDuration = game?.turn_duration ?? 60
     lobby.players = players.map(p => ({
       playerId: p.player_id,
       playerName: p.player_name,
