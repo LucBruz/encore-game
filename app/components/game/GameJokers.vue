@@ -7,7 +7,7 @@
         :key="i"
         class="joker"
         :class="{ 'joker--used': i <= used }"
-        @click="$emit('use')"
+        @click="i > used && $emit('use')"
       >
         !
       </div>

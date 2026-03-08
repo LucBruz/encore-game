@@ -1,5 +1,5 @@
 <template>
-  <div class="game-grid">
+  <div class="game-grid" :class="{ 'game-grid--readonly': readonly }">
 
     <!-- En-tête colonnes -->
     <div class="grid-header">
@@ -21,8 +21,11 @@
         :color="COLOR_MAP[cell[0]].name"
         :star="cell[1]"
         :checked="checkedCells.has(idx)"
+        :pending="pendingCells.includes(idx)"
+        :is-valid="validCells.has(idx)"
+        :is-blocked="isBlockedMode && !validCells.has(idx) && !checkedCells.has(idx) && !pendingCells.includes(idx)"
         :is-start-col="idx % 15 === 7"
-        @click="$emit('cell-click', idx)"
+        @click="handleCellClick(idx)"
       />
     </div>
 
@@ -33,7 +36,10 @@
           v-for="(col, i) in COLS"
           :key="`f-${col}`"
           class="points-cell"
-          :class="{ 'points-cell--start': i === 7, 'points-cell--crossed': columnBonus[col] !== null }"
+          :class="{
+            'points-cell--start': i === 7,
+            'points-cell--crossed': columnBonus[col] !== null
+          }"
         >
           {{ COLUMN_POINTS[col].first }}
         </div>
@@ -50,6 +56,28 @@
       </div>
     </div>
 
+    <!-- Message d'erreur placement -->
+    <div v-if="placementError" class="placement-error">
+      ⚠️ {{ placementError }}
+    </div>
+
+    <!-- Bouton confirmer placement -->
+    <div v-if="pendingCells.length > 0 && confirmedCombo" class="placement-confirm">
+      <span class="placement-confirm__count">
+        {{ pendingCells.length }} / {{ confirmedCombo.count }} case(s) sélectionnée(s)
+      </span>
+      <button
+        class="btn-confirm-placement"
+        :disabled="pendingCells.length !== confirmedCombo.count || readonly"
+        @click="$emit('confirm-placement')"
+      >
+        ✓ Valider le placement
+      </button>
+      <button class="btn-cancel-placement" :disabled="readonly" @click="$emit('cancel-placement')">
+        ✕ Annuler
+      </button>
+    </div>
+
   </div>
 </template>
 
@@ -60,20 +88,39 @@ import type { PlayerState } from '~/stores/gameStore'
 const props = defineProps<{
   grid: typeof import('~/data/grids/grid-01').GRID_01
   checkedCells: Set<number>
+  pendingCells: number[]
+  validCells: Set<number>
   columnBonus: PlayerState['columnBonus']
+  confirmedCombo: { color: string; count: number } | null
+  placementError: string | null
+  isBlockedMode: boolean
+  readonly?: boolean
 }>()
 
-defineEmits<{
+const emit = defineEmits<{
   'cell-click': [idx: number]
+  'confirm-placement': []
+  'cancel-placement': []
 }>()
+
+function handleCellClick(idx: number) {
+  if (props.readonly) return
+  // Ignorer les cases déjà cochées définitivement
+  if (props.checkedCells.has(idx)) return
+  emit('cell-click', idx)
+}
 </script>
 
 <style scoped>
 .game-grid {
-  @apply w-full;
+  @apply w-full flex flex-col gap-2;
 }
 
-/* Header */
+.game-grid--readonly :deep(.game-cell) {
+  cursor: default !important;
+  pointer-events: none;
+}
+
 .grid-header {
   display: grid;
   grid-template-columns: repeat(15, 1fr);
@@ -91,17 +138,13 @@ defineEmits<{
   background: rgba(245, 215, 66, 0.1);
 }
 
-/* Grille */
 .grid-cells {
   display: grid;
   grid-template-columns: repeat(15, 1fr);
   @apply gap-1;
 }
 
-/* Footer points */
-.grid-footer {
-  @apply mt-1;
-}
+.grid-footer { @apply mt-1; }
 
 .points-row {
   display: grid;
@@ -115,15 +158,47 @@ defineEmits<{
   color: #e8e8f0;
 }
 
-.points-cell--others {
+.points-cell--others { color: #6e6e88; }
+.points-cell--start { color: #f5d742; }
+.points-cell--crossed { @apply line-through opacity-40; }
+
+.placement-error {
+  @apply text-xs px-3 py-2 rounded-lg;
+  background: rgba(232, 90, 130, 0.15);
+  color: #e85a82;
+  border: 1px solid rgba(232, 90, 130, 0.3);
+}
+
+.placement-confirm {
+  @apply flex items-center gap-3 flex-wrap px-3 py-2 rounded-xl;
+  background: #23232f;
+  border: 1px solid #3e3e52;
+}
+
+.placement-confirm__count {
+  @apply text-xs font-bold;
   color: #6e6e88;
 }
 
-.points-cell--start {
-  color: #f5d742;
+.btn-confirm-placement {
+  @apply px-4 py-1.5 rounded-lg font-black text-sm cursor-pointer transition-all;
+  background: #5cc96e;
+  color: #0f0f13;
+  border: none;
 }
 
-.points-cell--crossed {
-  @apply line-through opacity-40;
+.btn-confirm-placement:hover:not(:disabled) { filter: brightness(1.1); }
+.btn-confirm-placement:disabled { @apply opacity-40 cursor-not-allowed; }
+
+.btn-cancel-placement {
+  @apply px-3 py-1.5 rounded-lg text-xs cursor-pointer transition-all;
+  background: transparent;
+  color: #6e6e88;
+  border: 1px solid #2e2e3e;
+}
+
+.btn-cancel-placement:hover {
+  color: #e85a82;
+  border-color: #e85a82;
 }
 </style>

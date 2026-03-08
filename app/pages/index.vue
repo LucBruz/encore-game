@@ -4,156 +4,260 @@
     <!-- Header -->
     <header class="page-header">
       <h1 class="page-title">ENCORE!</h1>
-      <p class="page-subtitle">Tour {{ store.turnNumber + 1 }} · {{ store.isFirstThreeTurns ? '⚡ 3 premiers tours — tous les dés disponibles' : '' }}</p>
+      <p class="page-subtitle">Jeu de société multijoueur en temps réel</p>
     </header>
 
-    <!-- Player tabs -->
-    <div class="player-tabs">
-      <button
-        v-for="player in store.players"
-        :key="player.id"
-        class="player-tab"
-        :class="{ 'player-tab--active': currentViewPlayer === player.id }"
-        @click="currentViewPlayer = player.id"
-      >
-        {{ player.name }}
-        <span class="player-tab__score">{{ store.scoreForPlayer(player.id) }} pts</span>
-      </button>
-
-      <button class="player-tab player-tab--add" @click="addPlayer">
-        + Joueur
-      </button>
+    <!-- Erreur globale -->
+    <div v-if="lobby.error" class="error-banner">
+      ⚠️ {{ lobby.error }}
     </div>
 
-    <!-- Board -->
-    <div v-if="viewedPlayer" class="board">
+    <!-- ── SALLE D'ATTENTE ─────────────────────────────────────── -->
+    <div v-if="lobby.gameId" class="lobby-card">
 
-      <!-- Jokers -->
-      <div class="board-topbar">
-        <span class="board-player-name">{{ viewedPlayer.name }}</span>
-        <GameJokers
-          :total="store.grid.jokers"
-          :used="viewedPlayer.jokersUsed"
-          @use="store.useJoker(viewedPlayer.id)"
-        />
+      <div class="lobby-code-header">
+        <div>
+          <p class="lobby-label">Code de la partie</p>
+          <p class="lobby-code">{{ lobby.gameCode }}</p>
+        </div>
+        <button class="btn btn--ghost btn--sm" @click="copyCode">
+          {{ copied ? '✓ Copié !' : '📋 Copier' }}
+        </button>
       </div>
 
-      <!-- Grille -->
-      <div class="board-grid">
-        <GameGrid
-          :grid="store.grid"
-          :checked-cells="viewedPlayer.checkedCells"
-          :column-bonus="viewedPlayer.columnBonus"
-          @cell-click="(idx) => store.toggleCell(viewedPlayer!.id, idx)"
-        />
-      </div>
-
-      <!-- Bonus couleurs -->
-      <div class="color-bonuses">
+      <div class="lobby-players">
+        <p class="lobby-label">Joueurs ({{ lobby.players.length }})</p>
         <div
-          v-for="(info, key) in COLOR_MAP"
-          :key="key"
-          class="color-chip"
+          v-for="player in lobby.players"
+          :key="player.playerId"
+          class="lobby-player"
         >
-          <div class="color-chip__dot" :style="{ background: info.hex }" />
+          <span class="lobby-player__name">
+            {{ player.playerName }}
+            <span v-if="player.playerId === lobby.localPlayerId" class="lobby-player__you">(toi)</span>
+          </span>
           <span
-            class="color-chip__val color-chip__val--first"
-            :class="{ 'color-chip__val--crossed': viewedPlayer.colorBonus[key as ColorKey] !== null }"
-          >5</span>
-          <span class="color-chip__sep">/</span>
-          <span class="color-chip__val color-chip__val--others">3</span>
+            class="lobby-player__status"
+            :class="player.isReady ? 'lobby-player__status--ready' : 'lobby-player__status--waiting'"
+          >
+            {{ player.isReady ? '✓ Prêt' : 'En attente...' }}
+          </span>
         </div>
       </div>
 
-      <!-- Score -->
-      <div class="score-panel">
-        <div class="score-row">
-          <span>BONUS couleurs</span>
-          <span class="score-val">{{ colorBonusTotal }}</span>
-        </div>
-        <div class="score-row">
-          <span>A→O colonnes</span>
-          <span class="score-val">{{ columnTotal }}</span>
-        </div>
-        <div class="score-row">
-          <span>! Jokers (+1)</span>
-          <span class="score-val">{{ store.grid.jokers - viewedPlayer.jokersUsed }}</span>
-        </div>
-        <div class="score-row">
-          <span>★ Étoiles (−2)</span>
-          <span class="score-val score-val--negative">−{{ uncheckedStars * 2 }}</span>
-        </div>
-        <div class="score-total">
-          <span>TOTAL</span>
-          <span class="score-total__val">{{ store.scoreForPlayer(viewedPlayer.id) }}</span>
-        </div>
+      <div v-if="!lobby.localPlayer?.isReady">
+        <button
+          class="btn btn--primary btn--full"
+          :disabled="lobby.status === 'loading'"
+          @click="handleSetReady"
+        >
+          {{ lobby.status === 'loading' ? 'Chargement...' : 'Je suis prêt !' }}
+        </button>
       </div>
+
+      <p v-else class="lobby-waiting-msg">
+        ⏳ En attente des autres joueurs...
+      </p>
 
     </div>
 
-    <!-- Controls -->
-    <div class="controls">
-      <button class="btn btn--primary" @click="store.nextTurn()">Tour suivant →</button>
-      <button class="btn btn--ghost" @click="store.resetGame()">↺ Reset</button>
-    </div>
+    <!-- ── FORMULAIRES ─────────────────────────────────────────── -->
+    <div v-else class="forms-grid">
 
-    <!-- Game Over -->
-    <div v-if="store.gameOver" class="game-over">
-      <h2>🎉 Partie terminée !</h2>
-      <div v-for="player in store.players" :key="player.id" class="game-over__player">
-        {{ player.name }} : <strong>{{ store.scoreForPlayer(player.id) }} pts</strong>
+      <!-- Section A : Créer une partie -->
+      <div class="form-card">
+        <h2 class="form-title">Créer une partie</h2>
+
+        <div class="form-group">
+          <label class="form-label">Ton prénom</label>
+          <input
+            v-model="createName"
+            class="form-input"
+            type="text"
+            placeholder="ex: Alice"
+            maxlength="20"
+            @keyup.enter="handleCreate"
+          />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Grille</label>
+
+          <!-- Numéros de grilles -->
+          <div class="grid-nums">
+            <button
+              v-for="grid in ALL_GRIDS"
+              :key="grid.id"
+              class="grid-num"
+              :class="{ 'grid-num--selected': selectedGridId === grid.id }"
+              :style="{ '--theme-color': GRID_THEMES[grid.id] }"
+              type="button"
+              @click="selectedGridId = grid.id"
+            >
+              {{ grid.id }}
+            </button>
+          </div>
+
+          <!-- Aperçu de la grille sélectionnée -->
+          <div v-if="selectedGrid" class="grid-preview">
+            <div
+              v-for="(cell, idx) in selectedGrid.cells"
+              :key="idx"
+              class="grid-preview__cell"
+              :class="{ 'grid-preview__cell--star': cell[1] }"
+              :style="{ background: selectedGrid.colorMap[cell[0]].hex }"
+            />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Temps par tour</label>
+          <div class="duration-selector">
+            <button
+              v-for="d in DURATION_OPTIONS"
+              :key="d"
+              class="duration-btn"
+              :class="{ 'duration-btn--selected': selectedDuration === d }"
+              type="button"
+              @click="selectedDuration = d"
+            >
+              {{ d }}s
+            </button>
+          </div>
+        </div>
+
+        <button
+          class="btn btn--primary btn--full"
+          :disabled="!createName.trim() || lobby.status === 'loading'"
+          @click="handleCreate"
+        >
+          {{ lobby.status === 'loading' ? 'Création...' : 'Créer une partie →' }}
+        </button>
+
+        <div v-if="generatedCode" class="code-display">
+          <p class="code-display__label">Partage ce code !</p>
+          <p class="code-display__code">{{ generatedCode }}</p>
+          <button class="btn btn--ghost btn--sm btn--full" @click="copyCode">
+            {{ copied ? '✓ Copié !' : '📋 Copier le code' }}
+          </button>
+        </div>
       </div>
+
+      <!-- Section B : Rejoindre une partie -->
+      <div class="form-card">
+        <h2 class="form-title">Rejoindre une partie</h2>
+
+        <div class="form-group">
+          <label class="form-label">Ton prénom</label>
+          <input
+            v-model="joinName"
+            class="form-input"
+            type="text"
+            placeholder="ex: Bob"
+            maxlength="20"
+          />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Code de la partie</label>
+          <input
+            v-model="joinCode"
+            class="form-input form-input--code"
+            type="text"
+            placeholder="ex: XK92PL"
+            maxlength="6"
+            @input="joinCode = ($event.target as HTMLInputElement).value.toUpperCase()"
+            @keyup.enter="handleJoin"
+          />
+        </div>
+
+        <button
+          class="btn btn--primary btn--full"
+          :disabled="!joinName.trim() || joinCode.length !== 6 || lobby.status === 'loading'"
+          @click="handleJoin"
+        >
+          {{ lobby.status === 'loading' ? 'Connexion...' : 'Rejoindre →' }}
+        </button>
+      </div>
+
     </div>
 
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { useGameStore } from '~/stores/gameStore'
-import { COLOR_MAP } from '~/data/grids/grid-01'
-import type { ColorKey } from '~/data/grids/grid-01'
+import { ref, computed, onMounted } from 'vue'
+import { useLobbyStore } from '~/stores/lobbyStore'
+import { ALL_GRIDS, GRID_MAP } from '~/data/grids/index'
+import type { GridId } from '~/data/grids/index'
 
-const store = useGameStore()
-
-const currentViewPlayer = ref(store.players[0].id)
-
-const viewedPlayer = computed(() =>
-  store.players.find(p => p.id === currentViewPlayer.value) ?? null
-)
-
-function addPlayer() {
-  const name = `Joueur ${store.players.length + 1}`
-  store.addPlayer(name)
+const GRID_THEMES: Record<string, string> = {
+  '01': '#c0392b',
+  '02': '#e67e22',
+  '03': '#8e44ad',
+  '04': '#d4a017',
+  '05': '#2980b9',
+  '06': '#27ae60',
+  '07': '#d35400',
+  '08': '#c2185b',
 }
 
-const colorBonusTotal = computed(() => {
-  if (!viewedPlayer.value) return 0
-  return Object.values(viewedPlayer.value.colorBonus).reduce((acc, v) => {
-    return acc + (v === 'first' ? 5 : v === 'others' ? 3 : 0)
-  }, 0)
-})
+const lobby = useLobbyStore()
 
-const columnTotal = computed(() => {
-  if (!viewedPlayer.value) return 0
-  return Object.entries(viewedPlayer.value.columnBonus).reduce((acc, [col, v]) => {
-    if (v === 'first') return acc + (store.grid.columnPoints[col]?.first ?? 0)
-    if (v === 'others') return acc + (store.grid.columnPoints[col]?.others ?? 0)
-    return acc
-  }, 0)
-})
+const DURATION_OPTIONS = [15, 30, 60, 90, 120] as const
 
-const uncheckedStars = computed(() => {
-  if (!viewedPlayer.value) return 0
-  return store.grid.cells.filter(([_, star], idx) =>
-    star && !viewedPlayer.value!.checkedCells.has(idx)
-  ).length
+const createName = ref('')
+const selectedGridId = ref('01')
+const selectedGrid = computed(() => GRID_MAP[selectedGridId.value as GridId])
+const selectedDuration = ref(60)
+const generatedCode = ref('')
+const joinName = ref('')
+const joinCode = ref('')
+const copied = ref(false)
+
+function copyCode() {
+  const code = lobby.gameCode ?? generatedCode.value
+  if (!code) return
+  navigator.clipboard.writeText(code)
+  copied.value = true
+  setTimeout(() => { copied.value = false }, 2000)
+}
+
+async function handleCreate() {
+  if (!createName.value.trim()) return
+  try {
+    const code = await lobby.createGame(createName.value.trim(), selectedGridId.value, selectedDuration.value)
+    generatedCode.value = code
+  } catch {
+    // L'erreur est déjà dans lobby.error
+  }
+}
+
+async function handleJoin() {
+  if (!joinName.value.trim() || joinCode.value.length !== 6) return
+  try {
+    await lobby.joinGame(joinCode.value, joinName.value.trim())
+  } catch {
+    // L'erreur est déjà dans lobby.error
+  }
+}
+
+async function handleSetReady() {
+  try {
+    await lobby.setReady()
+  } catch {
+    // L'erreur est déjà dans lobby.error
+  }
+}
+
+onMounted(() => {
+  lobby.init()
 })
 </script>
 
 <style scoped>
 .page {
-  @apply min-h-screen flex flex-col items-center gap-6 py-8 px-4;
+  @apply min-h-screen flex flex-col items-center gap-8 py-12 px-4;
   background: #0f0f13;
   color: #e8e8f0;
   font-family: 'Nunito', sans-serif;
@@ -162,7 +266,7 @@ const uncheckedStars = computed(() => {
 .page-header { @apply text-center; }
 
 .page-title {
-  @apply text-4xl font-black tracking-tight;
+  @apply text-5xl font-black tracking-tight;
   font-family: 'Space Mono', monospace;
   background: linear-gradient(135deg, #f5d742, #f58a35);
   -webkit-background-clip: text;
@@ -171,114 +275,138 @@ const uncheckedStars = computed(() => {
 }
 
 .page-subtitle {
-  @apply text-sm mt-1;
+  @apply text-sm mt-2;
   color: #6e6e88;
 }
 
-/* Tabs */
-.player-tabs {
-  @apply flex gap-2 flex-wrap justify-center;
+.error-banner {
+  @apply w-full max-w-md px-4 py-3 rounded-xl text-sm font-bold;
+  background: #2d1a1a;
+  border: 1px solid #e85a82;
+  color: #e85a82;
 }
 
-.player-tab {
-  @apply flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all;
+.forms-grid {
+  @apply w-full max-w-2xl grid gap-4;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.form-card {
+  @apply flex flex-col gap-4 p-6 rounded-2xl;
   background: #1a1a24;
   border: 1px solid #2e2e3e;
-  color: #6e6e88;
-  cursor: pointer;
 }
 
-.player-tab:hover { color: #e8e8f0; }
-
-.player-tab--active {
-  border-color: #f5d742;
+.form-title {
+  @apply text-lg font-black;
   color: #f5d742;
 }
 
-.player-tab__score {
-  @apply text-xs px-2 py-0.5 rounded-full;
+.form-group { @apply flex flex-col gap-1.5; }
+
+.form-label {
+  @apply text-xs font-bold uppercase tracking-wider;
+  color: #6e6e88;
+}
+
+.form-input {
+  @apply w-full px-4 py-2.5 rounded-xl text-sm outline-none transition-all;
   background: #23232f;
+  border: 1px solid #2e2e3e;
   color: #e8e8f0;
 }
 
-.player-tab--add {
-  border-style: dashed;
+.form-input:focus { border-color: #f5d742; }
+.form-input::placeholder { color: #3e3e52; }
+
+.form-input--code {
+  @apply text-center font-black text-lg uppercase;
+  font-family: 'Space Mono', monospace;
+  letter-spacing: 0.3em;
 }
 
-/* Board */
-.board {
-  @apply w-full max-w-4xl flex flex-col gap-4 p-5 rounded-2xl;
-  background: #1a1a24;
-  border: 1px solid #2e2e3e;
-}
-
-.board-topbar {
-  @apply flex items-center justify-between flex-wrap gap-3;
-}
-
-.board-player-name {
-  @apply font-black text-lg;
-  color: #f5d742;
-}
-
-.board-grid { @apply w-full overflow-x-auto; }
-
-/* Color bonuses */
-.color-bonuses {
-  @apply flex gap-2 flex-wrap;
-}
-
-.color-chip {
-  @apply flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm;
+.code-display {
+  @apply flex flex-col items-center gap-2 p-4 rounded-xl;
   background: #23232f;
   border: 1px solid #2e2e3e;
 }
 
-.color-chip__dot {
-  @apply w-3 h-3 rounded-full;
+.code-display__label {
+  @apply text-xs font-bold uppercase tracking-wider;
+  color: #6e6e88;
 }
 
-.color-chip__val { @apply font-black; font-family: 'Space Mono', monospace; }
-.color-chip__val--first { color: #5cc96e; }
-.color-chip__val--others { color: #6e6e88; }
-.color-chip__val--crossed { @apply line-through opacity-40; }
-.color-chip__sep { color: #6e6e88; }
-
-/* Score */
-.score-panel {
-  @apply flex flex-col gap-2 pt-3;
-  border-top: 1px solid #2e2e3e;
+.code-display__code {
+  @apply text-3xl font-black;
+  font-family: 'Space Mono', monospace;
+  color: #f5d742;
+  letter-spacing: 0.3em;
 }
 
-.score-row {
-  @apply flex justify-between items-center text-sm pb-2;
+.lobby-card {
+  @apply w-full max-w-md flex flex-col gap-5 p-6 rounded-2xl;
+  background: #1a1a24;
+  border: 1px solid #2e2e3e;
+}
+
+.lobby-code-header {
+  @apply flex items-center justify-between pb-4;
   border-bottom: 1px solid #2e2e3e;
+}
+
+.lobby-label {
+  @apply text-xs font-bold uppercase tracking-wider mb-1;
   color: #6e6e88;
 }
 
-.score-val {
-  @apply font-black;
+.lobby-code {
+  @apply text-2xl font-black;
   font-family: 'Space Mono', monospace;
+  color: #f5d742;
+  letter-spacing: 0.2em;
+}
+
+.lobby-players { @apply flex flex-col gap-2; }
+
+.lobby-player {
+  @apply flex items-center justify-between px-3 py-2 rounded-xl;
+  background: #23232f;
+  border: 1px solid #2e2e3e;
+}
+
+.lobby-player__name {
+  @apply text-sm font-bold;
   color: #e8e8f0;
 }
 
-.score-val--negative { color: #e85a82; }
-
-.score-total {
-  @apply flex justify-between items-center font-black text-lg;
+.lobby-player__you {
+  @apply text-xs font-normal ml-1;
+  color: #6e6e88;
 }
 
-.score-total__val {
-  font-family: 'Space Mono', monospace;
-  color: #f5d742;
-  @apply text-2xl;
+.lobby-player__status {
+  @apply text-xs font-bold px-2 py-0.5 rounded-full;
 }
 
-/* Controls */
-.controls { @apply flex gap-3 flex-wrap justify-center; }
+.lobby-player__status--ready {
+  background: #1a2e1a;
+  color: #5cc96e;
+  border: 1px solid #5cc96e;
+}
+
+.lobby-player__status--waiting {
+  background: #23232f;
+  color: #6e6e88;
+  border: 1px solid #3e3e52;
+}
+
+.lobby-waiting-msg {
+  @apply text-sm text-center py-2;
+  color: #6e6e88;
+}
 
 .btn {
-  @apply px-5 py-2 rounded-xl font-bold text-sm cursor-pointer transition-all;
+  @apply px-5 py-2.5 rounded-xl font-bold text-sm cursor-pointer transition-all;
   border: none;
 }
 
@@ -287,7 +415,12 @@ const uncheckedStars = computed(() => {
   color: #0f0f13;
 }
 
-.btn--primary:hover { filter: brightness(1.1); transform: translateY(-1px); }
+.btn--primary:hover:not(:disabled) {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+.btn--primary:disabled { @apply opacity-40 cursor-not-allowed; }
 
 .btn--ghost {
   background: #23232f;
@@ -296,15 +429,87 @@ const uncheckedStars = computed(() => {
 }
 
 .btn--ghost:hover { color: #e8e8f0; }
+.btn--sm { @apply px-3 py-1.5 text-xs; }
+.btn--full { @apply w-full text-center; }
 
-/* Game Over */
-.game-over {
-  @apply text-center p-8 rounded-2xl;
-  background: #1a1a24;
-  border: 1px solid #f5d742;
+/* ── Duration selector ───────────────────────────────────────────────────── */
+
+.duration-selector {
+  @apply flex gap-1.5;
 }
 
-.game-over h2 { @apply text-2xl font-black mb-4; }
+.duration-btn {
+  @apply flex-1 py-2 rounded-lg text-sm font-black cursor-pointer transition-all;
+  font-family: 'Space Mono', monospace;
+  background: #23232f;
+  border: 2px solid #2e2e3e;
+  color: #6e6e88;
+}
 
-.game-over__player { @apply text-lg py-1; }
+.duration-btn:hover { border-color: #6e6e88; color: #e8e8f0; }
+
+.duration-btn--selected {
+  border-color: #f5d742;
+  background: rgba(245, 215, 66, 0.1);
+  color: #f5d742;
+}
+
+/* ── Grid selector ───────────────────────────────────────────────────────── */
+
+.grid-nums {
+  @apply flex gap-1.5 flex-wrap;
+}
+
+.grid-num {
+  @apply px-3 py-1.5 rounded-lg text-sm font-black cursor-pointer transition-all;
+  font-family: 'Space Mono', monospace;
+  background: color-mix(in srgb, var(--theme-color) 20%, transparent);
+  border: 2px solid color-mix(in srgb, var(--theme-color) 40%, transparent);
+  color: color-mix(in srgb, var(--theme-color) 80%, #e8e8f0);
+}
+
+.grid-num:hover {
+  border-color: var(--theme-color);
+  background: color-mix(in srgb, var(--theme-color) 30%, transparent);
+}
+
+.grid-num--selected {
+  border-color: var(--theme-color);
+  background: color-mix(in srgb, var(--theme-color) 35%, transparent);
+  color: #ffffff;
+  box-shadow: 0 0 8px color-mix(in srgb, var(--theme-color) 50%, transparent);
+}
+
+/* ── Grid preview ────────────────────────────────────────────────────────── */
+
+.grid-preview {
+  @apply mt-2 rounded-xl overflow-hidden;
+  display: grid;
+  grid-template-columns: repeat(15, 1fr);
+  gap: 2px;
+  padding: 8px;
+  background: #12121a;
+  border: 1px solid #2e2e3e;
+}
+
+.grid-preview__cell {
+  aspect-ratio: 1;
+  border-radius: 3px;
+  position: relative;
+}
+
+.grid-preview__cell--star::after {
+  content: '★';
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  color: white;
+  text-shadow: 0 0 3px rgba(0,0,0,0.8);
+  line-height: 1;
+  display: grid;
+  place-items: center;
+}
 </style>
