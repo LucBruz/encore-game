@@ -230,7 +230,7 @@ export const useLobbyStore = defineStore('lobby', {
 
             if (fetchError || !allPlayers) return
 
-            const everyoneReady = allPlayers.length > 0 && allPlayers.every(p => p.is_ready)
+            const everyoneReady = allPlayers.length >= 2 && allPlayers.every(p => p.is_ready)
 
             if (everyoneReady) {
                 await supabase
@@ -292,7 +292,7 @@ export const useLobbyStore = defineStore('lobby', {
                         }
 
                         // Si tous prêts et pas encore redirigé → démarrer
-                        const everyoneReady = this.players.length > 0 && this.players.every(p => p.isReady)
+                        const everyoneReady = this.players.length >= 2 && this.players.every(p => p.isReady)
                         if (everyoneReady && this.status !== 'playing') {
                             this.status = 'playing'
                             await navigateTo(`/game/${gameId}`)

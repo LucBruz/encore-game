@@ -247,16 +247,22 @@ function startTimer() {
   timer.start(lobby.turnDuration, () => {
     if (sync.localPlayerId.value !== store.activePlayerId) return
 
-    // Si le joueur actif n'a pas encore confirmé ses dés → il passe
-    const activePlayer = store.players.find(p => p.id === store.activePlayerId)
-    if ((store.phase as string) === 'active_selecting' && activePlayer && !activePlayer.hasConfirmed) {
-      sync.dispatch('PASS_ACTIVE', {})
+    if (store.isFirstThreeTurns) {
+      // Tours 1–3 : passer tous les joueurs qui n'ont pas encore joué
+      store.players
+        .filter(p => !p.hasPlaced && !p.hasPassed)
+        .forEach(p => sync.dispatch('PASS_PASSIVE', { playerId: p.id }))
+    } else {
+      // Tours normaux : passer le joueur actif s'il n'a pas confirmé ses dés
+      const ap = store.players.find(p => p.id === store.activePlayerId)
+      if ((store.phase as string) === 'active_selecting' && ap && !ap.hasConfirmed) {
+        sync.dispatch('PASS_ACTIVE', {})
+      }
+      // Passer tous les joueurs passifs qui n'ont pas joué
+      store.players
+        .filter(p => p.id !== store.activePlayerId && !p.hasPlaced && !p.hasPassed)
+        .forEach(p => sync.dispatch('PASS_PASSIVE', { playerId: p.id }))
     }
-
-    // Forcer tous les joueurs passifs qui n'ont pas joué
-    store.players
-      .filter(p => p.id !== store.activePlayerId && !p.hasPlaced && !p.hasPassed)
-      .forEach(p => sync.dispatch('PASS_PASSIVE', { playerId: p.id }))
   })
 }
 
@@ -273,6 +279,10 @@ watch(() => store.phase, (phase) => {
   }
 
   if (phase === 'active_selecting') {
+    startTimer()
+  }
+
+  if (phase === 'passive_selecting' && store.isFirstThreeTurns) {
     startTimer()
   }
 

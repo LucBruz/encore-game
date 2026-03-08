@@ -25,20 +25,20 @@ export interface CellData {
 // 7 lignes × 15 colonnes = 105 cases
 // Format : [couleur, étoile]
 export const GRID_01_CELLS: [ColorKey, boolean][] = [
-    // Row 0
-    ['g', false], ['g', false], ['g', false], ['y', false], ['y', false], ['y', false], ['y', false], ['g', true], ['b', false], ['b', false], ['y', true], ['y', false], ['y', false], ['y', false], ['y', false],
-    // Row 1
-    ['o', false], ['p', true], ['g', false], ['g', true], ['y', false], ['y', false], ['o', false], ['o', false], ['p', false], ['b', true], ['b', false], ['o', false], ['g', false], ['y', false], ['y', false],
-    // Row 2
-    ['b', true], ['p', false], ['p', false], ['g', false], ['g', false], ['o', false], ['o', true], ['p', false], ['p', false], ['y', false], ['y', false], ['y', false], ['o', false], ['b', false], ['b', false],
-    // Row 3
-    ['b', false], ['o', false], ['g', false], ['p', false], ['o', false], ['b', true], ['b', false], ['g', false], ['o', false], ['o', false], ['y', false], ['y', false], ['p', false], ['p', true], ['o', false],
-    // Row 4
-    ['p', false], ['p', false], ['o', false], ['o', false], ['p', false], ['p', false], ['g', false], ['b', false], ['b', false], ['g', false], ['g', false], ['g', false], ['b', false], ['o', false], ['p', false],
-    // Row 5
-    ['p', false], ['b', true], ['b', false], ['p', false], ['p', false], ['o', false], ['o', false], ['y', false], ['p', false], ['p', true], ['o', false], ['b', false], ['b', false], ['g', false], ['o', true],
-    // Row 6
-    ['y', false], ['y', false], ['b', false], ['b', false], ['b', false], ['g', false], ['p', false], ['y', false], ['y', false], ['g', false], ['g', true], ['o', false], ['p', false], ['p', false], ['g', false],
+    // Row 0 — VVVJJJJV*BBBO*JJJ
+    ['g', false], ['g', false], ['g', false], ['y', false], ['y', false], ['y', false], ['y', false], ['g', true],  ['b', false], ['b', false], ['b', false], ['o', true],  ['y', false], ['y', false], ['y', false],
+    // Row 1 — OVJ*VJ*JOORB*BOOVV
+    ['o', false], ['g', false], ['y', true],  ['g', false], ['y', true],  ['y', false], ['o', false], ['o', false], ['p', false], ['b', true],  ['b', false], ['o', false], ['o', false], ['g', false], ['g', false],
+    // Row 2 — B*VRVVVV*RRRJJOVV
+    ['b', true],  ['g', false], ['p', false], ['g', false], ['g', false], ['g', false], ['g', true],  ['p', false], ['p', false], ['p', false], ['y', false], ['y', false], ['o', false], ['g', false], ['g', false],
+    // Row 3 — BRRVOO*BBVVJJOR*B
+    ['b', false], ['p', false], ['p', false], ['g', false], ['o', false], ['o', true],  ['b', false], ['b', false], ['g', false], ['g', false], ['y', false], ['y', false], ['o', false], ['p', true],  ['b', false],
+    // Row 4 — ROOOORBBOOORRRR
+    ['p', false], ['o', false], ['o', false], ['o', false], ['o', false], ['p', false], ['b', false], ['b', false], ['o', false], ['o', false], ['o', false], ['p', false], ['p', false], ['p', false], ['p', false],
+    // Row 5 — RB*BR*RRRJJ*OR*BBBO*
+    ['p', false], ['b', true],  ['b', false], ['p', true],  ['p', false], ['p', false], ['p', false], ['y', false], ['y', true],  ['o', false], ['p', true],  ['b', false], ['b', false], ['b', false], ['o', true],
+    // Row 6 — JJBBBBRJJJVVV*OO
+    ['y', false], ['y', false], ['b', false], ['b', false], ['b', false], ['b', false], ['p', false], ['y', false], ['y', false], ['y', false], ['g', false], ['g', false], ['g', true],  ['o', false], ['o', false],
 ]
 
 export const GRID_01 = {

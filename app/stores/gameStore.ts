@@ -137,6 +137,10 @@ export const useGameStore = defineStore('game', {
             state.players.filter(p => p.id !== state.activePlayerId),
 
         allPassiveDone: (state): boolean => {
+            // Tours 1–3 : tous les joueurs jouent en parallèle → tous doivent avoir joué
+            if (state.turnNumber < 3) {
+                return state.players.every(p => p.hasPlaced || p.hasPassed)
+            }
             const passives = state.players.filter(p => p.id !== state.activePlayerId)
             return passives.every(p => p.hasPlaced || p.hasPassed)
         },
@@ -277,7 +281,8 @@ export const useGameStore = defineStore('game', {
         rollDicesWithResult(roll: DicesRoll) {
             if (this.phase !== 'waiting_roll') return
             this.currentRoll = roll
-            this.phase = 'active_selecting'
+            // Tours 1–3 : tout le monde choisit en même temps → pas de phase active_selecting
+            this.phase = this.turnNumber < 3 ? 'passive_selecting' : 'active_selecting'
             this.players.forEach(p => {
                 p.hasPassed = false
                 p.hasConfirmed = false
@@ -486,8 +491,9 @@ export const useGameStore = defineStore('game', {
             this.checkColumnCompletion(player)
             this.checkGameOver()
 
-            const isActivePlayer = player.id === this.activePlayerId
-            if (!isActivePlayer && this.allPassiveDone) {
+            // Tours 1–3 : le joueur actif aussi déclenche la fin de tour
+            const isNormalActiveTurn = this.turnNumber >= 3 && player.id === this.activePlayerId
+            if (!isNormalActiveTurn && this.allPassiveDone) {
                 this.phase = 'turn_end'
             }
         },

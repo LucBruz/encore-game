@@ -232,7 +232,8 @@ const canSelect = computed(() => {
   if (store.phase === 'turn_end') return false
   if (hasConfirmed.value) return false
   if (isActivePlayer.value && store.phase === 'active_selecting') return true
-  if (!isActivePlayer.value && store.phase === 'passive_selecting') return true
+  // En passive_selecting : tous les joueurs peuvent choisir (y compris le joueur actif aux tours 1–3)
+  if (store.phase === 'passive_selecting') return true
   return false
 })
 
@@ -299,7 +300,8 @@ async function confirmCombo() {
   const jColor = selectedColorIsJoker.value ? jokerColor.value ?? undefined : undefined
   const jCount = selectedNumberIsJoker.value ? jokerCount.value ?? undefined : undefined
 
-  if (isActivePlayer.value) {
+  // Tours 1–3 : le joueur actif passe aussi par confirm-passive (phase passive_selecting)
+  if (isActivePlayer.value && !store.isFirstThreeTurns) {
     emit('confirm-active', selectedColor.value, selectedNumber.value, jColor, jCount)
   } else {
     emit('confirm-passive', props.playerId, selectedColor.value, selectedNumber.value, jColor, jCount)
@@ -311,7 +313,8 @@ async function confirmCombo() {
 // handlePass gère tous les cas : volontaire, forcé (aucune case), après combo confirmée
 function handlePass() {
   if (props.readonly) return
-  if (isActivePlayer.value && !currentPlayer.value?.hasConfirmed) {
+  // Tours 1–3 : le joueur actif passe aussi via pass-passive
+  if (isActivePlayer.value && !currentPlayer.value?.hasConfirmed && !store.isFirstThreeTurns) {
     emit('pass-active')
   } else {
     emit('pass-passive', props.playerId)
