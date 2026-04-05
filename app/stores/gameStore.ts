@@ -111,7 +111,7 @@ function resolveCount(face: NumberFace, jokerCount?: number): number | null {
 
 export const useGameStore = defineStore('game', {
     state: () => ({
-        grid: GRID_01,
+        grid: { ...GRID_01, cells: [...GRID_01.cells] },
         players: [createPlayer('p1', 'Joueur 1'), createPlayer('p2', 'Joueur 2')] as PlayerState[],
         currentPlayerIndex: 0,
         turnNumber: 0,
@@ -260,7 +260,7 @@ export const useGameStore = defineStore('game', {
 
         initGrid(gridId: string) {
             const grid = GRID_MAP[gridId as GridId]
-            if (grid) this.grid = grid
+            if (grid) this.grid = { ...grid, cells: [...grid.cells] }
         },
 
         addPlayer(name: string) {

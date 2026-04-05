@@ -16,10 +16,10 @@
     <!-- Grille -->
     <div class="grid-cells">
       <GameCell
-        v-for="(cell, idx) in grid.cells"
+        v-for="([colorKey, hasStar], idx) in grid.cells"
         :key="idx"
-        :color="COLOR_MAP[cell[0]].name"
-        :star="cell[1]"
+        :color="COLOR_MAP[colorKey].name"
+        :star="hasStar"
         :checked="checkedCells.has(idx)"
         :pending="pendingCells.includes(idx)"
         :is-valid="validCells.has(idx)"

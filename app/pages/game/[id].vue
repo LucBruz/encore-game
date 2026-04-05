@@ -248,17 +248,19 @@ function startTimer() {
     if (sync.localPlayerId.value !== store.activePlayerId) return
 
     if (store.isFirstThreeTurns) {
-      // Tours 1–3 : passer tous les joueurs qui n'ont pas encore joué
+      // Tours 1–3 : passer tous ceux qui n'ont pas joué
       store.players
         .filter(p => !p.hasPlaced && !p.hasPassed)
         .forEach(p => sync.dispatch('PASS_PASSIVE', { playerId: p.id }))
-    } else {
-      // Tours normaux : passer le joueur actif s'il n'a pas confirmé ses dés
+    } else if ((store.phase as string) === 'active_selecting') {
+      // Seulement passer le joueur actif — les passifs jouent ensuite
       const ap = store.players.find(p => p.id === store.activePlayerId)
-      if ((store.phase as string) === 'active_selecting' && ap && !ap.hasConfirmed) {
+      if (ap && !ap.hasConfirmed) {
         sync.dispatch('PASS_ACTIVE', {})
       }
-      // Passer tous les joueurs passifs qui n'ont pas joué
+      // NE PAS passer les joueurs passifs ici — ils auront leur propre timer
+    } else if ((store.phase as string) === 'passive_selecting') {
+      // Timer passif expiré : passer tous ceux qui n'ont pas encore joué
       store.players
         .filter(p => p.id !== store.activePlayerId && !p.hasPlaced && !p.hasPassed)
         .forEach(p => sync.dispatch('PASS_PASSIVE', { playerId: p.id }))
@@ -282,13 +284,16 @@ watch(() => store.phase, (phase) => {
     startTimer()
   }
 
-  if (phase === 'passive_selecting' && store.isFirstThreeTurns) {
-    startTimer()
+  if (phase === 'passive_selecting') {
+    // Tours 1–3 ET tours normaux où le joueur actif a passé son tour
+    const activePlayerPassed = store.players.find(p => p.id === store.activePlayerId)?.hasPassed ?? false
+    if (store.isFirstThreeTurns || activePlayerPassed) {
+      startTimer()
+    }
   }
 
   if (phase === 'turn_end') {
     timer.stop()
-    currentViewPlayer.value = store.activePlayerId
     // Auto passage au tour suivant après 3 secondes (joueur actif seulement)
     if (sync.localPlayerId.value === store.activePlayerId) {
       setTimeout(() => {
@@ -303,7 +308,6 @@ watch(() => store.phase, (phase) => {
 // ── Handlers ─────────────────────────────────────────────────────────────────
 
 function handlePass() {
-  currentViewPlayer.value = sync.localPlayerId.value
 }
 
 function handleComboConfirmed(_colorIdx: number, _numberIdx: number) {
@@ -312,7 +316,6 @@ function handleComboConfirmed(_colorIdx: number, _numberIdx: number) {
 
 function handleNextTurn() {
   sync.dispatch('NEXT_TURN', {})
-  currentViewPlayer.value = store.activePlayerId
 }
 
 // ── Lifecycle ─────────────────────────────────────────────────────────────────

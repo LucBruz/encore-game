@@ -4,7 +4,7 @@
     <!-- État : pas encore lancé -->
     <div v-if="store.phase === 'waiting_roll'" class="dices-panel__intro">
       <button
-        v-if="isActivePlayer"
+        v-if="isActivePlayer || store.isFirstThreeTurns"
         class="btn-roll"
         :class="{ 'btn-roll--rolling': isRolling }"
         :disabled="readonly"
@@ -161,8 +161,31 @@
       </div>
 
       <!-- Joueur passif en attente de l'actif -->
-      <div v-else-if="!isActivePlayer && store.phase === 'active_selecting'" class="dices-panel__waiting-active">
-        <p>⏳ En attente que <strong>{{ activePlayerName }}</strong> choisisse ses dés...</p>
+      <div v-else-if="!isActivePlayer && store.phase === 'active_selecting' && store.currentRoll" class="dices-display-readonly">
+        <div class="dices-group">
+          <span class="dices-group__label">Couleur</span>
+          <div class="dices-row">
+            <GameDice
+              v-for="(dice, i) in store.currentRoll.colorDices"
+              :key="`c-ro-${i}`"
+              type="color"
+              :value="dice.value"
+              :selectable="false"
+            />
+          </div>
+        </div>
+        <div class="dices-group">
+          <span class="dices-group__label">Chiffre</span>
+          <div class="dices-row">
+            <GameDice
+              v-for="(dice, i) in store.currentRoll.numberDices"
+              :key="`n-ro-${i}`"
+              type="number"
+              :value="dice.value"
+              :selectable="false"
+            />
+          </div>
+        </div>
       </div>
 
     </div>
@@ -344,13 +367,16 @@ function handlePass() {
   color: #6e6e88;
 }
 
-.dices-panel__waiting-active {
-  @apply text-sm text-center py-4;
-  color: #6e6e88;
+.dices-display-readonly {
+  @apply flex flex-col gap-4 opacity-60;
+}
+
+.dices-panel__label {
+  @apply mb-2;
 }
 
 .btn-pass {
-  @apply text-xs px-3 py-1.5 rounded-lg cursor-pointer transition-all self-start;
+  @apply text-xs px-3 py-1.5 rounded-lg cursor-pointer transition-all self-start mt-2;
   background: transparent;
   color: #6e6e88;
   border: 1px solid #2e2e3e;
