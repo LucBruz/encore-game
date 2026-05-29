@@ -341,11 +341,7 @@ watch(() => store.phase, (phase) => {
   }
 
   if (phase === 'passive_selecting') {
-    // Tours 1–3 ET tours normaux où le joueur actif a passé son tour
-    const activePlayerPassed = store.players.find(p => p.id === store.activePlayerId)?.hasPassed ?? false
-    if (store.isFirstThreeTurns || activePlayerPassed) {
-      startTimer()
-    }
+    startTimer()
   }
 
   if (phase === 'turn_end') {

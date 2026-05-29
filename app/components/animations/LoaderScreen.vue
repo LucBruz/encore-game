@@ -3,11 +3,9 @@ import { onMounted, ref, watch } from 'vue'
 
 const props = withDefaults(defineProps<{
   subtitle?: string
-  duration?: number
   ready?: boolean
 }>(), {
   subtitle: 'Chargement de la partie...',
-  duration: 2000,
   ready: false
 })
 
@@ -36,7 +34,7 @@ onMounted(async () => {
 
   const tl = gsap.timeline()
 
-  // Anneaux — on cible les circles via le container SVG
+  // Anneaux — scale 0→1, t=0, 0.2s, stagger 0.06
   const rings = ringsContainerRef.value
     ? Array.from(ringsContainerRef.value.querySelectorAll('circle'))
     : []
@@ -45,56 +43,56 @@ onMounted(async () => {
     tl.from(rings, {
       scale: 0,
       opacity: 0,
-      duration: 0.4,
-      stagger: 0.1,
+      duration: 0.2,
+      stagger: 0.06,
       ease: 'back.out(2)',
       transformOrigin: '50% 50%'
     }, 0)
   }
 
-  // Lettres ENCORE (sans "!")
+  // Barre de progression — démarre à t=0, durée fixe 1.3s
+  if (progressRef.value) {
+    tl.to(progressRef.value, {
+      width: '100%',
+      duration: 1.3,
+      ease: 'power2.inOut',
+      onComplete: () => setTimeout(() => emit('done'), 150)
+    }, 0)
+  }
+
+  // Lettres ENCORE (sans "!") — t=0.08, stagger 0.045, duration 0.32
   const letterEls = lettersRef.filter(Boolean)
   if (letterEls.length) {
     tl.from(letterEls, {
       y: -80,
       opacity: 0,
       rotate: -15,
-      duration: 0.5,
-      stagger: 0.07,
-      ease: 'back.out(2.5)'
-    }, 0.25)
+      duration: 0.32,
+      stagger: 0.045,
+      ease: 'back.out(2)'
+    }, 0.08)
   }
 
-  // "!"
+  // "!" — t=0.55, apparaît + rebondit 2 fois
   if (bangRef.value) {
     tl.from(bangRef.value, {
       opacity: 0,
       scale: 0,
-      duration: 0.3,
+      duration: 0.25,
       ease: 'back.out(3)'
-    }, 0.9)
+    }, 0.55)
     tl.to(bangRef.value, {
       y: -14,
-      duration: 0.15,
+      duration: 0.12,
       ease: 'power2.out',
       yoyo: true,
-      repeat: 3
-    }, 1.0)
+      repeat: 2
+    }, 0.8)
   }
 
-  // Sous-titre
+  // Sous-titre — t=0.55, fade-in
   if (subtitleRef.value) {
-    tl.from(subtitleRef.value, { opacity: 0, y: 8, duration: 0.4 }, 1.0)
-  }
-
-  // Barre de progression
-  if (progressRef.value) {
-    tl.to(progressRef.value, {
-      width: '100%',
-      duration: props.duration / 1000,
-      ease: 'power2.inOut',
-      onComplete: () => setTimeout(() => emit('done'), 200)
-    }, 1.1)
+    tl.from(subtitleRef.value, { opacity: 0, y: 8, duration: 0.3 }, 0.55)
   }
 
   // Si ready devient true avant la fin, fast-forward la barre
