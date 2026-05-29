@@ -116,6 +116,7 @@ export const useGameStore = defineStore('game', {
         currentPlayerIndex: 0,
         turnNumber: 0,
         gameOver: false,
+        lastColorCompleted: null as { playerId: string; color: ColorKey } | null,
         activePlayerId: 'p1',
         gameId: null as string | null,
 
@@ -529,6 +530,7 @@ export const useGameStore = defineStore('game', {
                         p => p.id !== player.id && p.colorBonus[c] !== null
                     )
                     player.colorBonus[c] = otherCompleted ? 'others' : 'first'
+                    this.lastColorCompleted = { playerId: player.id, color: c }
                 }
             })
         },
@@ -575,6 +577,10 @@ export const useGameStore = defineStore('game', {
             this.activeSelection = null
             this.passiveSelections = {}
             this.placementError = null
+        },
+
+        clearLastColorCompleted() {
+            this.lastColorCompleted = null
         },
 
         resetGame() {

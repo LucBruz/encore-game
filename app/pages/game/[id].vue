@@ -153,8 +153,8 @@
       <p class="auto-next-msg">Tour suivant dans quelques secondes...</p>
     </div>
 
-    <!-- Game Over -->
-    <div v-if="store.gameOver" class="game-over">
+    <!-- Game Over (fallback texte) -->
+    <div v-if="store.gameOver && !showEndGame" class="game-over">
       <h2>🎉 Partie terminée !</h2>
       <div
         v-for="player in store.players"
@@ -164,6 +164,36 @@
         {{ player.name }} : <strong>{{ store.scoreForPlayer(player.id) }} pts</strong>
       </div>
     </div>
+
+    <!-- Loader reconnexion -->
+    <LoaderScreen
+      v-if="isReconnecting"
+      subtitle="Connexion à la partie..."
+      :duration="1500"
+      @done="isReconnecting = false"
+    />
+
+    <!-- Launch overlay (première fois) -->
+    <LaunchOverlay
+      v-if="showLaunchAnim"
+      :player-name="lobby.localPlayerName ?? 'Joueur'"
+      @done="showLaunchAnim = false"
+    />
+
+    <!-- Color completion -->
+    <ColorCompletionOverlay
+      v-if="store.lastColorCompleted"
+      :color="store.lastColorCompleted.color"
+      :player-name="completedPlayerName"
+      @done="store.clearLastColorCompleted()"
+    />
+
+    <!-- End game -->
+    <EndGameOverlay
+      v-if="store.gameOver && showEndGame"
+      :players="endGamePlayers"
+      @replay="handleReplay"
+    />
 
   </div>
 </template>
@@ -184,6 +214,9 @@ const sync = useGameSync()
 const timer = useTurnTimer()
 
 const currentViewPlayer = ref('')
+const isReconnecting = ref(true)
+const showLaunchAnim = ref(false)
+const showEndGame = ref(false)
 
 // ── Computed ──────────────────────────────────────────────────────────────────
 
@@ -220,7 +253,28 @@ const uncheckedStars = computed(() => {
   ).length
 })
 
+const endGamePlayers = computed(() =>
+  store.players.map(p => ({
+    name: p.name,
+    isLocal: p.id === lobby.localPlayerId,
+    score: store.scoreForPlayer(p.id),
+    colors: Object.values(p.colorBonus).filter(v => v !== null).length,
+    columns: Object.values(p.columnBonus).filter(v => v !== null).length,
+    jokers: p.jokersUsed ?? 0,
+    stars: 0,
+  }))
+)
+
+const completedPlayerName = computed(() => {
+  const playerId = store.lastColorCompleted?.playerId
+  return store.players.find(p => p.id === playerId)?.name ?? ''
+})
+
 // ── Watchers ──────────────────────────────────────────────────────────────────
+
+watch(() => store.gameOver, (val) => {
+  if (val) showEndGame.value = true
+})
 
 // ── Roll timer (auto-roll après 15s si le joueur actif ne lance pas) ──────────
 
@@ -318,6 +372,10 @@ function handleNextTurn() {
   sync.dispatch('NEXT_TURN', {})
 }
 
+function handleReplay() {
+  navigateTo('/')
+}
+
 // ── Lifecycle ─────────────────────────────────────────────────────────────────
 
 onMounted(async () => {
@@ -372,7 +430,15 @@ onMounted(async () => {
   store.initGrid(lobby.gridId)
 
   // Init sync (store + canal + replay)
+  isReconnecting.value = true
   await sync.setup(gameId, lobby.localPlayerId, lobby.players)
+  isReconnecting.value = false
+
+  // Distinguer premier lancement vs reconnexion
+  if (lobby.justStartedGame) {
+    showLaunchAnim.value = true
+    lobby.justStartedGame = false
+  }
 
   // Positionner la vue sur le joueur local
   currentViewPlayer.value = lobby.localPlayerId

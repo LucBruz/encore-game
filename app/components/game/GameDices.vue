@@ -57,6 +57,7 @@
               :value="dice.value"
               :selected="selectedColor === i"
               :selectable="true"
+              :spinning="isSpinning"
               @select="selectColor(i)"
             />
           </div>
@@ -88,6 +89,7 @@
               :value="dice.value"
               :selected="selectedNumber === i"
               :selectable="true"
+              :spinning="isSpinning"
               @select="selectNumber(i)"
             />
           </div>
@@ -117,12 +119,14 @@
               type="color"
               :value="colorDices[selectedColor].value"
               :selectable="false"
+              :spinning="isSpinning"
             />
             <span class="dices-combo__plus">+</span>
             <GameDice
               type="number"
               :value="numberDices[selectedNumber].value"
               :selectable="false"
+              :spinning="isSpinning"
             />
             <span v-if="selectedColorIsJoker && jokerColor" class="joker-resolved">→ {{ jokerColor.toUpperCase() }}</span>
             <span v-if="selectedNumberIsJoker && jokerCount" class="joker-resolved">→ {{ jokerCount }}</span>
@@ -171,6 +175,7 @@
               type="color"
               :value="dice.value"
               :selectable="false"
+              :spinning="isSpinning"
             />
           </div>
         </div>
@@ -183,6 +188,7 @@
               type="number"
               :value="dice.value"
               :selectable="false"
+              :spinning="isSpinning"
             />
           </div>
         </div>
@@ -220,6 +226,7 @@ const emit = defineEmits<{
 const store = useGameStore()
 
 const isRolling = ref(false)
+const isSpinning = ref(false)
 const selectedColor = ref<number | null>(null)
 const selectedNumber = ref<number | null>(null)
 const jokerColor = ref<ColorKey | null>(null)
@@ -296,6 +303,7 @@ const comboIsReady = computed(() => {
 async function handleRoll() {
   if (props.readonly) return
   isRolling.value = true
+  isSpinning.value = true
   await new Promise(r => setTimeout(r, 600))
   const roll = rollAllDices()
   emit('roll', roll)
@@ -304,6 +312,7 @@ async function handleRoll() {
   selectedNumber.value = null
   jokerColor.value = null
   jokerCount.value = null
+  setTimeout(() => { isSpinning.value = false }, 1600)
 }
 
 function selectColor(i: number) {

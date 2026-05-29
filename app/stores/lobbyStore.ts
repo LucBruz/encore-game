@@ -22,6 +22,7 @@ export const useLobbyStore = defineStore('lobby', {
         players: [] as LobbyPlayer[],
         status: 'idle' as 'idle' | 'loading' | 'waiting' | 'starting' | 'playing',
         error: null as string | null,
+        justStartedGame: false,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         lobbyChannel: null as any,
     }),
@@ -238,6 +239,7 @@ export const useLobbyStore = defineStore('lobby', {
                     .update({ status: 'playing' })
                     .eq('id', this.gameId)
 
+                this.justStartedGame = true
                 this.status = 'playing'
                 await navigateTo(`/game/${this.gameId}`)
             }
@@ -294,6 +296,7 @@ export const useLobbyStore = defineStore('lobby', {
                         // Si tous prêts et pas encore redirigé → démarrer
                         const everyoneReady = this.players.length >= 2 && this.players.every(p => p.isReady)
                         if (everyoneReady && this.status !== 'playing') {
+                            this.justStartedGame = true
                             this.status = 'playing'
                             await navigateTo(`/game/${gameId}`)
                         }
