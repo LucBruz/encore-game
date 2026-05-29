@@ -165,11 +165,12 @@
       </div>
     </div>
 
-    <!-- Loader reconnexion -->
+    <!-- Loader reconnexion : se termine dès que sync est prêt -->
     <LoaderScreen
       v-if="isReconnecting"
       subtitle="Connexion à la partie..."
-      :duration="1500"
+      :duration="4000"
+      :ready="loaderReady"
       @done="isReconnecting = false"
     />
 
@@ -215,6 +216,7 @@ const timer = useTurnTimer()
 
 const currentViewPlayer = ref('')
 const isReconnecting = ref(true)
+const loaderReady = ref(false)
 const showLaunchAnim = ref(false)
 const showEndGame = ref(false)
 
@@ -431,8 +433,9 @@ onMounted(async () => {
 
   // Init sync (store + canal + replay)
   isReconnecting.value = true
+  loaderReady.value = false
   await sync.setup(gameId, lobby.localPlayerId, lobby.players)
-  isReconnecting.value = false
+  loaderReady.value = true
 
   // Distinguer premier lancement vs reconnexion
   if (lobby.justStartedGame) {

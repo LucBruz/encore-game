@@ -1,7 +1,5 @@
 <template>
   <div class="page">
-    <LoaderScreen v-if="showLoader" @done="showLoader = false" />
-
     <!-- Header -->
     <header class="page-header">
       <h1 class="page-title">ENCORE!</h1>
@@ -188,7 +186,6 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import LoaderScreen from '~/components/animations/LoaderScreen.vue'
 import { useLobbyStore } from '~/stores/lobbyStore'
 import { ALL_GRIDS, GRID_MAP } from '~/data/grids/index'
 import type { GridId } from '~/data/grids/index'
@@ -208,7 +205,6 @@ const lobby = useLobbyStore()
 
 const DURATION_OPTIONS = [15, 30, 60, 90, 120] as const
 
-const showLoader = ref(true)
 const createName = ref('')
 const selectedGridId = ref('01')
 const selectedGrid = computed(() => GRID_MAP[selectedGridId.value as GridId])

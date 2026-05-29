@@ -1,12 +1,14 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 
 const props = withDefaults(defineProps<{
   subtitle?: string
   duration?: number
+  ready?: boolean
 }>(), {
   subtitle: 'Chargement de la partie...',
-  duration: 2000
+  duration: 2000,
+  ready: false
 })
 
 const emit = defineEmits<{ done: [] }>()
@@ -94,6 +96,18 @@ onMounted(async () => {
       onComplete: () => setTimeout(() => emit('done'), 200)
     }, 1.1)
   }
+
+  // Si ready devient true avant la fin, fast-forward la barre
+  watch(() => props.ready, (val) => {
+    if (!val || !progressRef.value) return
+    gsap.killTweensOf(progressRef.value)
+    gsap.to(progressRef.value, {
+      width: '100%',
+      duration: 0.3,
+      ease: 'power2.out',
+      onComplete: () => setTimeout(() => emit('done'), 150)
+    })
+  })
 })
 </script>
 
