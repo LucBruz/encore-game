@@ -5,29 +5,31 @@
     @click="selectable && $emit('select')"
   >
     <div ref="cubeRef" class="die-cube">
-      <!-- Front = face 1 -->
-      <div class="die-face die-face--front">
-        <DiceFaceContent :type="type" :face-index="0" />
-      </div>
-      <!-- Back = face 6 -->
-      <div class="die-face die-face--back">
-        <DiceFaceContent :type="type" :face-index="5" />
-      </div>
-      <!-- Right = face 4 -->
-      <div class="die-face die-face--right">
-        <DiceFaceContent :type="type" :face-index="3" />
-      </div>
-      <!-- Left = face 3 -->
-      <div class="die-face die-face--left">
-        <DiceFaceContent :type="type" :face-index="2" />
-      </div>
-      <!-- Top = face 5 -->
-      <div class="die-face die-face--top">
-        <DiceFaceContent :type="type" :face-index="4" />
-      </div>
-      <!-- Bottom = face 2 -->
-      <div class="die-face die-face--bottom">
-        <DiceFaceContent :type="type" :face-index="1" />
+      <div
+        v-for="face in faceDefinitions"
+        :key="face.cls"
+        class="die-face"
+        :class="`die-face--${face.cls}`"
+      >
+        <!-- Dé couleur : pastille colorée -->
+        <div v-if="isColorDie" class="face-color-content">
+          <div
+            class="color-dot"
+            :style="{
+              background: face.colorHex,
+              boxShadow: `0 0 12px 4px ${face.colorHex}66, 0 0 24px 8px ${face.colorHex}22`,
+            }"
+          />
+        </div>
+        <!-- Dé chiffre : grille de pips -->
+        <div v-else class="face-number-content">
+          <div
+            v-for="n in 9"
+            :key="n"
+            class="pip"
+            :class="face.pips.includes(n - 1) ? 'pip--on' : 'pip--off'"
+          />
+        </div>
       </div>
     </div>
     <div class="die-shadow" />
@@ -35,12 +37,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, defineComponent, h } from 'vue'
+import { ref, watch, onMounted, computed } from 'vue'
 import gsap from 'gsap'
 import type { ColorKey } from '~/data/grids/grid-01'
 import type { ColorFace, NumberFace } from '~/stores/gameStore'
 
-// ─── Constants ────────────────────────────────────────────────────────────────
+// ─── Constantes ────────────────────────────────────────────────────────────────
 
 const COLOR_LIST: (ColorKey | 'x')[] = ['g', 'y', 'b', 'p', 'o', 'x']
 
@@ -53,7 +55,6 @@ const COLOR_HEX: Record<string, string> = {
   x: '#888888',
 }
 
-// Pip positions (0–8 in a 3×3 grid) for each face value 1–6
 const PIP_POSITIONS: Record<number, number[]> = {
   1: [4],
   2: [0, 8],
@@ -63,68 +64,29 @@ const PIP_POSITIONS: Record<number, number[]> = {
   6: [0, 2, 3, 5, 6, 8],
 }
 
-// Final rotation for each face index 1–6
+// Rotation du cube pour amener chaque face (1-6) face à la caméra
 const FACE_ROTATION: Record<number, { x: number; y: number }> = {
-  1: { x: 0,   y: 0   },
-  2: { x: -90, y: 0   },
-  3: { x: 0,   y: -90 },
-  4: { x: 0,   y: 90  },
-  5: { x: 90,  y: 0   },
-  6: { x: 0,   y: 180 },
+  1: { x: 0,    y: 0   },
+  2: { x: -90,  y: 0   },
+  3: { x: 0,    y: -90 },
+  4: { x: 0,    y: 90  },
+  5: { x: 90,   y: 0   },
+  6: { x: 0,    y: 180 },
 }
 
-// Maps color key → face number (1-based)
-const COLOR_FACE_INDEX: Record<string, number> = {
-  g: 1,
-  y: 2,
-  b: 3,
-  p: 4,
-  o: 5,
-  x: 6,
-}
+const COLOR_FACE_INDEX: Record<string, number> = { g: 1, y: 2, b: 3, p: 4, o: 5, x: 6 }
 
-// ─── Inner component: renders the content of a single face ───────────────────
+// Correspondance position CSS → numéro de face (1-based)
+const FACE_POSITIONS = [
+  { cls: 'front',  faceNum: 1 },
+  { cls: 'back',   faceNum: 6 },
+  { cls: 'right',  faceNum: 4 },
+  { cls: 'left',   faceNum: 3 },
+  { cls: 'top',    faceNum: 5 },
+  { cls: 'bottom', faceNum: 2 },
+]
 
-const DiceFaceContent = defineComponent({
-  name: 'DiceFaceContent',
-  props: {
-    type: { type: String as () => 'color' | 'number' | 'c' | 'n', required: true },
-    faceIndex: { type: Number, required: true }, // 0-based
-  },
-  setup(props) {
-    return () => {
-      const isColor = props.type === 'color' || props.type === 'c'
-      if (isColor) {
-        const colorKey = COLOR_LIST[props.faceIndex] ?? 'x'
-        const hex = COLOR_HEX[colorKey] ?? '#888'
-        return h('div', { class: 'face-color-content' }, [
-          h('div', {
-            class: 'color-dot',
-            style: {
-              background: hex,
-              boxShadow: `0 0 12px 4px ${hex}66, 0 0 24px 8px ${hex}33`,
-            },
-          }),
-        ])
-      } else {
-        // Number face — faceIndex 0-based → value 1-based
-        const value = props.faceIndex + 1
-        const activePips = PIP_POSITIONS[value] ?? []
-        return h(
-          'div',
-          { class: 'face-number-content' },
-          Array.from({ length: 9 }, (_, i) =>
-            h('div', {
-              class: ['pip', activePips.includes(i) ? 'pip--on' : 'pip--off'],
-            }),
-          ),
-        )
-      }
-    }
-  },
-})
-
-// ─── Props / Emits ────────────────────────────────────────────────────────────
+// ─── Props / Emits ─────────────────────────────────────────────────────────────
 
 const props = defineProps<{
   type: 'color' | 'number' | 'c' | 'n'
@@ -136,63 +98,79 @@ const props = defineProps<{
 
 defineEmits<{ select: [] }>()
 
-// ─── Template ref ─────────────────────────────────────────────────────────────
+// ─── Computed ──────────────────────────────────────────────────────────────────
+
+const isColorDie = computed(() => props.type === 'color' || props.type === 'c')
+
+const faceDefinitions = computed(() =>
+  FACE_POSITIONS.map(({ cls, faceNum }) => {
+    const idx = faceNum - 1
+    return {
+      cls,
+      colorHex: COLOR_HEX[COLOR_LIST[idx] ?? 'x'] ?? '#888',
+      pips: PIP_POSITIONS[faceNum] ?? [],
+    }
+  }),
+)
+
+// ─── Rotation helpers ──────────────────────────────────────────────────────────
 
 const cubeRef = ref<HTMLElement | null>(null)
 
-// ─── Spin animation ───────────────────────────────────────────────────────────
+function targetRotation() {
+  const faceNum = isColorDie.value
+    ? (COLOR_FACE_INDEX[props.value as string] ?? 1)
+    : Number(props.value)
+  return FACE_ROTATION[faceNum] ?? { x: 0, y: 0 }
+}
 
+// Positionne le cube sur la bonne face dès le montage
+onMounted(() => {
+  if (!process.client || !cubeRef.value) return
+  const rot = targetRotation()
+  gsap.set(cubeRef.value, { rotateX: rot.x, rotateY: rot.y })
+})
+
+// Repositionne si la valeur change sans spin (ex : nouveau tirage côté serveur)
+watch(
+  () => props.value,
+  () => {
+    if (!cubeRef.value || props.spinning) return
+    const rot = targetRotation()
+    gsap.set(cubeRef.value, { rotateX: rot.x, rotateY: rot.y })
+  },
+)
+
+// Animation Spin : reset puis tourne jusqu'à la bonne face
 watch(
   () => props.spinning,
   (val) => {
-    if (!val || !cubeRef.value) return
-    if (!process.client) return
-
-    const isNumber = props.type === 'number' || props.type === 'n'
-    const faceIndex: number = isNumber
-      ? Number(props.value)
-      : COLOR_FACE_INDEX[props.value as string] ?? 1
-
-    const finalRot = FACE_ROTATION[faceIndex] ?? { x: 0, y: 0 }
-    const spinX = (3 + Math.floor(Math.random() * 3)) * 360 + finalRot.x
-    const spinY = (3 + Math.floor(Math.random() * 3)) * 360 + finalRot.y
-
+    if (!val || !cubeRef.value || !process.client) return
+    const rot = targetRotation()
+    const spinX = (3 + Math.floor(Math.random() * 3)) * 360 + rot.x
+    const spinY = (3 + Math.floor(Math.random() * 3)) * 360 + rot.y
     gsap.set(cubeRef.value, { rotateX: 0, rotateY: 0 })
-    gsap.to(cubeRef.value, {
-      rotateX: spinX,
-      rotateY: spinY,
-      duration: 1.4,
-      ease: 'power4.out',
-    })
+    gsap.to(cubeRef.value, { rotateX: spinX, rotateY: spinY, duration: 1.4, ease: 'power4.out' })
   },
 )
 </script>
 
 <style scoped>
-/* ─── Scene wrapper ─────────────────────────────────────────────────────────── */
 .die-scene {
   position: relative;
   width: 80px;
   height: 80px;
-  perspective: 1000px;
+  perspective: 600px;
   cursor: default;
   transition: transform 0.15s ease;
   user-select: none;
+  flex-shrink: 0;
 }
 
-.die-scene.selectable {
-  cursor: pointer;
-}
+.die-scene.selectable { cursor: pointer; }
+.die-scene.selectable:hover { transform: translateY(-3px); }
+.die-scene.selected { transform: translateY(-5px); }
 
-.die-scene.selectable:hover {
-  transform: translateY(-2px);
-}
-
-.die-scene.selected {
-  transform: translateY(-4px);
-}
-
-/* ─── Cube ──────────────────────────────────────────────────────────────────── */
 .die-cube {
   width: 80px;
   height: 80px;
@@ -200,81 +178,79 @@ watch(
   transform-style: preserve-3d;
 }
 
-/* ─── Faces ─────────────────────────────────────────────────────────────────── */
 .die-face {
   position: absolute;
-  width: 80px;
-  height: 80px;
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   background: radial-gradient(circle at 30% 25%, #2a2a32 0%, #15151a 60%, #0a0a0e 100%);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 12px;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.4),
-    inset 1px 0 rgba(255, 255, 255, 0.04),
-    inset -1px 0 rgba(0, 0, 0, 0.3);
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.5);
   backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
 
 .die-face--front  { transform: translateZ(40px); }
-.die-face--back   { transform: rotateY(180deg) translateZ(40px); }
-.die-face--right  { transform: rotateY(90deg) translateZ(40px); }
-.die-face--left   { transform: rotateY(-90deg) translateZ(40px); }
-.die-face--top    { transform: rotateX(90deg) translateZ(40px); }
-.die-face--bottom { transform: rotateX(-90deg) translateZ(40px); }
+.die-face--back   { transform: rotateY(180deg)  translateZ(40px); }
+.die-face--right  { transform: rotateY(90deg)   translateZ(40px); }
+.die-face--left   { transform: rotateY(-90deg)  translateZ(40px); }
+.die-face--top    { transform: rotateX(90deg)   translateZ(40px); }
+.die-face--bottom { transform: rotateX(-90deg)  translateZ(40px); }
 
-/* ─── Color face content ────────────────────────────────────────────────────── */
+/* Pastille couleur */
 .face-color-content {
+  width: 100%;
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 100%;
-  height: 100%;
 }
 
 .color-dot {
   width: 48px;
   height: 48px;
   border-radius: 50%;
+  flex-shrink: 0;
 }
 
-/* ─── Number face content (pip grid) ────────────────────────────────────────── */
+/* Grille de pips */
 .face-number-content {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   grid-template-rows: repeat(3, 1fr);
-  gap: 4px;
-  width: 56px;
-  height: 56px;
-  padding: 4px;
+  gap: 5px;
+  width: 54px;
+  height: 54px;
+  padding: 6px;
+  box-sizing: border-box;
 }
 
 .pip {
-  width: 100%;
-  height: 100%;
   border-radius: 50%;
 }
 
 .pip--on {
-  background: radial-gradient(circle at 35% 30%, #fff 0%, #d8d8d8 40%, #888 100%);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+  background: radial-gradient(circle at 35% 30%, #ffffff 0%, #d8d8d8 40%, #999 100%);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
 }
 
 .pip--off {
   background: transparent;
 }
 
-/* ─── Shadow ────────────────────────────────────────────────────────────────── */
+/* Ombre portée sous le dé */
 .die-shadow {
   position: absolute;
-  bottom: -22px;
-  left: 0;
-  width: 80px;
-  height: 20px;
-  background: radial-gradient(ellipse, rgba(0, 0, 0, 0.55), transparent 70%);
+  bottom: -18px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 64px;
+  height: 14px;
+  background: radial-gradient(ellipse, rgba(0, 0, 0, 0.5), transparent 70%);
   pointer-events: none;
 }
 </style>
