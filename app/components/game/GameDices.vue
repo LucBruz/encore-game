@@ -199,7 +199,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import { useGameStore, rollAllDices } from '~/stores/gameStore'
 import { COLOR_MAP } from '~/data/grids/grid-01'
 import type { ColorKey } from '~/data/grids/grid-01'
@@ -303,15 +303,17 @@ const comboIsReady = computed(() => {
 async function handleRoll() {
   if (props.readonly) return
   isRolling.value = true
-  isSpinning.value = true
-  await new Promise(r => setTimeout(r, 600))
-  const roll = rollAllDices()
-  emit('roll', roll)
-  isRolling.value = false
   selectedColor.value = null
   selectedNumber.value = null
   jokerColor.value = null
   jokerCount.value = null
+  // Génère les valeurs et met à jour le store AVANT de lancer le spin
+  const roll = rollAllDices()
+  emit('roll', roll)
+  // Attend que Vue rende les dés avec les nouvelles valeurs
+  await nextTick()
+  isSpinning.value = true
+  isRolling.value = false
   setTimeout(() => { isSpinning.value = false }, 1600)
 }
 
@@ -359,6 +361,7 @@ function handlePass() {
 .dices-panel {
   @apply w-full p-4 rounded-2xl flex flex-col gap-4;
   background: #1a1a24;
+  min-height: 260px;
   border: 1px solid #2e2e3e;
 }
 
@@ -368,7 +371,9 @@ function handlePass() {
 }
 
 .dices-panel__intro {
-  @apply flex flex-col items-center gap-3 py-4;
+  @apply flex flex-col items-center gap-3;
+  flex: 1;
+  justify-content: center;
 }
 
 .dices-panel__waiting {
@@ -480,6 +485,7 @@ function handlePass() {
 
 .dices-row {
   @apply flex gap-2 flex-wrap;
+  overflow: visible;
 }
 
 /* Joker picker */

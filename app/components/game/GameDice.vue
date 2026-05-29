@@ -66,12 +66,12 @@ const PIP_POSITIONS: Record<number, number[]> = {
 
 // Rotation du cube pour amener chaque face (1-6) face à la caméra
 const FACE_ROTATION: Record<number, { x: number; y: number }> = {
-  1: { x: 0,    y: 0   },
-  2: { x: -90,  y: 0   },
-  3: { x: 0,    y: -90 },
-  4: { x: 0,    y: 90  },
-  5: { x: 90,   y: 0   },
-  6: { x: 0,    y: 180 },
+  1: { x: 0,    y: 0   },   // front
+  2: { x: -90,  y: 0   },   // bottom
+  3: { x: 0,    y: 90  },   // left  (+90 amène la face gauche vers caméra en CSS)
+  4: { x: 0,    y: -90 },   // right (-90 amène la face droite vers caméra en CSS)
+  5: { x: 90,   y: 0   },   // top
+  6: { x: 0,    y: 180 },   // back
 }
 
 const COLOR_FACE_INDEX: Record<string, number> = { g: 1, y: 2, b: 3, p: 4, o: 5, x: 6 }
