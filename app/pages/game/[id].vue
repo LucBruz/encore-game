@@ -43,11 +43,13 @@
       </button>
     </div>
 
-    <!-- Layout principal -->
+    <!-- Layout principal : gauche = dés + infos, droite = grille -->
     <div class="main-layout">
 
-      <!-- Panneau dés -->
-      <div class="dice-section">
+      <!-- Colonne gauche -->
+      <div class="main-left">
+
+        <!-- Panneau dés -->
         <GameDices
           :player-id="currentViewPlayer"
           :readonly="!isLocalPlayer"
@@ -60,16 +62,11 @@
           @pass-active="sync.dispatch('PASS_ACTIVE', {})"
           @pass-passive="(pid) => sync.dispatch('PASS_PASSIVE', { playerId: pid })"
         />
-      </div>
 
-      <!-- Board joueur -->
-      <div v-if="viewedPlayer" class="board">
-
-        <!-- Gauche : infos, scores, bonus, jokers -->
-        <div class="board-left">
+        <!-- Infos joueur : nom, combo, jokers, bonus, score -->
+        <div v-if="viewedPlayer" class="board-info">
           <span class="board-player-name">{{ viewedPlayer.name }}</span>
 
-          <!-- Combo en cours -->
           <div v-if="viewedPlayer.confirmedCombo" class="combo-badge">
             <span
               class="combo-badge__color"
@@ -78,20 +75,14 @@
             <span class="combo-badge__count">× {{ viewedPlayer.confirmedCombo.count }}</span>
           </div>
 
-          <!-- Jokers -->
           <GameJokers
             :total="store.grid.jokers"
             :used="viewedPlayer.jokersUsed"
             @use="isLocalPlayer && sync.dispatch('USE_JOKER', { playerId: viewedPlayer!.id })"
           />
 
-          <!-- Bonus couleurs -->
           <div class="color-bonuses">
-            <div
-              v-for="(info, key) in COLOR_MAP"
-              :key="key"
-              class="color-chip"
-            >
+            <div v-for="(info, key) in COLOR_MAP" :key="key" class="color-chip">
               <div class="color-chip__dot" :style="{ background: info.hex }" />
               <span
                 class="color-chip__val color-chip__val--first"
@@ -102,52 +93,38 @@
             </div>
           </div>
 
-          <!-- Score -->
           <div class="score-panel">
-            <div class="score-row">
-              <span>Couleurs</span>
-              <span class="score-val">{{ colorBonusTotal }}</span>
-            </div>
-            <div class="score-row">
-              <span>Colonnes</span>
-              <span class="score-val">{{ columnTotal }}</span>
-            </div>
-            <div class="score-row">
-              <span>Jokers</span>
-              <span class="score-val">{{ store.grid.jokers - viewedPlayer.jokersUsed }}</span>
-            </div>
+            <div class="score-row"><span>Couleurs</span><span class="score-val">{{ colorBonusTotal }}</span></div>
+            <div class="score-row"><span>Colonnes</span><span class="score-val">{{ columnTotal }}</span></div>
+            <div class="score-row"><span>Jokers</span><span class="score-val">{{ store.grid.jokers - viewedPlayer.jokersUsed }}</span></div>
             <div class="score-row">
               <span>Étoiles</span>
-              <span class="score-val score-val--negative">
-                {{ store.gameOver ? `−${uncheckedStars * 2}` : '—' }}
-              </span>
+              <span class="score-val score-val--negative">{{ store.gameOver ? `−${uncheckedStars * 2}` : '—' }}</span>
             </div>
-            <div class="score-total">
-              <span>TOTAL</span>
-              <span class="score-total__val">{{ store.scoreForPlayer(viewedPlayer.id) }}</span>
-            </div>
+            <div class="score-total"><span>TOTAL</span><span class="score-total__val">{{ store.scoreForPlayer(viewedPlayer.id) }}</span></div>
           </div>
         </div>
 
-        <!-- Droite : grille -->
-        <div class="board-grid">
-          <GameGrid
-            :grid="store.grid"
-            :checked-cells="viewedPlayer.checkedCells"
-            :pending-cells="viewedPlayer.pendingCells"
-            :valid-cells="store.validCellsForPlayer(viewedPlayer.id)"
-            :column-bonus="viewedPlayer.columnBonus"
-            :confirmed-combo="viewedPlayer.confirmedCombo"
-            :placement-error="store.placementError"
-            :is-blocked-mode="!!viewedPlayer.confirmedCombo && !viewedPlayer.hasPlaced"
-            :readonly="!isLocalPlayer"
-            @cell-click="(idx) => sync.dispatch('TOGGLE_CELL', { playerId: viewedPlayer!.id, cellIdx: idx })"
-            @confirm-placement="sync.dispatch('CONFIRM_PLACEMENT', { playerId: viewedPlayer!.id })"
-            @cancel-placement="sync.dispatch('CANCEL_PLACEMENT', { playerId: viewedPlayer!.id })"
-          />
-        </div>
-
       </div>
+
+      <!-- Colonne droite : grille seule -->
+      <div v-if="viewedPlayer" class="main-right">
+        <GameGrid
+          :grid="store.grid"
+          :checked-cells="viewedPlayer.checkedCells"
+          :pending-cells="viewedPlayer.pendingCells"
+          :valid-cells="store.validCellsForPlayer(viewedPlayer.id)"
+          :column-bonus="viewedPlayer.columnBonus"
+          :confirmed-combo="viewedPlayer.confirmedCombo"
+          :placement-error="store.placementError"
+          :is-blocked-mode="!!viewedPlayer.confirmedCombo && !viewedPlayer.hasPlaced"
+          :readonly="!isLocalPlayer"
+          @cell-click="(idx) => sync.dispatch('TOGGLE_CELL', { playerId: viewedPlayer!.id, cellIdx: idx })"
+          @confirm-placement="sync.dispatch('CONFIRM_PLACEMENT', { playerId: viewedPlayer!.id })"
+          @cancel-placement="sync.dispatch('CANCEL_PLACEMENT', { playerId: viewedPlayer!.id })"
+        />
+      </div>
+
     </div>
 
     <!-- Auto passage au tour suivant -->
@@ -566,20 +543,33 @@ onUnmounted(async () => {
 
 /* ── Layout ──────────────────────────────────────────────────────────────────── */
 
-.main-layout { @apply w-full max-w-5xl flex flex-col gap-4; }
-.dice-section { @apply w-full; }
-
-.board {
-  @apply w-full flex flex-row gap-4 p-4 rounded-2xl;
-  background: #1a1a24;
-  border: 1px solid #2e2e3e;
+.main-layout {
+  display: flex;
+  flex-direction: row;
+  gap: 16px;
+  width: 100%;
+  max-width: 1400px;
   align-items: flex-start;
 }
 
-.board-left {
-  @apply flex flex-col gap-3;
-  width: 160px;
+.main-left {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 300px;
   flex-shrink: 0;
+}
+
+.main-right {
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.board-info {
+  @apply flex flex-col gap-3 p-4 rounded-2xl;
+  background: #1a1a24;
+  border: 1px solid #2e2e3e;
 }
 
 .board-player-name {
@@ -596,11 +586,6 @@ onUnmounted(async () => {
 .combo-badge__color { @apply w-4 h-4 rounded-full inline-block; }
 .combo-badge__count { color: #e8e8f0; }
 
-.board-grid {
-  flex: 1;
-  min-width: 0;
-  overflow-x: auto;
-}
 
 .color-bonuses { @apply flex flex-col gap-1; }
 
