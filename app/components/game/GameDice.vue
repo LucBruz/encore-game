@@ -11,8 +11,12 @@
         class="die-face"
         :class="`die-face--${face.cls}`"
       >
+        <!-- Face joker (couleur ou chiffre) -->
+        <div v-if="face.isJoker" class="face-joker-content">
+          <span class="joker-star">★</span>
+        </div>
         <!-- Dé couleur : pastille colorée -->
-        <div v-if="isColorDie" class="face-color-content">
+        <div v-else-if="isColorDie" class="face-color-content">
           <div
             class="color-dot"
             :style="{
@@ -66,15 +70,16 @@ const PIP_POSITIONS: Record<number, number[]> = {
 
 // Rotation du cube pour amener chaque face (1-6) face à la caméra
 const FACE_ROTATION: Record<number, { x: number; y: number }> = {
-  1: { x: 0,    y: 0   },   // front
-  2: { x: -90,  y: 0   },   // bottom
-  3: { x: 0,    y: 90  },   // left  (+90 amène la face gauche vers caméra en CSS)
-  4: { x: 0,    y: -90 },   // right (-90 amène la face droite vers caméra en CSS)
-  5: { x: 90,   y: 0   },   // top
-  6: { x: 0,    y: 180 },   // back
+  1: { x: 0,    y: 0   },   // front  : translateZ → pointe +Z
+  2: { x: 90,   y: 0   },   // bottom : rotateX(-90) → pointe +Y → cube rotateX(+90) pour la ramener vers caméra
+  3: { x: 0,    y: 90  },   // left   : rotateY(-90) → pointe -X → cube rotateY(+90)
+  4: { x: 0,    y: -90 },   // right  : rotateY(+90) → pointe +X → cube rotateY(-90)
+  5: { x: -90,  y: 0   },   // top    : rotateX(+90) → pointe -Y → cube rotateX(-90)
+  6: { x: 0,    y: 180 },   // back   : rotateY(180) → pointe -Z
 }
 
-const COLOR_FACE_INDEX: Record<string, number> = { g: 1, y: 2, b: 3, p: 4, o: 5, x: 6 }
+// 'joker' → face 6 (face arrière = étoile)
+const COLOR_FACE_INDEX: Record<string, number> = { g: 1, y: 2, b: 3, p: 4, o: 5, x: 6, joker: 6 }
 
 // Correspondance position CSS → numéro de face (1-based)
 const FACE_POSITIONS = [
@@ -105,10 +110,12 @@ const isColorDie = computed(() => props.type === 'color' || props.type === 'c')
 const faceDefinitions = computed(() =>
   FACE_POSITIONS.map(({ cls, faceNum }) => {
     const idx = faceNum - 1
+    const colorKey = COLOR_LIST[idx] ?? 'x'
     return {
       cls,
-      colorHex: COLOR_HEX[COLOR_LIST[idx] ?? 'x'] ?? '#888',
+      colorHex: COLOR_HEX[colorKey] ?? '#888',
       pips: PIP_POSITIONS[faceNum] ?? [],
+      isJoker: faceNum === 6,
     }
   }),
 )
@@ -118,9 +125,12 @@ const faceDefinitions = computed(() =>
 const cubeRef = ref<HTMLElement | null>(null)
 
 function targetRotation() {
-  const faceNum = isColorDie.value
-    ? (COLOR_FACE_INDEX[props.value as string] ?? 1)
-    : Number(props.value)
+  const isJoker = props.value === 'joker'
+  const faceNum = isJoker
+    ? 6
+    : isColorDie.value
+      ? (COLOR_FACE_INDEX[props.value as string] ?? 1)
+      : Number(props.value)
   return FACE_ROTATION[faceNum] ?? { x: 0, y: 0 }
 }
 
@@ -200,6 +210,22 @@ watch(
 .die-face--left   { transform: rotateY(-90deg)  translateZ(40px); }
 .die-face--top    { transform: rotateX(90deg)   translateZ(40px); }
 .die-face--bottom { transform: rotateX(-90deg)  translateZ(40px); }
+
+/* Face joker */
+.face-joker-content {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.joker-star {
+  font-size: 30px;
+  line-height: 1;
+  color: #f5d742;
+  text-shadow: 0 0 10px rgba(245, 215, 66, 0.9), 0 0 20px rgba(245, 215, 66, 0.5);
+}
 
 /* Pastille couleur */
 .face-color-content {
