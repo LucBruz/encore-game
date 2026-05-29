@@ -65,26 +65,71 @@
       <!-- Board joueur -->
       <div v-if="viewedPlayer" class="board">
 
-        <!-- Topbar -->
-        <div class="board-topbar">
+        <!-- Gauche : infos, scores, bonus, jokers -->
+        <div class="board-left">
           <span class="board-player-name">{{ viewedPlayer.name }}</span>
-          <div class="board-topbar__right">
-            <div v-if="viewedPlayer.confirmedCombo" class="combo-badge">
-              <span
-                class="combo-badge__color"
-                :style="{ background: COLOR_MAP[viewedPlayer.confirmedCombo.color as ColorKey]?.hex }"
-              />
-              <span class="combo-badge__count">× {{ viewedPlayer.confirmedCombo.count }}</span>
-            </div>
-            <GameJokers
-              :total="store.grid.jokers"
-              :used="viewedPlayer.jokersUsed"
-              @use="isLocalPlayer && sync.dispatch('USE_JOKER', { playerId: viewedPlayer!.id })"
+
+          <!-- Combo en cours -->
+          <div v-if="viewedPlayer.confirmedCombo" class="combo-badge">
+            <span
+              class="combo-badge__color"
+              :style="{ background: COLOR_MAP[viewedPlayer.confirmedCombo.color as ColorKey]?.hex }"
             />
+            <span class="combo-badge__count">× {{ viewedPlayer.confirmedCombo.count }}</span>
+          </div>
+
+          <!-- Jokers -->
+          <GameJokers
+            :total="store.grid.jokers"
+            :used="viewedPlayer.jokersUsed"
+            @use="isLocalPlayer && sync.dispatch('USE_JOKER', { playerId: viewedPlayer!.id })"
+          />
+
+          <!-- Bonus couleurs -->
+          <div class="color-bonuses">
+            <div
+              v-for="(info, key) in COLOR_MAP"
+              :key="key"
+              class="color-chip"
+            >
+              <div class="color-chip__dot" :style="{ background: info.hex }" />
+              <span
+                class="color-chip__val color-chip__val--first"
+                :class="{ 'color-chip__val--crossed': viewedPlayer.colorBonus[key as ColorKey] !== null }"
+              >5</span>
+              <span class="color-chip__sep">/</span>
+              <span class="color-chip__val color-chip__val--others">3</span>
+            </div>
+          </div>
+
+          <!-- Score -->
+          <div class="score-panel">
+            <div class="score-row">
+              <span>Couleurs</span>
+              <span class="score-val">{{ colorBonusTotal }}</span>
+            </div>
+            <div class="score-row">
+              <span>Colonnes</span>
+              <span class="score-val">{{ columnTotal }}</span>
+            </div>
+            <div class="score-row">
+              <span>Jokers</span>
+              <span class="score-val">{{ store.grid.jokers - viewedPlayer.jokersUsed }}</span>
+            </div>
+            <div class="score-row">
+              <span>Étoiles</span>
+              <span class="score-val score-val--negative">
+                {{ store.gameOver ? `−${uncheckedStars * 2}` : '—' }}
+              </span>
+            </div>
+            <div class="score-total">
+              <span>TOTAL</span>
+              <span class="score-total__val">{{ store.scoreForPlayer(viewedPlayer.id) }}</span>
+            </div>
           </div>
         </div>
 
-        <!-- Grille -->
+        <!-- Droite : grille -->
         <div class="board-grid">
           <GameGrid
             :grid="store.grid"
@@ -100,49 +145,6 @@
             @confirm-placement="sync.dispatch('CONFIRM_PLACEMENT', { playerId: viewedPlayer!.id })"
             @cancel-placement="sync.dispatch('CANCEL_PLACEMENT', { playerId: viewedPlayer!.id })"
           />
-        </div>
-
-        <!-- Bonus couleurs -->
-        <div class="color-bonuses">
-          <div
-            v-for="(info, key) in COLOR_MAP"
-            :key="key"
-            class="color-chip"
-          >
-            <div class="color-chip__dot" :style="{ background: info.hex }" />
-            <span
-              class="color-chip__val color-chip__val--first"
-              :class="{ 'color-chip__val--crossed': viewedPlayer.colorBonus[key as ColorKey] !== null }"
-            >5</span>
-            <span class="color-chip__sep">/</span>
-            <span class="color-chip__val color-chip__val--others">3</span>
-          </div>
-        </div>
-
-        <!-- Score -->
-        <div class="score-panel">
-          <div class="score-row">
-            <span>BONUS couleurs</span>
-            <span class="score-val">{{ colorBonusTotal }}</span>
-          </div>
-          <div class="score-row">
-            <span>A→O colonnes</span>
-            <span class="score-val">{{ columnTotal }}</span>
-          </div>
-          <div class="score-row">
-            <span>! Jokers (+1)</span>
-            <span class="score-val">{{ store.grid.jokers - viewedPlayer.jokersUsed }}</span>
-          </div>
-          <div class="score-row">
-            <span>★ Étoiles (−2)</span>
-            <span class="score-val score-val--negative">
-              {{ store.gameOver ? `−${uncheckedStars * 2}` : '—' }}
-            </span>
-          </div>
-          <div class="score-total">
-            <span>TOTAL</span>
-            <span class="score-total__val">{{ store.scoreForPlayer(viewedPlayer.id) }}</span>
-          </div>
         </div>
 
       </div>
@@ -568,21 +570,20 @@ onUnmounted(async () => {
 .dice-section { @apply w-full; }
 
 .board {
-  @apply w-full flex flex-col gap-4 p-5 rounded-2xl;
+  @apply w-full flex flex-row gap-4 p-4 rounded-2xl;
   background: #1a1a24;
   border: 1px solid #2e2e3e;
+  align-items: flex-start;
 }
 
-.board-topbar {
-  @apply flex items-center justify-between flex-wrap gap-3;
-}
-
-.board-topbar__right {
-  @apply flex items-center gap-3;
+.board-left {
+  @apply flex flex-col gap-3;
+  width: 160px;
+  flex-shrink: 0;
 }
 
 .board-player-name {
-  @apply font-black text-lg;
+  @apply font-black text-base;
   color: #f5d742;
 }
 
@@ -595,12 +596,16 @@ onUnmounted(async () => {
 .combo-badge__color { @apply w-4 h-4 rounded-full inline-block; }
 .combo-badge__count { color: #e8e8f0; }
 
-.board-grid { @apply w-full overflow-x-auto; }
+.board-grid {
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+}
 
-.color-bonuses { @apply flex gap-2 flex-wrap; }
+.color-bonuses { @apply flex flex-col gap-1; }
 
 .color-chip {
-  @apply flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm;
+  @apply flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs;
   background: #23232f;
   border: 1px solid #2e2e3e;
 }
