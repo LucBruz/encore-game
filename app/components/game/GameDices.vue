@@ -312,7 +312,7 @@ function handlePass() {
   @apply w-full p-4 rounded-2xl flex flex-col gap-3;
   background: #1a1a24;
   border: 1px solid #2e2e3e;
-  min-height: 260px;
+  min-height: 210px;
   position: relative;
   overflow: hidden;
   contain: layout;
@@ -426,10 +426,10 @@ function handlePass() {
 /* ─── Rangées de dés ─────────────────────────────────────────────────────────── */
 .dices-row {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   flex-wrap: nowrap;
   overflow: visible;
-  height: 80px;
+  height: 64px;
   align-items: center;
 }
 

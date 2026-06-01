@@ -114,7 +114,7 @@ function handleCellClick(idx: number) {
 <style scoped>
 .game-grid {
   @apply w-full flex flex-col gap-2;
-  max-width: 660px;
+  max-width: 750px;
 }
 
 .game-grid--readonly :deep(.game-cell) {

@@ -168,9 +168,9 @@ watch(
 <style scoped>
 .die-scene {
   position: relative;
-  width: 80px;
-  height: 80px;
-  perspective: 600px;
+  width: 64px;
+  height: 64px;
+  perspective: 480px;
   cursor: default;
   transition: transform 0.15s ease;
   user-select: none;
@@ -182,8 +182,8 @@ watch(
 .die-scene.selected { transform: translateY(-5px); }
 
 .die-cube {
-  width: 80px;
-  height: 80px;
+  width: 64px;
+  height: 64px;
   position: relative;
   transform-style: preserve-3d;
 }
@@ -204,12 +204,12 @@ watch(
   -webkit-backface-visibility: hidden;
 }
 
-.die-face--front  { transform: translateZ(40px); }
-.die-face--back   { transform: rotateY(180deg)  translateZ(40px); }
-.die-face--right  { transform: rotateY(90deg)   translateZ(40px); }
-.die-face--left   { transform: rotateY(-90deg)  translateZ(40px); }
-.die-face--top    { transform: rotateX(90deg)   translateZ(40px); }
-.die-face--bottom { transform: rotateX(-90deg)  translateZ(40px); }
+.die-face--front  { transform: translateZ(32px); }
+.die-face--back   { transform: rotateY(180deg)  translateZ(32px); }
+.die-face--right  { transform: rotateY(90deg)   translateZ(32px); }
+.die-face--left   { transform: rotateY(-90deg)  translateZ(32px); }
+.die-face--top    { transform: rotateX(90deg)   translateZ(32px); }
+.die-face--bottom { transform: rotateX(-90deg)  translateZ(32px); }
 
 /* Face joker */
 .face-joker-content {
@@ -221,7 +221,7 @@ watch(
 }
 
 .joker-star {
-  font-size: 30px;
+  font-size: 22px;
   line-height: 1;
   color: #f5d742;
   text-shadow: 0 0 10px rgba(245, 215, 66, 0.9), 0 0 20px rgba(245, 215, 66, 0.5);
@@ -237,8 +237,8 @@ watch(
 }
 
 .color-dot {
-  width: 48px;
-  height: 48px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   flex-shrink: 0;
 }
@@ -248,10 +248,10 @@ watch(
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   grid-template-rows: repeat(3, 1fr);
-  gap: 5px;
-  width: 54px;
-  height: 54px;
-  padding: 6px;
+  gap: 4px;
+  width: 44px;
+  height: 44px;
+  padding: 5px;
   box-sizing: border-box;
 }
 
@@ -271,11 +271,11 @@ watch(
 /* Ombre portée sous le dé */
 .die-shadow {
   position: absolute;
-  bottom: -18px;
+  bottom: -14px;
   left: 50%;
   transform: translateX(-50%);
-  width: 64px;
-  height: 14px;
+  width: 52px;
+  height: 12px;
   background: radial-gradient(ellipse, rgba(0, 0, 0, 0.5), transparent 70%);
   pointer-events: none;
 }
