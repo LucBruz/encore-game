@@ -421,6 +421,8 @@ function handlePass() {
   flex-direction: row;
   gap: 8px;
   align-items: flex-start;
+  height: 136px; /* 2 × 64px dés + 8px gap — fixe pour éviter tout décalage */
+  overflow: visible;
 }
 
 .joker-sidebar {
