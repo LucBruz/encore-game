@@ -28,7 +28,13 @@
 
       <!-- Droite : joueur actif + timer + dot -->
       <div class="header-right">
-        <div v-if="activePlayer" class="active-phase-info">
+        <!-- Badge vert si on est le joueur actif -->
+        <span
+          v-if="isLocalActivePlayer && store.phase === 'active_selecting'"
+          class="badge-active-player"
+        >🎲 Joueur actif</span>
+        <!-- Nom + action de l'autre joueur actif -->
+        <div v-else-if="activePlayer && !isLocalActivePlayer" class="active-phase-info">
           <span class="active-phase-info__name">{{ activePlayer.name }}</span>
           <span v-if="activePhaseInfo" class="active-phase-info__label">{{ activePhaseInfo }}</span>
         </div>
@@ -209,6 +215,7 @@ const viewedPlayer = computed(() =>
 )
 
 const isLocalPlayer = computed(() => currentViewPlayer.value === sync.localPlayerId.value)
+const isLocalActivePlayer = computed(() => sync.localPlayerId.value === store.activePlayerId)
 
 const activePlayer = computed(() =>
   store.players.find(p => p.id === store.activePlayerId)
@@ -499,6 +506,14 @@ onUnmounted(async () => {
 
 .header-right {
   @apply flex items-center gap-3;
+}
+
+.badge-active-player {
+  @apply text-xs font-bold px-3 py-1 rounded-full;
+  background: rgba(92, 201, 110, 0.15);
+  color: #5cc96e;
+  border: 1px solid rgba(92, 201, 110, 0.3);
+  white-space: nowrap;
 }
 
 .active-phase-info {
