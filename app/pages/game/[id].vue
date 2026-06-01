@@ -78,7 +78,6 @@
           <GameJokers
             :total="store.grid.jokers"
             :used="viewedPlayer.jokersUsed"
-            @use="isLocalPlayer && sync.dispatch('USE_JOKER', { playerId: viewedPlayer!.id })"
           />
 
           <div class="color-bonuses">
