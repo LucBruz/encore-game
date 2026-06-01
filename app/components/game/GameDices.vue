@@ -1,7 +1,4 @@
 <template>
-  <!-- Message d'attente EN DEHORS du panneau -->
-  <p v-if="waitingMessage" class="dice-wait-text">{{ waitingMessage }}</p>
-
   <div class="dices-panel" :class="{ 'dices-panel--readonly': readonly }">
 
     <!-- Phase : en attente du lancer -->
@@ -156,10 +153,6 @@ const jokerCount = ref<number | null>(null)
 
 const isActivePlayer = computed(() => store.activePlayerId === props.playerId)
 
-const activePlayerName = computed(() =>
-  store.players.find(p => p.id === store.activePlayerId)?.name ?? ''
-)
-
 const currentPlayer = computed(() =>
   store.players.find(p => p.id === props.playerId)
 )
@@ -213,15 +206,6 @@ const selectedColorIsJoker = computed(() =>
 const selectedNumberIsJoker = computed(() =>
   selectedNumber.value !== null && numberDices.value[selectedNumber.value]?.value === 'joker'
 )
-
-// Message d'attente affiché HORS du panneau
-const waitingMessage = computed(() => {
-  if (store.phase === 'waiting_roll' && !isActivePlayer.value && !store.isFirstThreeTurns)
-    return `⏳ En attente du lancer de ${activePlayerName.value}...`
-  if (store.phase === 'active_selecting' && !isActivePlayer.value)
-    return `⏳ ${activePlayerName.value} choisit sa combinaison...`
-  return ''
-})
 
 // Grise les dés non sélectionnés après confirmation
 function dimmedColor(i: number): boolean {
@@ -299,15 +283,6 @@ function handlePass() {
 </script>
 
 <style scoped>
-/* ─── Message d'attente hors panneau ────────────────────────────────────────── */
-.dice-wait-text {
-  font-size: 12px;
-  color: #6e6e88;
-  text-align: center;
-  padding: 0 0 8px;
-  line-height: 1.4;
-}
-
 /* ─── Panneau principal ──────────────────────────────────────────────────────── */
 .dices-panel {
   @apply w-full p-4 rounded-2xl flex flex-col gap-3;
@@ -452,9 +427,9 @@ function handlePass() {
 .joker-sidebar {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 8px 6px;
-  border-radius: 12px;
+  gap: 6px;
+  padding: 5px 5px;
+  border-radius: 10px;
   background: rgba(232, 232, 240, 0.05);
   border: 1px solid rgba(232, 232, 240, 0.1);
   flex-shrink: 0;
@@ -478,7 +453,7 @@ function handlePass() {
 .joker-sidebar__colors {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
   align-items: center;
 }
 
@@ -497,7 +472,7 @@ function handlePass() {
 }
 
 .joker-picker__color {
-  @apply w-8 h-8 rounded-full cursor-pointer transition-all border-2;
+  @apply w-5 h-5 rounded-full cursor-pointer transition-all border-2;
   border-color: transparent;
 }
 
@@ -512,7 +487,7 @@ function handlePass() {
 }
 
 .joker-picker__number {
-  @apply w-10 h-10 rounded-xl font-black text-base cursor-pointer transition-all;
+  @apply w-6 h-6 rounded-lg font-black text-xs cursor-pointer transition-all;
   background: #23232f;
   border: 2px solid #3e3e52;
   color: #e8e8f0;

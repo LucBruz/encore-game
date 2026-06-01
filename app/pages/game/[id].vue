@@ -26,8 +26,12 @@
         </button>
       </div>
 
-      <!-- Droite : timer + badge tours 1-3 + dot -->
+      <!-- Droite : joueur actif + timer + dot -->
       <div class="header-right">
+        <div v-if="activePlayer && activePhaseInfo" class="active-phase-info">
+          <span class="active-phase-info__name">{{ activePlayer.name }}</span>
+          <span class="active-phase-info__label">{{ activePhaseInfo }}</span>
+        </div>
         <div class="timer-block">
           <div class="timer" :class="{ 'timer--urgent': timer.secondsLeft.value <= 10 }">
             <div
@@ -209,6 +213,12 @@ const isLocalPlayer = computed(() => currentViewPlayer.value === sync.localPlaye
 const activePlayer = computed(() =>
   store.players.find(p => p.id === store.activePlayerId)
 )
+
+const activePhaseInfo = computed(() => {
+  if (store.phase === 'waiting_roll') return 'lance les dés...'
+  if (store.phase === 'active_selecting') return 'fait sa sélection'
+  return null
+})
 
 const colorBonusTotal = computed(() => {
   if (!viewedPlayer.value) return 0
@@ -487,6 +497,27 @@ onUnmounted(async () => {
 
 .header-right {
   @apply flex items-center gap-3;
+}
+
+.active-phase-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+}
+
+.active-phase-info__name {
+  font-size: 12px;
+  font-weight: 900;
+  font-family: 'Space Mono', monospace;
+  color: #f5d742;
+  white-space: nowrap;
+}
+
+.active-phase-info__label {
+  font-size: 10px;
+  color: #6e6e88;
+  white-space: nowrap;
 }
 
 .timer-block {
