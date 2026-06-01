@@ -64,14 +64,15 @@
 
         <!-- Infos joueur : nom, combo, jokers, bonus, score -->
         <div v-if="viewedPlayer" class="board-info">
-          <span class="board-player-name">{{ viewedPlayer.name }}</span>
-
-          <div v-if="viewedPlayer.confirmedCombo" class="combo-badge">
-            <span
-              class="combo-badge__color"
-              :style="{ background: COLOR_MAP[viewedPlayer.confirmedCombo.color as ColorKey]?.hex }"
-            />
-            <span class="combo-badge__count">× {{ viewedPlayer.confirmedCombo.count }}</span>
+          <div class="board-info-top">
+            <span class="board-player-name">{{ viewedPlayer.name }}</span>
+            <div v-if="viewedPlayer.confirmedCombo" class="combo-badge">
+              <span
+                class="combo-badge__color"
+                :style="{ background: COLOR_MAP[viewedPlayer.confirmedCombo.color as ColorKey]?.hex }"
+              />
+              <span class="combo-badge__count">× {{ viewedPlayer.confirmedCombo.count }}</span>
+            </div>
           </div>
 
           <GameJokers
@@ -569,13 +570,17 @@ onUnmounted(async () => {
 }
 
 .board-info {
-  @apply flex flex-col gap-3 p-4 rounded-2xl;
+  @apply flex flex-col gap-2 p-3 rounded-2xl;
   background: #1a1a24;
   border: 1px solid #2e2e3e;
 }
 
+.board-info-top {
+  @apply flex items-center justify-between gap-2;
+}
+
 .board-player-name {
-  @apply font-black text-base;
+  @apply font-black text-sm;
   color: #f5d742;
 }
 
@@ -589,7 +594,11 @@ onUnmounted(async () => {
 .combo-badge__count { color: #e8e8f0; }
 
 
-.color-bonuses { @apply flex flex-col gap-1; }
+.color-bonuses {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
 
 .color-chip {
   @apply flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs;
@@ -605,12 +614,12 @@ onUnmounted(async () => {
 .color-chip__sep { color: #6e6e88; }
 
 .score-panel {
-  @apply flex flex-col gap-2 pt-3;
+  @apply flex flex-col gap-1 pt-2;
   border-top: 1px solid #2e2e3e;
 }
 
 .score-row {
-  @apply flex justify-between items-center text-sm pb-2;
+  @apply flex justify-between items-center text-xs pb-1;
   border-bottom: 1px solid #2e2e3e;
   color: #6e6e88;
 }
@@ -624,13 +633,13 @@ onUnmounted(async () => {
 .score-val--negative { color: #e85a82; }
 
 .score-total {
-  @apply flex justify-between items-center font-black text-lg;
+  @apply flex justify-between items-center font-black text-base;
 }
 
 .score-total__val {
   font-family: 'Space Mono', monospace;
   color: #f5d742;
-  @apply text-2xl;
+  @apply text-xl;
 }
 
 /* ── Controls ────────────────────────────────────────────────────────────────── */
