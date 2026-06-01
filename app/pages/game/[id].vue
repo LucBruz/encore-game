@@ -28,9 +28,9 @@
 
       <!-- Droite : joueur actif + timer + dot -->
       <div class="header-right">
-        <div v-if="activePlayer && activePhaseInfo" class="active-phase-info">
+        <div v-if="activePlayer" class="active-phase-info">
           <span class="active-phase-info__name">{{ activePlayer.name }}</span>
-          <span class="active-phase-info__label">{{ activePhaseInfo }}</span>
+          <span v-if="activePhaseInfo" class="active-phase-info__label">{{ activePhaseInfo }}</span>
         </div>
         <div class="timer-block">
           <div class="timer" :class="{ 'timer--urgent': timer.secondsLeft.value <= 10 }">
@@ -217,6 +217,8 @@ const activePlayer = computed(() =>
 const activePhaseInfo = computed(() => {
   if (store.phase === 'waiting_roll') return 'lance les dés...'
   if (store.phase === 'active_selecting') return 'fait sa sélection'
+  if (store.phase === 'passive_selecting') return 'a joué — à vous'
+  if (store.phase === 'turn_end') return 'tour suivant...'
   return null
 })
 
