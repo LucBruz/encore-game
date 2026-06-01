@@ -21,62 +21,67 @@
     <!-- Phase : dés lancés -->
     <div v-else-if="store.currentRoll" class="dices-panel__rolled">
 
-      <!-- Rangée couleur -->
-      <div class="dices-row">
-        <GameDice
-          v-for="(dice, i) in colorDices"
-          :key="`c-${i}`"
-          type="color"
-          :value="dice.value"
-          :selected="canSelect && selectedColor === i"
-          :selectable="canSelect"
-          :spinning="isSpinning"
-          :class="{ 'die--dimmed': dimmedColor(i) }"
-          @select="selectColor(i)"
-        />
-      </div>
-
-      <!-- Joker couleur -->
-      <div v-if="selectedColorIsJoker" class="joker-picker">
-        <span class="joker-picker__label">Couleur du joker :</span>
-        <div class="joker-picker__options">
-          <button
-            v-for="c in COLOR_KEYS"
-            :key="c"
-            class="joker-picker__color"
-            :class="{ 'joker-picker__color--selected': jokerColor === c }"
-            :style="{ background: COLOR_MAP[c].hex }"
-            @click="jokerColor = c"
-          />
+      <div class="dices-main">
+        <!-- Colonne gauche : joker pickers verticaux -->
+        <div v-if="selectedColorIsJoker || selectedNumberIsJoker" class="joker-sidebar">
+          <div v-if="selectedColorIsJoker" class="joker-sidebar__section">
+            <span class="joker-sidebar__label">Couleur</span>
+            <div class="joker-sidebar__colors">
+              <button
+                v-for="c in COLOR_KEYS"
+                :key="c"
+                class="joker-picker__color"
+                :class="{ 'joker-picker__color--selected': jokerColor === c }"
+                :style="{ background: COLOR_MAP[c].hex }"
+                @click="jokerColor = c"
+              />
+            </div>
+          </div>
+          <div v-if="selectedNumberIsJoker" class="joker-sidebar__section">
+            <span class="joker-sidebar__label">Valeur</span>
+            <div class="joker-sidebar__numbers">
+              <button
+                v-for="n in [1, 2, 3, 4, 5]"
+                :key="n"
+                class="joker-picker__number"
+                :class="{ 'joker-picker__number--selected': jokerCount === n }"
+                @click="jokerCount = n"
+              >{{ n }}</button>
+            </div>
+          </div>
         </div>
-      </div>
 
-      <!-- Rangée chiffre -->
-      <div class="dices-row">
-        <GameDice
-          v-for="(dice, i) in numberDices"
-          :key="`n-${i}`"
-          type="number"
-          :value="dice.value"
-          :selected="canSelect && selectedNumber === i"
-          :selectable="canSelect"
-          :spinning="isSpinning"
-          :class="{ 'die--dimmed': dimmedNumber(i) }"
-          @select="selectNumber(i)"
-        />
-      </div>
+        <!-- Colonne droite : dés -->
+        <div class="dices-column">
+          <!-- Rangée couleur -->
+          <div class="dices-row">
+            <GameDice
+              v-for="(dice, i) in colorDices"
+              :key="`c-${i}`"
+              type="color"
+              :value="dice.value"
+              :selected="canSelect && selectedColor === i"
+              :selectable="canSelect"
+              :spinning="isSpinning"
+              :style="dimmedColor(i) ? { opacity: '0.2', filter: 'grayscale(0.7)', pointerEvents: 'none', transition: 'opacity 0.3s, filter 0.3s' } : {}"
+              @select="selectColor(i)"
+            />
+          </div>
 
-      <!-- Joker nombre -->
-      <div v-if="selectedNumberIsJoker" class="joker-picker">
-        <span class="joker-picker__label">Valeur du joker :</span>
-        <div class="joker-picker__options">
-          <button
-            v-for="n in [1, 2, 3, 4, 5]"
-            :key="n"
-            class="joker-picker__number"
-            :class="{ 'joker-picker__number--selected': jokerCount === n }"
-            @click="jokerCount = n"
-          >{{ n }}</button>
+          <!-- Rangée chiffre -->
+          <div class="dices-row">
+            <GameDice
+              v-for="(dice, i) in numberDices"
+              :key="`n-${i}`"
+              type="number"
+              :value="dice.value"
+              :selected="canSelect && selectedNumber === i"
+              :selectable="canSelect"
+              :spinning="isSpinning"
+              :style="dimmedNumber(i) ? { opacity: '0.2', filter: 'grayscale(0.7)', pointerEvents: 'none', transition: 'opacity 0.3s, filter 0.3s' } : {}"
+              @select="selectNumber(i)"
+            />
+          </div>
         </div>
       </div>
 
@@ -94,10 +99,6 @@
           :disabled="readonly"
           @click="handlePass"
         >Passer</button>
-        <span
-          v-if="hasConfirmed && !currentPlayer?.hasPlaced"
-          class="placement-hint"
-        >👆 {{ currentPlayer?.confirmedCombo?.count }} case(s)</span>
         <button
           v-if="canSelect && comboIsReady"
           class="btn-confirm"
@@ -110,7 +111,6 @@
         <span v-if="store.phase === 'turn_end'" class="badge badge--done">✓ Tour suivant...</span>
         <span v-else-if="store.isFirstThreeTurns" class="badge badge--special">⚡ Tours 1–3</span>
         <span v-else-if="isActivePlayer && store.phase === 'active_selecting'" class="badge badge--active">Joueur actif</span>
-        <span v-else-if="store.phase === 'passive_selecting' && !hasConfirmed" class="badge badge--passive">À toi</span>
         <span v-else-if="hasConfirmed && !currentPlayer?.hasPlaced" class="badge badge--active">Place sur la grille</span>
         <span v-else-if="hasConfirmed && currentPlayer?.hasPlaced" class="badge badge--done">✓ En attente...</span>
       </div>
@@ -334,23 +334,9 @@ function handlePass() {
   flex: 1;
 }
 
-/* ─── Dés grisés (non sélectionnés après confirmation) ──────────────────────── */
-:deep(.die--dimmed) {
-  opacity: 0.2;
-  filter: grayscale(0.7);
-  pointer-events: none;
-  transition: opacity 0.3s, filter 0.3s;
-}
-
 /* ─── Actions (passer / confirmer) ──────────────────────────────────────────── */
 .dices-actions {
   @apply flex items-center gap-3 flex-wrap mt-1;
-}
-
-.placement-hint {
-  font-size: 12px;
-  color: #5b9ff5;
-  flex: 1;
 }
 
 .btn-pass {
@@ -454,20 +440,59 @@ function handlePass() {
   right: 12px;
 }
 
-/* Joker picker */
-.joker-picker {
-  @apply flex flex-col gap-2 p-3 rounded-xl;
+/* ─── Joker sidebar (vertical, à gauche des dés) ─────────────────────────────── */
+.dices-main {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.joker-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 6px;
+  border-radius: 12px;
   background: rgba(232, 232, 240, 0.05);
   border: 1px solid rgba(232, 232, 240, 0.1);
+  flex-shrink: 0;
 }
 
-.joker-picker__label {
-  @apply text-xs font-bold;
+.joker-sidebar__section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+}
+
+.joker-sidebar__label {
+  font-size: 9px;
+  font-weight: 700;
   color: #6e6e88;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
-.joker-picker__options {
-  @apply flex gap-2 flex-wrap;
+.joker-sidebar__colors {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+}
+
+.joker-sidebar__numbers {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  align-items: center;
+}
+
+.dices-column {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
 }
 
 .joker-picker__color {

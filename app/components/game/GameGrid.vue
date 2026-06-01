@@ -114,6 +114,7 @@ function handleCellClick(idx: number) {
 <style scoped>
 .game-grid {
   @apply w-full flex flex-col gap-2;
+  max-width: 660px;
 }
 
 .game-grid--readonly :deep(.game-cell) {
@@ -124,7 +125,8 @@ function handleCellClick(idx: number) {
 .grid-header {
   display: grid;
   grid-template-columns: repeat(15, 1fr);
-  @apply gap-1 mb-1;
+  gap: 3px;
+  @apply mb-1;
 }
 
 .col-label {
@@ -141,7 +143,7 @@ function handleCellClick(idx: number) {
 .grid-cells {
   display: grid;
   grid-template-columns: repeat(15, 1fr);
-  @apply gap-1;
+  gap: 3px;
 }
 
 .grid-footer { @apply mt-1; }
@@ -149,7 +151,7 @@ function handleCellClick(idx: number) {
 .points-row {
   display: grid;
   grid-template-columns: repeat(15, 1fr);
-  @apply gap-1;
+  gap: 3px;
 }
 
 .points-cell {

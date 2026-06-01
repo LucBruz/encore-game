@@ -3,45 +3,44 @@
 
     <!-- Header -->
     <header class="page-header">
-      <div>
-        <h1 class="page-title">ENCORE!</h1>
-        <p class="page-subtitle">
-          Tour {{ store.turnNumber + 1 }} · Joueur actif : <strong>{{ activePlayer?.name }}</strong>
-        </p>
+      <!-- Gauche : titre -->
+      <h1 class="page-title">ENCORE!</h1>
+
+      <!-- Centre : chips joueurs -->
+      <div class="header-players">
+        <button
+          v-for="player in store.players"
+          :key="player.id"
+          class="player-chip"
+          :class="{
+            'player-chip--active': currentViewPlayer === player.id,
+            'player-chip--is-active-player': store.activePlayerId === player.id,
+            'player-chip--local': player.id === sync.localPlayerId.value,
+          }"
+          @click="currentViewPlayer = player.id"
+        >
+          <span v-if="store.activePlayerId === player.id" class="player-chip__dice">🎲</span>
+          {{ player.name }}
+          <span v-if="player.id === sync.localPlayerId.value" class="player-chip__you">toi</span>
+          <span class="player-chip__score">{{ store.scoreForPlayer(player.id) }} pts</span>
+        </button>
       </div>
 
-      <!-- Indicateur connexion + timer -->
+      <!-- Droite : timer + badge tours 1-3 + dot -->
       <div class="header-right">
-        <div class="timer" :class="{ 'timer--urgent': timer.secondsLeft.value <= 10 }">
-          <div
-            class="timer__bar"
-            :style="{ width: `${(timer.secondsLeft.value / timer.totalDuration.value) * 100}%` }"
-          />
-          <span class="timer__label">{{ timer.secondsLeft.value }}s</span>
+        <div class="timer-block">
+          <div class="timer" :class="{ 'timer--urgent': timer.secondsLeft.value <= 10 }">
+            <div
+              class="timer__bar"
+              :style="{ width: `${(timer.secondsLeft.value / timer.totalDuration.value) * 100}%` }"
+            />
+            <span class="timer__label">{{ timer.secondsLeft.value }}s</span>
+          </div>
+          <span v-if="store.isFirstThreeTurns" class="badge-early-turns">⚡ Tours 1–3</span>
         </div>
         <div class="connection-dot" :class="sync.isReady.value ? 'connection-dot--online' : 'connection-dot--offline'" />
       </div>
     </header>
-
-    <!-- Player tabs -->
-    <div class="player-tabs">
-      <button
-        v-for="player in store.players"
-        :key="player.id"
-        class="player-tab"
-        :class="{
-          'player-tab--active': currentViewPlayer === player.id,
-          'player-tab--is-active-player': store.activePlayerId === player.id,
-          'player-tab--local': player.id === sync.localPlayerId.value,
-        }"
-        @click="currentViewPlayer = player.id"
-      >
-        <span v-if="store.activePlayerId === player.id" class="player-tab__crown">🎲</span>
-        {{ player.name }}
-        <span v-if="player.id === sync.localPlayerId.value" class="player-tab__you">toi</span>
-        <span class="player-tab__score">{{ store.scoreForPlayer(player.id) }} pts</span>
-      </button>
-    </div>
 
     <!-- Layout principal : gauche = dés + infos, droite = grille -->
     <div class="main-layout">
@@ -439,7 +438,7 @@ onUnmounted(async () => {
 
 <style scoped>
 .page {
-  @apply min-h-screen flex flex-col items-center gap-6 py-8 px-4;
+  @apply min-h-screen flex flex-col items-center gap-3 py-4 px-4;
   background: #0f0f13;
   color: #e8e8f0;
   font-family: 'Nunito', sans-serif;
@@ -448,7 +447,7 @@ onUnmounted(async () => {
 /* ── Header ──────────────────────────────────────────────────────────────────── */
 
 .page-header {
-  @apply w-full max-w-5xl flex items-start justify-between;
+  @apply w-full max-w-5xl flex items-center justify-between gap-4;
 }
 
 .page-title {
@@ -460,13 +459,45 @@ onUnmounted(async () => {
   background-clip: text;
 }
 
-.page-subtitle {
-  @apply text-sm mt-1;
+.header-players {
+  @apply flex items-center gap-2 flex-wrap justify-center flex-1;
+}
+
+.player-chip {
+  @apply flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer;
+  background: #1a1a24;
+  border: 1px solid #2e2e3e;
   color: #6e6e88;
+}
+.player-chip:hover { color: #e8e8f0; }
+.player-chip--active { border-color: #f5d742; color: #f5d742; }
+.player-chip--is-active-player { border-color: #5cc96e; }
+.player-chip--active.player-chip--is-active-player { border-color: #f5d742; }
+.player-chip__dice { @apply text-sm; }
+.player-chip__you {
+  @apply text-xs px-1 py-0.5 rounded-full font-normal;
+  background: rgba(245, 215, 66, 0.15);
+  color: #f5d742;
+}
+.player-chip__score {
+  @apply text-xs px-1.5 py-0.5 rounded-full;
+  background: #23232f;
+  color: #e8e8f0;
 }
 
 .header-right {
-  @apply flex items-center gap-3 mt-2;
+  @apply flex items-center gap-3;
+}
+
+.timer-block {
+  @apply flex flex-col items-center gap-1;
+}
+
+.badge-early-turns {
+  @apply text-xs font-bold px-2 py-0.5 rounded-full;
+  background: rgba(245, 215, 66, 0.15);
+  color: #f5d742;
+  border: 1px solid rgba(245, 215, 66, 0.3);
 }
 
 /* ── Timer ───────────────────────────────────────────────────────────────────── */
@@ -510,35 +541,6 @@ onUnmounted(async () => {
 @keyframes pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.3; }
-}
-
-/* ── Player tabs ─────────────────────────────────────────────────────────────── */
-
-.player-tabs { @apply flex gap-2 flex-wrap justify-center; }
-
-.player-tab {
-  @apply flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all cursor-pointer;
-  background: #1a1a24;
-  border: 1px solid #2e2e3e;
-  color: #6e6e88;
-}
-
-.player-tab:hover { color: #e8e8f0; }
-.player-tab--active { border-color: #f5d742; color: #f5d742; }
-.player-tab--is-active-player { border-color: #5cc96e; }
-.player-tab--active.player-tab--is-active-player { border-color: #f5d742; }
-.player-tab__crown { @apply text-base; }
-
-.player-tab__you {
-  @apply text-xs px-1.5 py-0.5 rounded-full font-normal;
-  background: rgba(245, 215, 66, 0.15);
-  color: #f5d742;
-}
-
-.player-tab__score {
-  @apply text-xs px-2 py-0.5 rounded-full;
-  background: #23232f;
-  color: #e8e8f0;
 }
 
 /* ── Layout ──────────────────────────────────────────────────────────────────── */
