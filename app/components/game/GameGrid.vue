@@ -178,7 +178,15 @@ function handleCellClick(idx: number) {
 
 .points-cell--won-others {
   position: relative;
-  opacity: 0.4;
+  color: #e85a82;
+  box-shadow: 0 0 0 2px #e85a82;
+  border-radius: 3px;
+  opacity: 0.65;
+  animation: cell-circle-red 0.35s ease-out;
+}
+@keyframes cell-circle-red {
+  from { box-shadow: 0 0 0 0px #e85a82; opacity: 0.3; }
+  to   { box-shadow: 0 0 0 2px #e85a82; opacity: 0.65; }
 }
 .points-cell--won-others::before,
 .points-cell--won-others::after {
@@ -188,14 +196,14 @@ function handleCellClick(idx: number) {
   left: 50%;
   width: 14px;
   height: 1.5px;
-  background: currentColor;
+  background: #e85a82;
   pointer-events: none;
 }
 .points-cell--won-others::before {
-  animation: grid-cross-bar-1 0.2s ease-out forwards;
+  animation: grid-cross-bar-1 0.2s ease-out 0.15s both;
 }
 .points-cell--won-others::after {
-  animation: grid-cross-bar-2 0.2s ease-out 0.08s both;
+  animation: grid-cross-bar-2 0.2s ease-out 0.25s both;
 }
 @keyframes grid-cross-bar-1 {
   from { transform: translate(-50%, -50%) rotate(45deg) scaleX(0); }

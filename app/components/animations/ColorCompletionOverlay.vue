@@ -42,7 +42,7 @@ onMounted(async () => {
 
 <style scoped>
 .color-completion-overlay {
-  position: absolute;
+  position: fixed;
   inset: 0;
   background: rgba(15, 15, 19, 0.7);
   display: flex;

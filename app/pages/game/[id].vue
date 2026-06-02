@@ -95,7 +95,10 @@
               <div class="color-chip__dot" :style="{ background: info.hex }" />
               <span
                 class="color-chip__val color-chip__val--first"
-                :class="{ 'color-chip__val--crossed': viewedPlayer.colorBonus[key as ColorKey] !== null }"
+                :class="{
+                  'color-chip__val--done-first': viewedPlayer.colorBonus[key as ColorKey] === 'first',
+                  'color-chip__val--done-others': viewedPlayer.colorBonus[key as ColorKey] === 'others'
+                }"
               >5</span>
               <span class="color-chip__sep">/</span>
               <span class="color-chip__val color-chip__val--others">3</span>
@@ -658,32 +661,51 @@ onUnmounted(async () => {
 .color-chip__val { @apply font-black; font-family: 'Space Mono', monospace; }
 .color-chip__val--first { color: #5cc96e; }
 .color-chip__val--others { color: #6e6e88; }
-.color-chip__val--crossed {
-  @apply opacity-40;
+.color-chip__val--done-first {
   position: relative;
+  box-shadow: 0 0 0 2px #5cc96e;
+  border-radius: 3px;
+  animation: chip-circle-green 0.35s ease-out;
 }
-.color-chip__val--crossed::before,
-.color-chip__val--crossed::after {
+@keyframes chip-circle-green {
+  from { box-shadow: 0 0 0 0px #5cc96e; opacity: 0.4; }
+  to   { box-shadow: 0 0 0 2px #5cc96e; opacity: 1; }
+}
+
+.color-chip__val--done-others {
+  position: relative;
+  color: #e85a82;
+  box-shadow: 0 0 0 2px #e85a82;
+  border-radius: 3px;
+  opacity: 0.65;
+  animation: chip-circle-red 0.35s ease-out;
+}
+@keyframes chip-circle-red {
+  from { box-shadow: 0 0 0 0px #e85a82; opacity: 0.3; }
+  to   { box-shadow: 0 0 0 2px #e85a82; opacity: 0.65; }
+}
+.color-chip__val--done-others::before,
+.color-chip__val--done-others::after {
   content: '';
   position: absolute;
   top: 50%;
   left: 50%;
   width: 12px;
   height: 1.5px;
-  background: currentColor;
+  background: #e85a82;
   pointer-events: none;
 }
-.color-chip__val--crossed::before {
-  animation: cross-bar-1 0.2s ease-out forwards;
+.color-chip__val--done-others::before {
+  animation: chip-cross-1 0.2s ease-out 0.15s both;
 }
-.color-chip__val--crossed::after {
-  animation: cross-bar-2 0.2s ease-out 0.08s both;
+.color-chip__val--done-others::after {
+  animation: chip-cross-2 0.2s ease-out 0.25s both;
 }
-@keyframes cross-bar-1 {
+@keyframes chip-cross-1 {
   from { transform: translate(-50%, -50%) rotate(45deg) scaleX(0); }
   to   { transform: translate(-50%, -50%) rotate(45deg) scaleX(1); }
 }
-@keyframes cross-bar-2 {
+@keyframes chip-cross-2 {
   from { transform: translate(-50%, -50%) rotate(-45deg) scaleX(0); }
   to   { transform: translate(-50%, -50%) rotate(-45deg) scaleX(1); }
 }
