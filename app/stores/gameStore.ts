@@ -116,7 +116,7 @@ export const useGameStore = defineStore('game', {
         currentPlayerIndex: 0,
         turnNumber: 0,
         gameOver: false,
-        lastColorCompleted: null as { playerId: string; color: ColorKey } | null,
+        completionQueue: [] as { playerId: string; color: ColorKey }[],
         activePlayerId: 'p1',
         gameId: null as string | null,
 
@@ -133,6 +133,9 @@ export const useGameStore = defineStore('game', {
         currentPlayer: (state): PlayerState => state.players[state.currentPlayerIndex],
 
         isFirstThreeTurns: (state) => state.turnNumber < 3,
+
+        lastColorCompleted: (state): { playerId: string; color: ColorKey } | null =>
+            state.completionQueue[0] ?? null,
 
         passivePlayers: (state): PlayerState[] =>
             state.players.filter(p => p.id !== state.activePlayerId),
@@ -257,6 +260,7 @@ export const useGameStore = defineStore('game', {
             this.activeSelection = null
             this.passiveSelections = {}
             this.placementError = null
+            this.completionQueue = []
         },
 
         initGrid(gridId: string) {
@@ -531,7 +535,7 @@ export const useGameStore = defineStore('game', {
                         p => p.id !== player.id && p.colorBonus[c] !== null
                     )
                     player.colorBonus[c] = otherCompleted ? 'others' : 'first'
-                    this.lastColorCompleted = { playerId: player.id, color: c }
+                    this.completionQueue.push({ playerId: player.id, color: c })
                 }
             })
         },
@@ -581,8 +585,8 @@ export const useGameStore = defineStore('game', {
             this.placementError = null
         },
 
-        clearLastColorCompleted() {
-            this.lastColorCompleted = null
+        popCompletionQueue() {
+            this.completionQueue.shift()
         },
 
         resetGame() {
@@ -596,6 +600,7 @@ export const useGameStore = defineStore('game', {
             this.activeSelection = null
             this.passiveSelections = {}
             this.placementError = null
+            this.completionQueue = []
         },
     },
 })

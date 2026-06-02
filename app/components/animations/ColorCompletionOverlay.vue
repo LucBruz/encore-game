@@ -32,19 +32,16 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   gap: 16px;
-  z-index: 200;
+  z-index: 9999;
   pointer-events: none;
-  animation: overlay-in 0.3s ease-out forwards, overlay-out 0.3s ease-in 3.2s forwards;
+  animation: overlay-lifecycle 3.5s ease-in-out forwards;
 }
 
-@keyframes overlay-in {
-  from { opacity: 0; }
-  to   { opacity: 1; }
-}
-
-@keyframes overlay-out {
-  from { opacity: 1; }
-  to   { opacity: 0; }
+@keyframes overlay-lifecycle {
+  0%   { opacity: 0; }
+  9%   { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { opacity: 0; }
 }
 
 .completion-ribbon {

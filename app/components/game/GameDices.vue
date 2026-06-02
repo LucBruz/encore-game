@@ -19,7 +19,23 @@
     <div v-else-if="store.currentRoll" class="dices-panel__rolled">
 
       <div class="dices-main">
-        <!-- Colonne droite des dés -->
+
+        <!-- Sidebar gauche : joker couleur -->
+        <div v-if="selectedColorIsJoker" class="joker-sidebar">
+          <span class="joker-sidebar__label">Couleur</span>
+          <div class="joker-sidebar__colors">
+            <button
+              v-for="c in COLOR_KEYS"
+              :key="c"
+              class="joker-picker__color"
+              :class="{ 'joker-picker__color--selected': jokerColor === c }"
+              :style="{ background: COLOR_MAP[c].hex }"
+              @click="jokerColor = c"
+            />
+          </div>
+        </div>
+
+        <!-- Colonne dés -->
         <div class="dices-column">
           <!-- Rangée couleur -->
           <div class="dices-row">
@@ -52,32 +68,17 @@
           </div>
         </div>
 
-        <!-- Colonne droite : joker pickers verticaux -->
-        <div v-if="selectedColorIsJoker || selectedNumberIsJoker" class="joker-sidebar">
-          <div v-if="selectedColorIsJoker" class="joker-sidebar__section">
-            <span class="joker-sidebar__label">Couleur</span>
-            <div class="joker-sidebar__colors">
-              <button
-                v-for="c in COLOR_KEYS"
-                :key="c"
-                class="joker-picker__color"
-                :class="{ 'joker-picker__color--selected': jokerColor === c }"
-                :style="{ background: COLOR_MAP[c].hex }"
-                @click="jokerColor = c"
-              />
-            </div>
-          </div>
-          <div v-if="selectedNumberIsJoker" class="joker-sidebar__section">
-            <span class="joker-sidebar__label">Valeur</span>
-            <div class="joker-sidebar__numbers">
-              <button
-                v-for="n in [1, 2, 3, 4, 5]"
-                :key="n"
-                class="joker-picker__number"
-                :class="{ 'joker-picker__number--selected': jokerCount === n }"
-                @click="jokerCount = n"
-              >{{ n }}</button>
-            </div>
+        <!-- Sidebar droite : joker chiffre -->
+        <div v-if="selectedNumberIsJoker" class="joker-sidebar">
+          <span class="joker-sidebar__label">Valeur</span>
+          <div class="joker-sidebar__numbers">
+            <button
+              v-for="n in [1, 2, 3, 4, 5]"
+              :key="n"
+              class="joker-picker__number"
+              :class="{ 'joker-picker__number--selected': jokerCount === n }"
+              @click="jokerCount = n"
+            >{{ n }}</button>
           </div>
         </div>
 

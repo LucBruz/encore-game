@@ -174,12 +174,14 @@
     />
 
     <!-- Color completion -->
-    <ColorCompletionOverlay
-      v-if="store.lastColorCompleted"
-      :color="store.lastColorCompleted.color"
-      :player-name="completedPlayerName"
-      @done="store.clearLastColorCompleted()"
-    />
+    <Teleport to="body">
+      <ColorCompletionOverlay
+        v-if="store.lastColorCompleted"
+        :color="store.lastColorCompleted.color"
+        :player-name="completedPlayerName"
+        @done="store.popCompletionQueue()"
+      />
+    </Teleport>
 
     <!-- End game -->
     <EndGameOverlay
@@ -661,12 +663,15 @@ onUnmounted(async () => {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 4px;
+  padding-bottom: 4px;
+  overflow: visible;
 }
 
 .color-chip {
   @apply flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs;
   background: #23232f;
   border: 1px solid #2e2e3e;
+  overflow: visible;
 }
 
 .color-chip__dot { @apply w-3 h-3 rounded-full; }
