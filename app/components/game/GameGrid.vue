@@ -105,8 +105,8 @@ const emit = defineEmits<{
 
 function handleCellClick(idx: number) {
   if (props.readonly) return
-  // Ignorer les cases déjà cochées définitivement
   if (props.checkedCells.has(idx)) return
+  if (props.isBlockedMode && !props.validCells.has(idx) && !props.pendingCells.includes(idx)) return
   emit('cell-click', idx)
 }
 </script>

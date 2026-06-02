@@ -31,7 +31,7 @@
               :selected="canSelect && selectedColor === i"
               :selectable="canSelect"
               :spinning="isSpinning"
-              :style="dimmedColor(i) ? { opacity: '0.3', pointerEvents: 'none', transition: 'opacity 0.2s' } : {}"
+              :style="colorDiceStyle(i)"
               @select="selectColor(i)"
             />
           </div>
@@ -46,7 +46,7 @@
               :selected="canSelect && selectedNumber === i"
               :selectable="canSelect"
               :spinning="isSpinning"
-              :style="dimmedNumber(i) ? { opacity: '0.3', pointerEvents: 'none', transition: 'opacity 0.2s' } : {}"
+              :style="numberDiceStyle(i)"
               @select="selectNumber(i)"
             />
           </div>
@@ -221,6 +221,24 @@ function dimmedColor(i: number): boolean {
 function dimmedNumber(i: number): boolean {
   if (selectedNumber.value === null) return false
   return selectedNumber.value !== i
+}
+
+function colorDiceStyle(i: number) {
+  if (!dimmedColor(i)) return {}
+  return {
+    opacity: '0.3',
+    transition: 'opacity 0.2s',
+    ...(hasConfirmed.value ? { pointerEvents: 'none' as const } : {})
+  }
+}
+
+function numberDiceStyle(i: number) {
+  if (!dimmedNumber(i)) return {}
+  return {
+    opacity: '0.3',
+    transition: 'opacity 0.2s',
+    ...(hasConfirmed.value ? { pointerEvents: 'none' as const } : {})
+  }
 }
 
 // La combo est prête à être confirmée (jokers résolus si nécessaire)
