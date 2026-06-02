@@ -107,7 +107,6 @@
       <!-- Badge phase bas-droite -->
       <div class="dices-badge">
         <span v-if="store.phase === 'turn_end'" class="badge badge--done">✓ Tour suivant...</span>
-        <span v-else-if="store.isFirstThreeTurns" class="badge badge--special">⚡ Tours 1–3</span>
         <span v-else-if="hasConfirmed && !currentPlayer?.hasPlaced" class="badge badge--active">Place sur la grille</span>
         <span v-else-if="hasConfirmed && currentPlayer?.hasPlaced" class="badge badge--done">✓ En attente...</span>
       </div>

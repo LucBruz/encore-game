@@ -163,34 +163,29 @@ function findContiguousCombos(
     startIdx: number,
     count: number,
     available: number[],
-    block: Set<number>
+    _block: Set<number>
 ): number[][] {
     if (count === 1) return [[startIdx]]
 
-    const availableSet = new Set(available)
+    const others = available.filter(c => c !== startIdx)
     const results: number[][] = []
+    const needed = count - 1
 
-    function dfs(current: number[], lastAdded: number) {
-        if (current.length === count) {
-            results.push([...current])
+    function pick(chosen: number[], startPos: number) {
+        if (chosen.length === needed) {
+            const subset = [startIdx, ...chosen]
+            if (areCellsContiguous(subset)) results.push(subset)
             return
         }
-
-        const neighbors = getNeighbors(lastAdded).filter(
-            n => block.has(n) && availableSet.has(n) && !current.includes(n)
-        )
-
-        neighbors.forEach(n => {
-            current.push(n)
-            dfs(current, n)
-            current.pop()
-        })
+        const remaining = needed - chosen.length
+        for (let i = startPos; i <= others.length - remaining; i++) {
+            chosen.push(others[i])
+            pick(chosen, i + 1)
+            chosen.pop()
+        }
     }
 
-    if (availableSet.has(startIdx)) {
-        dfs([startIdx], startIdx)
-    }
-
+    pick([], 0)
     return results
 }
 
