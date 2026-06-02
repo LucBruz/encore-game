@@ -39,8 +39,7 @@
           :class="{
             'points-cell--start': i === 7,
             'points-cell--won-first': columnBonus[col] === 'first',
-            'points-cell--won-others': columnBonus[col] === 'others',
-            'points-cell--taken': columnBonus[col] === null && columnsTaken?.has(col)
+            'points-cell--taken': columnBonus[col] === 'others' || (columnBonus[col] === null && columnsTaken?.has(col))
           }"
         >
           {{ COLUMN_POINTS[col].first }}
@@ -51,7 +50,10 @@
           v-for="(col, i) in COLS"
           :key="`o-${col}`"
           class="points-cell points-cell--others"
-          :class="{ 'points-cell--start': i === 7 }"
+          :class="{
+            'points-cell--start': i === 7,
+            'points-cell--won-second': columnBonus[col] === 'others'
+          }"
         >
           {{ COLUMN_POINTS[col].others }}
         </div>
@@ -166,14 +168,46 @@ function handleCellClick(idx: number) {
 .points-cell--others { color: #6e6e88; }
 .points-cell--start { color: #f5d742; }
 
+/* Colonne prise par un autre (première ligne — points inaccessibles) */
 .points-cell--taken {
+  position: relative;
   color: #e85a82;
   box-shadow: 0 0 0 2px #e85a82;
   border-radius: 3px;
-  opacity: 0.5;
+  opacity: 0.65;
   animation: cell-circle-red 0.35s ease-out;
 }
+@keyframes cell-circle-red {
+  from { box-shadow: 0 0 0 0px #e85a82; opacity: 0.3; }
+  to   { box-shadow: 0 0 0 2px #e85a82; opacity: 0.65; }
+}
+.points-cell--taken::before,
+.points-cell--taken::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 14px;
+  height: 1.5px;
+  background: #e85a82;
+  pointer-events: none;
+}
+.points-cell--taken::before {
+  animation: grid-cross-bar-1 0.2s ease-out 0.15s both;
+}
+.points-cell--taken::after {
+  animation: grid-cross-bar-2 0.2s ease-out 0.25s both;
+}
+@keyframes grid-cross-bar-1 {
+  from { transform: translate(-50%, -50%) rotate(45deg) scaleX(0); }
+  to   { transform: translate(-50%, -50%) rotate(45deg) scaleX(1); }
+}
+@keyframes grid-cross-bar-2 {
+  from { transform: translate(-50%, -50%) rotate(-45deg) scaleX(0); }
+  to   { transform: translate(-50%, -50%) rotate(-45deg) scaleX(1); }
+}
 
+/* Joueur a fini la colonne en second — deuxième ligne entourée en vert */
 .points-cell--won-first {
   position: relative;
   box-shadow: 0 0 0 2px #5cc96e;
@@ -186,42 +220,11 @@ function handleCellClick(idx: number) {
   to   { box-shadow: 0 0 0 2px #5cc96e; opacity: 1; }
 }
 
-.points-cell--won-others {
-  position: relative;
-  color: #e85a82;
-  box-shadow: 0 0 0 2px #e85a82;
+.points-cell--won-second {
+  box-shadow: 0 0 0 2px #5cc96e;
   border-radius: 3px;
-  opacity: 0.65;
-  animation: cell-circle-red 0.35s ease-out;
-}
-@keyframes cell-circle-red {
-  from { box-shadow: 0 0 0 0px #e85a82; opacity: 0.3; }
-  to   { box-shadow: 0 0 0 2px #e85a82; opacity: 0.65; }
-}
-.points-cell--won-others::before,
-.points-cell--won-others::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 14px;
-  height: 1.5px;
-  background: #e85a82;
-  pointer-events: none;
-}
-.points-cell--won-others::before {
-  animation: grid-cross-bar-1 0.2s ease-out 0.15s both;
-}
-.points-cell--won-others::after {
-  animation: grid-cross-bar-2 0.2s ease-out 0.25s both;
-}
-@keyframes grid-cross-bar-1 {
-  from { transform: translate(-50%, -50%) rotate(45deg) scaleX(0); }
-  to   { transform: translate(-50%, -50%) rotate(45deg) scaleX(1); }
-}
-@keyframes grid-cross-bar-2 {
-  from { transform: translate(-50%, -50%) rotate(-45deg) scaleX(0); }
-  to   { transform: translate(-50%, -50%) rotate(-45deg) scaleX(1); }
+  color: #5cc96e;
+  animation: cell-circled 0.35s ease-out;
 }
 
 .placement-error {
