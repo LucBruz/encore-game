@@ -281,6 +281,7 @@ export const useGameStore = defineStore('game', {
          */
         rollDicesWithResult(roll: DicesRoll) {
             if (this.phase !== 'waiting_roll') return
+            if (this.gameOver) return
             this.currentRoll = roll
             // Tours 1–3 : tout le monde choisit en même temps → pas de phase active_selecting
             this.phase = this.turnNumber < 3 ? 'passive_selecting' : 'active_selecting'
@@ -559,6 +560,7 @@ export const useGameStore = defineStore('game', {
 
         nextTurn() {
             if (this.phase !== 'turn_end') return
+            if (this.gameOver) return
 
             // Sécurité : flush les pending non confirmées
             this.players.forEach(p => {
