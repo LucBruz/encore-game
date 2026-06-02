@@ -38,7 +38,8 @@
           class="points-cell"
           :class="{
             'points-cell--start': i === 7,
-            'points-cell--crossed': columnBonus[col] !== null
+            'points-cell--won-first': columnBonus[col] === 'first',
+            'points-cell--won-others': columnBonus[col] === 'others'
           }"
         >
           {{ COLUMN_POINTS[col].first }}
@@ -162,7 +163,48 @@ function handleCellClick(idx: number) {
 
 .points-cell--others { color: #6e6e88; }
 .points-cell--start { color: #f5d742; }
-.points-cell--crossed { @apply line-through opacity-40; }
+
+.points-cell--won-first {
+  position: relative;
+  box-shadow: 0 0 0 2px #5cc96e;
+  border-radius: 3px;
+  color: #5cc96e;
+  animation: cell-circled 0.35s ease-out;
+}
+@keyframes cell-circled {
+  from { box-shadow: 0 0 0 0px #5cc96e; opacity: 0.4; }
+  to   { box-shadow: 0 0 0 2px #5cc96e; opacity: 1; }
+}
+
+.points-cell--won-others {
+  position: relative;
+  opacity: 0.4;
+}
+.points-cell--won-others::before,
+.points-cell--won-others::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 14px;
+  height: 1.5px;
+  background: currentColor;
+  pointer-events: none;
+}
+.points-cell--won-others::before {
+  animation: grid-cross-bar-1 0.2s ease-out forwards;
+}
+.points-cell--won-others::after {
+  animation: grid-cross-bar-2 0.2s ease-out 0.08s both;
+}
+@keyframes grid-cross-bar-1 {
+  from { transform: translate(-50%, -50%) rotate(45deg) scaleX(0); }
+  to   { transform: translate(-50%, -50%) rotate(45deg) scaleX(1); }
+}
+@keyframes grid-cross-bar-2 {
+  from { transform: translate(-50%, -50%) rotate(-45deg) scaleX(0); }
+  to   { transform: translate(-50%, -50%) rotate(-45deg) scaleX(1); }
+}
 
 .placement-error {
   @apply text-xs px-3 py-2 rounded-lg;

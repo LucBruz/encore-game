@@ -458,6 +458,7 @@ onUnmounted(async () => {
 <style scoped>
 .page {
   @apply min-h-screen flex flex-col items-center gap-3 py-4 px-4;
+  position: relative;
   background: #0f0f13;
   color: #e8e8f0;
   font-family: 'Nunito', sans-serif;
@@ -657,7 +658,35 @@ onUnmounted(async () => {
 .color-chip__val { @apply font-black; font-family: 'Space Mono', monospace; }
 .color-chip__val--first { color: #5cc96e; }
 .color-chip__val--others { color: #6e6e88; }
-.color-chip__val--crossed { @apply line-through opacity-40; }
+.color-chip__val--crossed {
+  @apply opacity-40;
+  position: relative;
+}
+.color-chip__val--crossed::before,
+.color-chip__val--crossed::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 12px;
+  height: 1.5px;
+  background: currentColor;
+  pointer-events: none;
+}
+.color-chip__val--crossed::before {
+  animation: cross-bar-1 0.2s ease-out forwards;
+}
+.color-chip__val--crossed::after {
+  animation: cross-bar-2 0.2s ease-out 0.08s both;
+}
+@keyframes cross-bar-1 {
+  from { transform: translate(-50%, -50%) rotate(45deg) scaleX(0); }
+  to   { transform: translate(-50%, -50%) rotate(45deg) scaleX(1); }
+}
+@keyframes cross-bar-2 {
+  from { transform: translate(-50%, -50%) rotate(-45deg) scaleX(0); }
+  to   { transform: translate(-50%, -50%) rotate(-45deg) scaleX(1); }
+}
 .color-chip__sep { color: #6e6e88; }
 
 .score-panel {
