@@ -11,9 +11,9 @@
         class="die-face"
         :class="`die-face--${face.cls}`"
       >
-        <!-- Face joker (couleur ou chiffre) -->
+        <!-- Face joker : cercle multicolore -->
         <div v-if="face.isJoker" class="face-joker-content">
-          <span class="joker-star">★</span>
+          <div class="joker-multicolor" />
         </div>
         <!-- Dé couleur : pastille colorée -->
         <div v-else-if="isColorDie" class="face-color-content">
@@ -220,11 +220,19 @@ watch(
   justify-content: center;
 }
 
-.joker-star {
-  font-size: 22px;
-  line-height: 1;
-  color: #f5d742;
-  text-shadow: 0 0 10px rgba(245, 215, 66, 0.9), 0 0 20px rgba(245, 215, 66, 0.5);
+.joker-multicolor {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: conic-gradient(
+    #5cc96e  0deg  72deg,
+    #f5d742 72deg 144deg,
+    #5b9ff5 144deg 216deg,
+    #e85a82 216deg 288deg,
+    #f58a35 288deg 360deg
+  );
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.15);
+  flex-shrink: 0;
 }
 
 /* Pastille couleur */
