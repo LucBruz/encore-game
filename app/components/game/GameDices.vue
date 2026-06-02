@@ -158,12 +158,19 @@ const currentPlayer = computed(() =>
 
 const hasConfirmed = computed(() => currentPlayer.value?.hasConfirmed ?? false)
 
-// Reset sélection locale quand le joueur affiché change
-watch(() => props.playerId, () => {
+function resetSelection() {
   selectedColor.value = null
   selectedNumber.value = null
   jokerColor.value = null
   jokerCount.value = null
+}
+
+// Reset sélection locale quand le joueur affiché change
+watch(() => props.playerId, resetSelection)
+
+// Reset sélection au début de chaque nouveau tour
+watch(() => store.phase, (phase) => {
+  if (phase === 'waiting_roll') resetSelection()
 })
 
 // Reset jokerColor quand on change de dé couleur
@@ -227,10 +234,7 @@ const comboIsReady = computed(() => {
 async function handleRoll() {
   if (props.readonly) return
   isRolling.value = true
-  selectedColor.value = null
-  selectedNumber.value = null
-  jokerColor.value = null
-  jokerCount.value = null
+  resetSelection()
   // Génère les valeurs et met à jour le store AVANT de lancer le spin
   const roll = rollAllDices()
   emit('roll', roll)
