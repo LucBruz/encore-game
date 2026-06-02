@@ -39,7 +39,8 @@
           :class="{
             'points-cell--start': i === 7,
             'points-cell--won-first': columnBonus[col] === 'first',
-            'points-cell--won-others': columnBonus[col] === 'others'
+            'points-cell--won-others': columnBonus[col] === 'others',
+            'points-cell--taken': columnBonus[col] === null && columnsTaken?.has(col)
           }"
         >
           {{ COLUMN_POINTS[col].first }}
@@ -92,6 +93,7 @@ const props = defineProps<{
   pendingCells: number[]
   validCells: Set<number>
   columnBonus: PlayerState['columnBonus']
+  columnsTaken?: Set<string>
   confirmedCombo: { color: string; count: number } | null
   placementError: string | null
   isBlockedMode: boolean
@@ -163,6 +165,14 @@ function handleCellClick(idx: number) {
 
 .points-cell--others { color: #6e6e88; }
 .points-cell--start { color: #f5d742; }
+
+.points-cell--taken {
+  color: #e85a82;
+  box-shadow: 0 0 0 2px #e85a82;
+  border-radius: 3px;
+  opacity: 0.5;
+  animation: cell-circle-red 0.35s ease-out;
+}
 
 .points-cell--won-first {
   position: relative;

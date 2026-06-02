@@ -127,6 +127,7 @@
           :pending-cells="viewedPlayer.pendingCells"
           :valid-cells="store.validCellsForPlayer(viewedPlayer.id)"
           :column-bonus="viewedPlayer.columnBonus"
+          :columns-taken="columnsTaken"
           :confirmed-combo="viewedPlayer.confirmedCombo"
           :placement-error="store.placementError"
           :is-blocked-mode="!!viewedPlayer.confirmedCombo && !viewedPlayer.hasPlaced"
@@ -216,6 +217,17 @@ const showEndGame = ref(false)
 const viewedPlayer = computed(() =>
   store.players.find(p => p.id === currentViewPlayer.value) ?? null
 )
+
+// Colonnes finies en premier par un autre joueur (pour afficher rouge sur la grille du joueur courant)
+const columnsTaken = computed(() => {
+  const taken = new Set<string>()
+  if (!viewedPlayer.value) return taken
+  store.players.forEach(p => {
+    if (p.id === viewedPlayer.value!.id) return
+    Object.entries(p.columnBonus).forEach(([col, v]) => { if (v !== null) taken.add(col) })
+  })
+  return taken
+})
 
 const isLocalPlayer = computed(() => currentViewPlayer.value === sync.localPlayerId.value)
 const isLocalActivePlayer = computed(() => sync.localPlayerId.value === store.activePlayerId)
