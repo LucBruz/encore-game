@@ -666,9 +666,10 @@ onUnmounted(async () => {
 }
 
 .score-row {
-  @apply flex justify-between items-center text-xs pb-1;
+  @apply flex justify-between items-center pb-1;
   border-bottom: 1px solid #2e2e3e;
-  color: #6e6e88;
+  font-size: 11px;
+  color: #e8e8f0;
 }
 
 .score-val {

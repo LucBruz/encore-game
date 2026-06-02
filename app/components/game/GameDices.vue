@@ -31,7 +31,7 @@
               :selected="canSelect && selectedColor === i"
               :selectable="canSelect"
               :spinning="isSpinning"
-              :style="dimmedColor(i) ? { opacity: '0.2', filter: 'grayscale(0.7)', pointerEvents: 'none', transition: 'opacity 0.3s, filter 0.3s' } : {}"
+              :style="dimmedColor(i) ? { opacity: '0.3', pointerEvents: 'none', transition: 'opacity 0.2s' } : {}"
               @select="selectColor(i)"
             />
           </div>
@@ -46,7 +46,7 @@
               :selected="canSelect && selectedNumber === i"
               :selectable="canSelect"
               :spinning="isSpinning"
-              :style="dimmedNumber(i) ? { opacity: '0.2', filter: 'grayscale(0.7)', pointerEvents: 'none', transition: 'opacity 0.3s, filter 0.3s' } : {}"
+              :style="dimmedNumber(i) ? { opacity: '0.3', pointerEvents: 'none', transition: 'opacity 0.2s' } : {}"
               @select="selectNumber(i)"
             />
           </div>
@@ -206,13 +206,13 @@ const selectedNumberIsJoker = computed(() =>
   selectedNumber.value !== null && numberDices.value[selectedNumber.value]?.value === 'joker'
 )
 
-// Grise les dés non sélectionnés après confirmation
+// Grise les dés non sélectionnés (pendant sélection et après confirmation)
 function dimmedColor(i: number): boolean {
-  if (!hasConfirmed.value) return false
+  if (selectedColor.value === null) return false
   return selectedColor.value !== i
 }
 function dimmedNumber(i: number): boolean {
-  if (!hasConfirmed.value) return false
+  if (selectedNumber.value === null) return false
   return selectedNumber.value !== i
 }
 
@@ -317,13 +317,13 @@ function handlePass() {
 .btn-pass {
   @apply text-xs px-3 py-1.5 rounded-lg cursor-pointer transition-all;
   background: transparent;
-  color: #6e6e88;
-  border: 1px solid #2e2e3e;
+  color: #e8e8f0;
+  border: 1px solid #3e3e52;
 }
 
 .btn-pass:hover {
-  color: #e8e8f0;
-  border-color: #6e6e88;
+  border-color: #e8e8f0;
+  background: rgba(232, 232, 240, 0.08);
 }
 
 /* Roll button */

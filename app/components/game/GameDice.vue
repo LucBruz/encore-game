@@ -11,9 +11,9 @@
         class="die-face"
         :class="`die-face--${face.cls}`"
       >
-        <!-- Face joker : cercle multicolore -->
+        <!-- Face joker : étoile -->
         <div v-if="face.isJoker" class="face-joker-content">
-          <div class="joker-multicolor" />
+          <span class="joker-star">★</span>
         </div>
         <!-- Dé couleur : pastille colorée -->
         <div v-else-if="isColorDie" class="face-color-content">
@@ -178,8 +178,8 @@ watch(
 }
 
 .die-scene.selectable { cursor: pointer; }
-.die-scene.selectable:hover { transform: translateY(-3px); }
-.die-scene.selected { transform: translateY(-5px); }
+.die-scene.selectable:hover { transform: translateY(-2px); }
+.die-scene.selected { /* pas de déplacement — grisage des autres à la place */ }
 
 .die-cube {
   width: 64px;
@@ -220,19 +220,11 @@ watch(
   justify-content: center;
 }
 
-.joker-multicolor {
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  background: conic-gradient(
-    #5cc96e  0deg  72deg,
-    #f5d742 72deg 144deg,
-    #5b9ff5 144deg 216deg,
-    #e85a82 216deg 288deg,
-    #f58a35 288deg 360deg
-  );
-  box-shadow: 0 0 10px rgba(255, 255, 255, 0.15);
-  flex-shrink: 0;
+.joker-star {
+  font-size: 22px;
+  line-height: 1;
+  color: #f5d742;
+  text-shadow: 0 0 10px rgba(245, 215, 66, 0.9), 0 0 20px rgba(245, 215, 66, 0.5);
 }
 
 /* Pastille couleur */
