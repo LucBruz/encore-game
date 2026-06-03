@@ -146,7 +146,7 @@
     </div>
 
     <!-- Game Over (fallback texte) -->
-    <div v-if="store.gameOver && !showEndGame" class="game-over">
+    <div v-if="store.gameOver && store.phase !== 'turn_end'" class="game-over">
       <h2>🎉 Partie terminée !</h2>
       <div
         v-for="player in store.players"
@@ -185,9 +185,9 @@
     </Teleport>
 
 
-    <!-- End game : attend turn_end (dernier tour joué) + fin des animations couleur -->
+    <!-- End game : turn_end + plus d'animations en cours -->
     <EndGameOverlay
-      v-if="store.gameOver && showEndGame && !store.lastColorCompleted && store.phase === 'turn_end'"
+      v-if="store.gameOver && store.phase === 'turn_end' && !store.lastColorCompleted"
       :players="endGamePlayers"
       :turn-number="store.turnNumber"
       @replay="handleReplay"
@@ -215,7 +215,6 @@ const currentViewPlayer = ref('')
 const isReconnecting = ref(true)
 const loaderReady = ref(false)
 const showLaunchAnim = ref(false)
-const showEndGame = ref(false)
 
 // ── Computed ──────────────────────────────────────────────────────────────────
 
@@ -302,9 +301,6 @@ const completedBonusType = computed((): 'first' | 'others' => {
 
 // ── Watchers ──────────────────────────────────────────────────────────────────
 
-watch(() => store.gameOver, (val) => {
-  if (val) showEndGame.value = true
-})
 
 // ── Roll timer (auto-roll après 15s si le joueur actif ne lance pas) ──────────
 
