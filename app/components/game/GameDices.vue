@@ -20,21 +20,6 @@
 
       <div class="dices-main">
 
-        <!-- Sidebar gauche : joker couleur -->
-        <div v-if="selectedColorIsJoker" class="joker-sidebar">
-          <span class="joker-sidebar__label">Couleur</span>
-          <div class="joker-sidebar__colors">
-            <button
-              v-for="c in COLOR_KEYS"
-              :key="c"
-              class="joker-picker__color"
-              :class="{ 'joker-picker__color--selected': jokerColor === c }"
-              :style="{ background: COLOR_MAP[c].hex }"
-              @click="jokerColor = c"
-            />
-          </div>
-        </div>
-
         <!-- Colonne dés -->
         <div class="dices-column">
           <!-- Rangée couleur -->
@@ -64,6 +49,21 @@
               :spinning="isSpinning"
               :style="numberDiceStyle(i)"
               @select="selectNumber(i)"
+            />
+          </div>
+        </div>
+
+        <!-- Sidebar droite : joker couleur -->
+        <div v-if="selectedColorIsJoker" class="joker-sidebar">
+          <span class="joker-sidebar__label">Couleur</span>
+          <div class="joker-sidebar__colors">
+            <button
+              v-for="c in COLOR_KEYS"
+              :key="c"
+              class="joker-picker__color"
+              :class="{ 'joker-picker__color--selected': jokerColor === c }"
+              :style="{ background: COLOR_MAP[c].hex }"
+              @click="jokerColor = c"
             />
           </div>
         </div>

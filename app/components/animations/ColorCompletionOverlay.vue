@@ -34,6 +34,7 @@ onMounted(async () => {
   const tl = gsap.timeline({
     onComplete: () => emit('done'),
   })
+  tl.timeScale(2)
 
   // Fond fade-in
   tl.to(overlayRef.value, { opacity: 1, duration: 0.35, ease: 'power2.out' }, 0)

@@ -520,11 +520,14 @@ export const useGameStore = defineStore('game', {
             this.checkColumnCompletion(player)
             this.checkGameOver()
 
-            // Tours 1–3 : le joueur actif aussi déclenche la fin de tour
             const isNormalActiveTurn = this.turnNumber >= 3 && player.id === this.activePlayerId
             if (!isNormalActiveTurn && this.allPassiveDone) {
                 this.flushPendingAnimations()
                 this.phase = 'turn_end'
+            } else if (isNormalActiveTurn) {
+                // Le joueur actif vient de placer : on affiche ses animations couleur
+                // immédiatement, avant que les joueurs passifs jouent.
+                this.flushPendingAnimations()
             }
         },
 

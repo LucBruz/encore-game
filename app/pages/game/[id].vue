@@ -374,13 +374,13 @@ watch(() => store.phase, (phase) => {
 
   if (phase === 'turn_end') {
     timer.stop()
-    // Auto passage au tour suivant après 3 secondes (joueur actif seulement)
+    // Auto passage au tour suivant après 1.5 secondes (joueur actif seulement)
     if (sync.localPlayerId.value === store.activePlayerId) {
       setTimeout(() => {
         if ((store.phase as string) === 'turn_end') {
           handleNextTurn()
         }
-      }, 3000)
+      }, 1500)
     }
   }
 }, { immediate: false })
