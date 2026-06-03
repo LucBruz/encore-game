@@ -157,10 +157,14 @@ function handleCellClick(idx: number) {
   display: grid;
   grid-template-columns: repeat(15, 1fr);
   gap: 3px;
+  /* Espace vertical entre les deux rangées pour que le box-shadow (2px) ne soit pas rogné */
+  margin-bottom: 4px;
 }
 
 .points-cell {
-  @apply text-center text-xs font-bold py-0.5;
+  @apply text-center text-xs font-bold;
+  /* Padding vertical + horizontal pour que le box-shadow ne soit pas rogné sur aucun côté */
+  padding: 3px 2px;
   font-family: 'Space Mono', monospace;
   color: #e8e8f0;
 }

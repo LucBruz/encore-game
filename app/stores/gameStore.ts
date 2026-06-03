@@ -117,14 +117,12 @@ export const useGameStore = defineStore('game', {
         turnNumber: 0,
         gameOver: false,
         completionQueue: [] as { playerId: string; color: ColorKey }[],
-        columnCompletionQueue: [] as { playerId: string; column: string; points: number }[],
-        // Snapshot de l'état au début du tour (avant tout placement)
+        // Snapshot de l'état des couleurs au début du tour (avant tout placement)
         // Permet à plusieurs joueurs du même tour de tous recevoir 'first'
         turnStartColorCompleted: {} as Record<string, boolean>,
         turnStartColumnCompleted: {} as Record<string, boolean>,
-        // File d'attente interne au tour — flushée vers les queues d'affichage à turn_end
+        // File d'attente interne au tour — flushée vers completionQueue à turn_end
         pendingColorAnimations: [] as { playerId: string; color: ColorKey }[],
-        pendingColumnAnimations: [] as { playerId: string; column: string; points: number }[],
         activePlayerId: 'p1',
         gameId: null as string | null,
 
@@ -144,9 +142,6 @@ export const useGameStore = defineStore('game', {
 
         lastColorCompleted: (state): { playerId: string; color: ColorKey } | null =>
             state.completionQueue[0] ?? null,
-
-        lastColumnCompleted: (state): { playerId: string; column: string; points: number } | null =>
-            state.columnCompletionQueue[0] ?? null,
 
         passivePlayers: (state): PlayerState[] =>
             state.players.filter(p => p.id !== state.activePlayerId),
@@ -272,9 +267,7 @@ export const useGameStore = defineStore('game', {
             this.passiveSelections = {}
             this.placementError = null
             this.completionQueue = []
-            this.columnCompletionQueue = []
             this.pendingColorAnimations = []
-            this.pendingColumnAnimations = []
             this.turnStartColorCompleted = {}
             this.turnStartColumnCompleted = {}
         },
@@ -580,21 +573,15 @@ export const useGameStore = defineStore('game', {
                 if (complete) {
                     const wasCompletedBeforeTurn = this.turnStartColumnCompleted[col] ?? false
                     player.columnBonus[col] = wasCompletedBeforeTurn ? 'others' : 'first'
-                    const points = wasCompletedBeforeTurn
-                        ? COLUMN_POINTS[col].others
-                        : COLUMN_POINTS[col].first
-                    this.pendingColumnAnimations.push({ playerId: player.id, column: col, points })
                 }
             })
         },
 
-        // Transfère les animations pendantes vers les queues d'affichage.
+        // Transfère les animations couleur pendantes vers completionQueue.
         // Appelé juste avant la transition vers turn_end.
         flushPendingAnimations() {
             this.pendingColorAnimations.forEach(a => this.completionQueue.push(a))
             this.pendingColorAnimations = []
-            this.pendingColumnAnimations.forEach(a => this.columnCompletionQueue.push(a))
-            this.pendingColumnAnimations = []
         },
 
         checkGameOver() {
@@ -632,10 +619,6 @@ export const useGameStore = defineStore('game', {
             this.completionQueue.shift()
         },
 
-        popColumnCompletionQueue() {
-            this.columnCompletionQueue.shift()
-        },
-
         resetGame() {
             this.players = this.players.map(p => createPlayer(p.id, p.name))
             this.currentPlayerIndex = 0
@@ -648,9 +631,7 @@ export const useGameStore = defineStore('game', {
             this.passiveSelections = {}
             this.placementError = null
             this.completionQueue = []
-            this.columnCompletionQueue = []
             this.pendingColorAnimations = []
-            this.pendingColumnAnimations = []
             this.turnStartColorCompleted = {}
             this.turnStartColumnCompleted = {}
         },

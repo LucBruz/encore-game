@@ -184,21 +184,10 @@
       />
     </Teleport>
 
-    <!-- Column completion -->
-    <Teleport to="body">
-      <ColumnCompletionOverlay
-        v-if="store.lastColumnCompleted"
-        :column="store.lastColumnCompleted.column"
-        :player-name="columnCompletedPlayerName"
-        :points="store.lastColumnCompleted.points"
-        :status="columnCompletedStatus"
-        @done="store.popColumnCompletionQueue()"
-      />
-    </Teleport>
 
-    <!-- End game (attend la fin des animations de complétion) -->
+    <!-- End game (attend la fin des animations de complétion couleur) -->
     <EndGameOverlay
-      v-if="store.gameOver && showEndGame && !store.lastColorCompleted && !store.lastColumnCompleted"
+      v-if="store.gameOver && showEndGame && !store.lastColorCompleted"
       :players="endGamePlayers"
       :turn-number="store.turnNumber"
       @replay="handleReplay"
@@ -310,18 +299,6 @@ const completedBonusType = computed((): 'first' | 'others' => {
   return player?.colorBonus[item.color as ColorKey] ?? 'first'
 })
 
-// Computed pour la complétion de colonne
-const columnCompletedPlayerName = computed(() => {
-  const playerId = store.lastColumnCompleted?.playerId
-  return store.players.find(p => p.id === playerId)?.name ?? ''
-})
-
-const columnCompletedStatus = computed((): 'first' | 'others' => {
-  const item = store.lastColumnCompleted
-  if (!item) return 'first'
-  const player = store.players.find(p => p.id === item.playerId)
-  return (player?.columnBonus[item.column] ?? 'first') as 'first' | 'others'
-})
 
 // ── Watchers ──────────────────────────────────────────────────────────────────
 
