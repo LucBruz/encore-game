@@ -161,9 +161,8 @@ function handleCellClick(idx: number) {
 .points-row {
   display: grid;
   grid-template-columns: repeat(15, 1fr);
-  gap: 3px;
-  /* Espace vertical entre les deux rangées — identique au gap horizontal (3px) */
-  margin-bottom: 3px;
+  gap: 5px;
+  margin-bottom: 5px;
 }
 
 .points-cell {
