@@ -196,9 +196,9 @@
       />
     </Teleport>
 
-    <!-- End game -->
+    <!-- End game (attend la fin des animations de complétion) -->
     <EndGameOverlay
-      v-if="store.gameOver && showEndGame"
+      v-if="store.gameOver && showEndGame && !store.lastColorCompleted && !store.lastColumnCompleted"
       :players="endGamePlayers"
       :turn-number="store.turnNumber"
       @replay="handleReplay"

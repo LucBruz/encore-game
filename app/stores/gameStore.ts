@@ -118,6 +118,13 @@ export const useGameStore = defineStore('game', {
         gameOver: false,
         completionQueue: [] as { playerId: string; color: ColorKey }[],
         columnCompletionQueue: [] as { playerId: string; column: string; points: number }[],
+        // Snapshot de l'état au début du tour (avant tout placement)
+        // Permet à plusieurs joueurs du même tour de tous recevoir 'first'
+        turnStartColorCompleted: {} as Record<string, boolean>,
+        turnStartColumnCompleted: {} as Record<string, boolean>,
+        // File d'attente interne au tour — flushée vers les queues d'affichage à turn_end
+        pendingColorAnimations: [] as { playerId: string; color: ColorKey }[],
+        pendingColumnAnimations: [] as { playerId: string; column: string; points: number }[],
         activePlayerId: 'p1',
         gameId: null as string | null,
 
@@ -266,6 +273,10 @@ export const useGameStore = defineStore('game', {
             this.placementError = null
             this.completionQueue = []
             this.columnCompletionQueue = []
+            this.pendingColorAnimations = []
+            this.pendingColumnAnimations = []
+            this.turnStartColorCompleted = {}
+            this.turnStartColumnCompleted = {}
         },
 
         initGrid(gridId: string) {
@@ -303,6 +314,19 @@ export const useGameStore = defineStore('game', {
                 p.confirmedCombo = null
             })
             this.placementError = null
+
+            // Snapshot : quelles couleurs/colonnes étaient déjà complétées AVANT ce tour.
+            // Sert à évaluer first/others de façon équitable pour tous les joueurs du même tour.
+            const colorKeys: ColorKey[] = ['g', 'y', 'b', 'p', 'o']
+            this.turnStartColorCompleted = Object.fromEntries(
+                colorKeys.map(c => [c, this.players.some(p => p.colorBonus[c] !== null)])
+            )
+            const colKeys = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O']
+            this.turnStartColumnCompleted = Object.fromEntries(
+                colKeys.map(col => [col, this.players.some(p => p.columnBonus[col] !== null)])
+            )
+            this.pendingColorAnimations = []
+            this.pendingColumnAnimations = []
         },
 
         /**
@@ -422,6 +446,7 @@ export const useGameStore = defineStore('game', {
                 player.hasPlaced = true
             }
             if (this.allPassiveDone) {
+                this.flushPendingAnimations()
                 this.phase = 'turn_end'
             }
         },
@@ -505,6 +530,7 @@ export const useGameStore = defineStore('game', {
             // Tours 1–3 : le joueur actif aussi déclenche la fin de tour
             const isNormalActiveTurn = this.turnNumber >= 3 && player.id === this.activePlayerId
             if (!isNormalActiveTurn && this.allPassiveDone) {
+                this.flushPendingAnimations()
                 this.phase = 'turn_end'
             }
         },
@@ -536,11 +562,12 @@ export const useGameStore = defineStore('game', {
             Object.keys(colorTotals).forEach(color => {
                 const c = color as ColorKey
                 if (colorChecked[c] === colorTotals[c] && player.colorBonus[c] === null) {
-                    const otherCompleted = this.players.some(
-                        p => p.id !== player.id && p.colorBonus[c] !== null
-                    )
-                    player.colorBonus[c] = otherCompleted ? 'others' : 'first'
-                    this.completionQueue.push({ playerId: player.id, color: c })
+                    // Utilise le snapshot du début du tour : si personne n'avait complété
+                    // cette couleur AVANT ce tour, tous les joueurs qui la complètent ce tour
+                    // obtiennent 'first' (équitable en simultané).
+                    const wasCompletedBeforeTurn = this.turnStartColorCompleted[c] ?? false
+                    player.colorBonus[c] = wasCompletedBeforeTurn ? 'others' : 'first'
+                    this.pendingColorAnimations.push({ playerId: player.id, color: c })
                 }
             })
         },
@@ -551,16 +578,23 @@ export const useGameStore = defineStore('game', {
                 const complete = Array.from({ length: 7 }, (_, row) => row * 15 + ci)
                     .every(idx => player.checkedCells.has(idx))
                 if (complete) {
-                    const otherCompleted = this.players.some(
-                        p => p.id !== player.id && p.columnBonus[col] !== null
-                    )
-                    player.columnBonus[col] = otherCompleted ? 'others' : 'first'
-                    const points = otherCompleted
+                    const wasCompletedBeforeTurn = this.turnStartColumnCompleted[col] ?? false
+                    player.columnBonus[col] = wasCompletedBeforeTurn ? 'others' : 'first'
+                    const points = wasCompletedBeforeTurn
                         ? COLUMN_POINTS[col].others
                         : COLUMN_POINTS[col].first
-                    this.columnCompletionQueue.push({ playerId: player.id, column: col, points })
+                    this.pendingColumnAnimations.push({ playerId: player.id, column: col, points })
                 }
             })
+        },
+
+        // Transfère les animations pendantes vers les queues d'affichage.
+        // Appelé juste avant la transition vers turn_end.
+        flushPendingAnimations() {
+            this.pendingColorAnimations.forEach(a => this.completionQueue.push(a))
+            this.pendingColorAnimations = []
+            this.pendingColumnAnimations.forEach(a => this.columnCompletionQueue.push(a))
+            this.pendingColumnAnimations = []
         },
 
         checkGameOver() {
@@ -615,6 +649,10 @@ export const useGameStore = defineStore('game', {
             this.placementError = null
             this.completionQueue = []
             this.columnCompletionQueue = []
+            this.pendingColorAnimations = []
+            this.pendingColumnAnimations = []
+            this.turnStartColorCompleted = {}
+            this.turnStartColumnCompleted = {}
         },
     },
 })
