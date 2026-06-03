@@ -184,6 +184,18 @@
       />
     </Teleport>
 
+    <!-- Column completion -->
+    <Teleport to="body">
+      <ColumnCompletionOverlay
+        v-if="store.lastColumnCompleted"
+        :column="store.lastColumnCompleted.column"
+        :player-name="columnCompletedPlayerName"
+        :points="store.lastColumnCompleted.points"
+        :status="columnCompletedStatus"
+        @done="store.popColumnCompletionQueue()"
+      />
+    </Teleport>
+
     <!-- End game -->
     <EndGameOverlay
       v-if="store.gameOver && showEndGame"
@@ -290,12 +302,25 @@ const completedPlayerName = computed(() => {
   return store.players.find(p => p.id === playerId)?.name ?? ''
 })
 
-// 'first' ou 'others' pour afficher +5 ou +3 dans l'overlay de complétion
+// 'first' ou 'others' pour afficher +5 ou +3 dans l'overlay de complétion couleur
 const completedBonusType = computed((): 'first' | 'others' => {
   const item = store.lastColorCompleted
   if (!item) return 'first'
   const player = store.players.find(p => p.id === item.playerId)
   return player?.colorBonus[item.color as ColorKey] ?? 'first'
+})
+
+// Computed pour la complétion de colonne
+const columnCompletedPlayerName = computed(() => {
+  const playerId = store.lastColumnCompleted?.playerId
+  return store.players.find(p => p.id === playerId)?.name ?? ''
+})
+
+const columnCompletedStatus = computed((): 'first' | 'others' => {
+  const item = store.lastColumnCompleted
+  if (!item) return 'first'
+  const player = store.players.find(p => p.id === item.playerId)
+  return (player?.columnBonus[item.column] ?? 'first') as 'first' | 'others'
 })
 
 // ── Watchers ──────────────────────────────────────────────────────────────────

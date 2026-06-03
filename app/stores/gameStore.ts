@@ -117,6 +117,7 @@ export const useGameStore = defineStore('game', {
         turnNumber: 0,
         gameOver: false,
         completionQueue: [] as { playerId: string; color: ColorKey }[],
+        columnCompletionQueue: [] as { playerId: string; column: string; points: number }[],
         activePlayerId: 'p1',
         gameId: null as string | null,
 
@@ -136,6 +137,9 @@ export const useGameStore = defineStore('game', {
 
         lastColorCompleted: (state): { playerId: string; color: ColorKey } | null =>
             state.completionQueue[0] ?? null,
+
+        lastColumnCompleted: (state): { playerId: string; column: string; points: number } | null =>
+            state.columnCompletionQueue[0] ?? null,
 
         passivePlayers: (state): PlayerState[] =>
             state.players.filter(p => p.id !== state.activePlayerId),
@@ -261,6 +265,7 @@ export const useGameStore = defineStore('game', {
             this.passiveSelections = {}
             this.placementError = null
             this.completionQueue = []
+            this.columnCompletionQueue = []
         },
 
         initGrid(gridId: string) {
@@ -550,6 +555,10 @@ export const useGameStore = defineStore('game', {
                         p => p.id !== player.id && p.columnBonus[col] !== null
                     )
                     player.columnBonus[col] = otherCompleted ? 'others' : 'first'
+                    const points = otherCompleted
+                        ? COLUMN_POINTS[col].others
+                        : COLUMN_POINTS[col].first
+                    this.columnCompletionQueue.push({ playerId: player.id, column: col, points })
                 }
             })
         },
@@ -589,6 +598,10 @@ export const useGameStore = defineStore('game', {
             this.completionQueue.shift()
         },
 
+        popColumnCompletionQueue() {
+            this.columnCompletionQueue.shift()
+        },
+
         resetGame() {
             this.players = this.players.map(p => createPlayer(p.id, p.name))
             this.currentPlayerIndex = 0
@@ -601,6 +614,7 @@ export const useGameStore = defineStore('game', {
             this.passiveSelections = {}
             this.placementError = null
             this.completionQueue = []
+            this.columnCompletionQueue = []
         },
     },
 })
