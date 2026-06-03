@@ -151,20 +151,25 @@ function handleCellClick(idx: number) {
   gap: 3px;
 }
 
-.grid-footer { @apply mt-1; }
+.grid-footer {
+  @apply mt-1;
+  /* Espace pour que le box-shadow des cellules bord gauche (col A) et bord bas ne soit pas rogné */
+  padding: 0 0 5px 5px;
+  overflow: visible;
+}
 
 .points-row {
   display: grid;
   grid-template-columns: repeat(15, 1fr);
   gap: 3px;
-  /* Espace vertical entre les deux rangées pour que le box-shadow (2px) ne soit pas rogné */
-  margin-bottom: 4px;
+  /* Espace vertical entre les deux rangées pour que le shadow bas/haut ne se chevauche pas */
+  margin-bottom: 5px;
 }
 
 .points-cell {
   @apply text-center text-xs font-bold;
-  /* Padding vertical + horizontal pour que le box-shadow ne soit pas rogné sur aucun côté */
-  padding: 3px 2px;
+  /* 4px vertical + 3px horizontal — les 4 côtés du box-shadow (2px) restent visibles */
+  padding: 4px 3px;
   font-family: 'Space Mono', monospace;
   color: #e8e8f0;
 }
