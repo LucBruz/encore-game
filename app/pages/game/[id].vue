@@ -140,8 +140,8 @@
 
     </div>
 
-    <!-- Auto passage au tour suivant -->
-    <div v-if="store.phase === 'turn_end'" class="controls">
+    <!-- Auto passage au tour suivant (masqué si la partie est terminée) -->
+    <div v-if="store.phase === 'turn_end' && !store.gameOver" class="controls">
       <p class="auto-next-msg">Tour suivant dans quelques secondes...</p>
     </div>
 
@@ -179,6 +179,7 @@
         v-if="store.lastColorCompleted"
         :color="store.lastColorCompleted.color"
         :player-name="completedPlayerName"
+        :status="completedBonusType"
         @done="store.popCompletionQueue()"
       />
     </Teleport>
@@ -187,6 +188,7 @@
     <EndGameOverlay
       v-if="store.gameOver && showEndGame"
       :players="endGamePlayers"
+      :turn-number="store.turnNumber"
       @replay="handleReplay"
     />
 
@@ -276,14 +278,24 @@ const endGamePlayers = computed(() =>
     score: store.scoreForPlayer(p.id),
     colors: Object.values(p.colorBonus).filter(v => v !== null).length,
     columns: Object.values(p.columnBonus).filter(v => v !== null).length,
-    jokers: p.jokersUsed ?? 0,
-    stars: 0,
+    jokers: store.grid.jokers - p.jokersUsed,   // jokers RESTANTS
+    stars: store.grid.cells.filter(([_, star], idx) =>
+      star && !p.checkedCells.has(idx)
+    ).length * -2,   // malus étoiles non cochées (−2 chacune)
   }))
 )
 
 const completedPlayerName = computed(() => {
   const playerId = store.lastColorCompleted?.playerId
   return store.players.find(p => p.id === playerId)?.name ?? ''
+})
+
+// 'first' ou 'others' pour afficher +5 ou +3 dans l'overlay de complétion
+const completedBonusType = computed((): 'first' | 'others' => {
+  const item = store.lastColorCompleted
+  if (!item) return 'first'
+  const player = store.players.find(p => p.id === item.playerId)
+  return player?.colorBonus[item.color as ColorKey] ?? 'first'
 })
 
 // ── Watchers ──────────────────────────────────────────────────────────────────

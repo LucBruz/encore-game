@@ -12,6 +12,7 @@ const props = withDefaults(defineProps<{
 const emit = defineEmits<{ done: [] }>()
 
 const lettersRef: (HTMLElement | null)[] = []
+const particleEls: HTMLElement[] = []
 const bangRef = ref<HTMLElement | null>(null)
 const subtitleRef = ref<HTMLElement | null>(null)
 const progressRef = ref<HTMLElement | null>(null)
@@ -33,6 +34,15 @@ onMounted(async () => {
   const gsap = (await import('gsap')).default
 
   const tl = gsap.timeline()
+
+  // Pastilles — apparaissent aléatoirement (via ref tableau)
+  if (particleEls.length) {
+    gsap.set(particleEls, { scale: 0, opacity: 0 })
+    tl.to(particleEls, {
+      scale: 1, opacity: 0.55, duration: 0.5,
+      stagger: { each: 0.02, from: 'random' }, ease: 'back.out(2)',
+    }, 0)
+  }
 
   // Anneaux — scale 0→1, t=0, 0.2s, stagger 0.06
   const rings = ringsContainerRef.value
@@ -113,8 +123,9 @@ onMounted(async () => {
   <div class="loader-screen">
     <!-- Pastilles colorées -->
     <div
-      v-for="p in particles"
+      v-for="(p, i) in particles"
       :key="p.id"
+      :ref="(el) => { if (el) particleEls[i] = el as HTMLElement }"
       class="loader-particle"
       :style="{
         left: p.x + '%',
@@ -176,7 +187,7 @@ onMounted(async () => {
 .loader-particle {
   position: absolute;
   border-radius: 50%;
-  opacity: 0.6;
+  opacity: 0;    /* GSAP anime scale 0→1 + opacity 0→0.55 */
   pointer-events: none;
 }
 
