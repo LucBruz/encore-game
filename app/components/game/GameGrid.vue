@@ -153,8 +153,9 @@ function handleCellClick(idx: number) {
 
 .grid-footer {
   @apply mt-1;
-  /* Espace pour que le box-shadow des cellules bord gauche (col A) et bord bas ne soit pas rogné */
-  padding: 0 0 5px 5px;
+  /* padding-left uniquement pour que le shadow de la col A ne soit pas rogné.
+     Pas de padding-bottom nécessaire : overflow:visible laisse le shadow sortir dans le gap. */
+  padding-left: 5px;
   overflow: visible;
 }
 

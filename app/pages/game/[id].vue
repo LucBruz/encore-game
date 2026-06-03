@@ -185,9 +185,9 @@
     </Teleport>
 
 
-    <!-- End game (attend la fin des animations de complétion couleur) -->
+    <!-- End game : attend turn_end (dernier tour joué) + fin des animations couleur -->
     <EndGameOverlay
-      v-if="store.gameOver && showEndGame && !store.lastColorCompleted"
+      v-if="store.gameOver && showEndGame && !store.lastColorCompleted && store.phase === 'turn_end'"
       :players="endGamePlayers"
       :turn-number="store.turnNumber"
       @replay="handleReplay"
