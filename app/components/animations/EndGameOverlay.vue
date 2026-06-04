@@ -1,19 +1,28 @@
 <script setup lang="ts">
 import { onMounted, ref, computed } from 'vue'
+import { COLOR_MAP, COLUMN_POINTS } from '~/data/grids/grid-01'
+import type { ColorKey } from '~/data/grids/grid-01'
 
 interface Player {
   name: string
   isLocal: boolean
   score: number
-  colors: number
-  columns: number
+  colorBonus: Record<string, 'first' | 'others' | null>
+  columnBonus: Record<string, 'first' | 'others' | null>
   jokers: number
-  stars: number
+  starMalus: number
+  checkedCells: number[]
+}
+
+interface GridData {
+  cells: [string, boolean][]
+  jokers: number
 }
 
 const props = defineProps<{
   players: Player[]
   turnNumber?: number
+  grid?: GridData
 }>()
 const emit = defineEmits<{ replay: [] }>()
 
@@ -21,7 +30,38 @@ const sortedPlayers = computed(() => [...props.players].sort((a, b) => b.score -
 const winner = computed(() => sortedPlayers.value[0])
 const maxScore = computed(() => Math.max(...props.players.map(p => p.score), 1))
 
-// Refs
+// Vue grilles
+const showGrids = ref(false)
+const selectedGridIdx = ref(0)
+
+// Couleurs dans l'ordre d'affichage
+const COLOR_KEYS: ColorKey[] = ['g', 'y', 'b', 'p', 'o']
+
+function colorBonusTotal(player: Player) {
+  return Object.values(player.colorBonus).reduce((acc, v) => {
+    return acc + (v === 'first' ? 5 : v === 'others' ? 3 : 0)
+  }, 0)
+}
+
+function columnBonusTotal(player: Player) {
+  return Object.entries(player.columnBonus).reduce((acc, [col, v]) => {
+    if (v === 'first') return acc + (COLUMN_POINTS[col]?.first ?? 0)
+    if (v === 'others') return acc + (COLUMN_POINTS[col]?.others ?? 0)
+    return acc
+  }, 0)
+}
+
+function completedColumns(player: Player) {
+  return Object.entries(player.columnBonus)
+    .filter(([_, v]) => v !== null)
+    .map(([col, v]) => ({
+      col,
+      pts: v === 'first' ? (COLUMN_POINTS[col]?.first ?? 0) : (COLUMN_POINTS[col]?.others ?? 0),
+      isFirst: v === 'first',
+    }))
+}
+
+// Refs animation
 const trophyRef = ref<HTMLElement | null>(null)
 const winnerNameRef = ref<HTMLElement | null>(null)
 const winnerSubRef = ref<HTMLElement | null>(null)
@@ -31,7 +71,7 @@ const cardRefs: HTMLElement[] = []
 const scoreEls: HTMLElement[] = []
 const barFillEls: HTMLElement[] = []
 
-// Confetti — généré une fois à la création
+// Confettis
 const CONF_COLORS = ['#5cc96e', '#f5d742', '#5b9ff5', '#e85a82', '#f58a35']
 const confettis = Array.from({ length: 64 }, (_, i) => ({
   id: i,
@@ -48,7 +88,6 @@ onMounted(async () => {
   const tl = gsap.timeline()
   const height = window.innerHeight
 
-  // ── États initiaux ──────────────────────────────────────────────
   gsap.set(trophyRef.value,    { scale: 0, rotate: -45, opacity: 0 })
   gsap.set(winnerNameRef.value, { opacity: 0, y: 40, scale: 0.9 })
   gsap.set(winnerSubRef.value,  { opacity: 0, y: 12 })
@@ -56,25 +95,21 @@ onMounted(async () => {
   gsap.set(barFillEls,          { scaleX: 0, transformOrigin: 'left center' })
   gsap.set(confettiRefs,        { y: -60, opacity: 0, rotate: 0 })
   gsap.set(ctaRef.value,        { opacity: 0, y: 14 })
-  scoreEls.forEach((el, i) => { if (el) el.textContent = '0' })
+  scoreEls.forEach(el => { if (el) el.textContent = '0' })
 
-  // ── Trophée ──────────────────────────────────────────────────────
   tl.to(trophyRef.value, {
     scale: 1, rotate: 0, opacity: 1, duration: 0.7, ease: 'back.out(2.5)'
   }, 0.1)
   .to(trophyRef.value, { rotate: -8, yoyo: true, repeat: 5, duration: 0.09, ease: 'power2.inOut' }, '>')
   .to(trophyRef.value, { rotate: 0, duration: 0.2 })
 
-  // ── Nom gagnant + sous-titre ─────────────────────────────────────
   tl.to(winnerNameRef.value, { opacity: 1, y: 0, scale: 1, duration: 0.55, ease: 'back.out(1.8)' }, 0.5)
     .to(winnerSubRef.value,  { opacity: 1, y: 0, duration: 0.4 }, '-=0.2')
 
-  // ── Cartes joueurs ───────────────────────────────────────────────
   tl.to(cardRefs, {
     opacity: 1, y: 0, scale: 1, duration: 0.55, stagger: 0.12, ease: 'back.out(1.6)'
   }, 0.7)
 
-  // ── Count-up des scores ──────────────────────────────────────────
   sortedPlayers.value.forEach((player, i) => {
     const obj = { val: 0 }
     tl.to(obj, {
@@ -87,13 +122,11 @@ onMounted(async () => {
     }, 0.95)
   })
 
-  // ── Barres de score ──────────────────────────────────────────────
   sortedPlayers.value.forEach((player, i) => {
     const barW = player.score / maxScore.value
     tl.to(barFillEls[i], { scaleX: barW, duration: 1, ease: 'power3.out' }, 1.0)
   })
 
-  // ── Confettis ────────────────────────────────────────────────────
   tl.to(confettiRefs, { opacity: 1, duration: 0.15 }, 0.7)
   tl.to(confettiRefs, {
     y: height + 40,
@@ -103,7 +136,6 @@ onMounted(async () => {
     stagger: { each: 0.02, from: 'random' },
   }, 0.7)
 
-  // ── CTA ──────────────────────────────────────────────────────────
   tl.to(ctaRef.value, { opacity: 1, y: 0, duration: 0.45 }, '-=0.5')
 })
 </script>
@@ -126,7 +158,7 @@ onMounted(async () => {
       }"
     />
 
-    <!-- Contenu -->
+    <!-- Contenu principal -->
     <div class="overlay-content">
 
       <!-- Trophée SVG -->
@@ -177,7 +209,8 @@ onMounted(async () => {
               </span>
               <span v-if="i === 0" class="pc-medal">★</span>
             </div>
-            <!-- Barre de progression -->
+
+            <!-- Barre -->
             <div class="pc-bar">
               <div
                 :ref="(el) => { if (el) barFillEls[i] = el as HTMLElement }"
@@ -185,31 +218,94 @@ onMounted(async () => {
                 :class="{ 'pc-bar-fill--dim': i > 0 }"
               />
             </div>
-            <!-- Détails -->
-            <div class="pc-detail">
-              <span>Couleurs <b>{{ player.colors }}</b></span>
-              <span>Colonnes <b>{{ player.columns }}</b></span>
-              <span>Jokers <b>{{ player.jokers }}</b></span>
-              <span :class="{ 'pc-stars': player.stars < 0 }">
-                Étoiles <b>{{ player.stars > 0 ? player.stars : (player.stars === 0 ? '—' : player.stars) }}</b>
+
+            <!-- Détail couleurs -->
+            <div class="pc-colors">
+              <span
+                v-for="ck in COLOR_KEYS"
+                :key="ck"
+                class="pc-color-dot"
+                :class="{
+                  'pc-color-dot--first': player.colorBonus[ck] === 'first',
+                  'pc-color-dot--others': player.colorBonus[ck] === 'others',
+                  'pc-color-dot--none': player.colorBonus[ck] === null,
+                }"
+                :style="{ background: player.colorBonus[ck] !== null ? COLOR_MAP[ck].hex : undefined }"
+                :title="`${ck.toUpperCase()} : ${player.colorBonus[ck] === 'first' ? '+5' : player.colorBonus[ck] === 'others' ? '+3' : '—'}`"
+              />
+              <span class="pc-score-part">{{ colorBonusTotal(player) }} pts</span>
+            </div>
+
+            <!-- Détail colonnes -->
+            <div v-if="completedColumns(player).length > 0" class="pc-columns">
+              <span
+                v-for="col in completedColumns(player)"
+                :key="col.col"
+                class="pc-col-chip"
+                :class="{ 'pc-col-chip--first': col.isFirst }"
+              >{{ col.col }} +{{ col.pts }}</span>
+              <span class="pc-score-part">{{ columnBonusTotal(player) }} pts</span>
+            </div>
+
+            <!-- Jokers + étoiles -->
+            <div class="pc-extras">
+              <span class="pc-extra">⬟ {{ player.jokers }} joker{{ player.jokers !== 1 ? 's' : '' }} +{{ player.jokers }}</span>
+              <span class="pc-extra" :class="{ 'pc-extra--neg': player.starMalus < 0 }">
+                ★ {{ player.starMalus < 0 ? player.starMalus : '—' }}
               </span>
             </div>
           </div>
 
           <!-- Score -->
           <div class="pc-num" :class="{ 'pc-num--dim': i > 0 }">
-            <span
-              :ref="(el) => { if (el) scoreEls[i] = el as HTMLElement }"
-            >0</span>
+            <span :ref="(el) => { if (el) scoreEls[i] = el as HTMLElement }">0</span>
             <span class="pc-unit">pts</span>
           </div>
         </div>
       </div>
 
-      <!-- CTA -->
-      <button ref="ctaRef" class="endgame-cta" @click="emit('replay')">
-        Rejouer une partie →
+      <!-- Bouton voir les grilles -->
+      <button class="btn-grids" @click="showGrids = !showGrids">
+        {{ showGrids ? '↑ Masquer les grilles' : '⊞ Voir les grilles' }}
       </button>
+
+      <!-- Section grilles -->
+      <div v-if="showGrids && grid" class="grids-section">
+        <!-- Onglets joueurs -->
+        <div class="grids-tabs">
+          <button
+            v-for="(player, i) in sortedPlayers"
+            :key="player.name"
+            class="grid-tab"
+            :class="{ 'grid-tab--active': selectedGridIdx === i }"
+            @click="selectedGridIdx = i"
+          >
+            {{ player.name }}
+          </button>
+        </div>
+
+        <!-- Grille readonly -->
+        <div class="grid-view">
+          <GameGrid
+            :grid="grid as any"
+            :checked-cells="new Set(sortedPlayers[selectedGridIdx].checkedCells)"
+            :pending-cells="[]"
+            :valid-cells="new Set()"
+            :column-bonus="sortedPlayers[selectedGridIdx].columnBonus as any"
+            :confirmed-combo="null"
+            :placement-error="null"
+            :is-blocked-mode="false"
+            :readonly="true"
+          />
+        </div>
+      </div>
+
+      <!-- CTA -->
+      <div ref="ctaRef" class="endgame-cta-wrap">
+        <button class="endgame-cta" @click="emit('replay')">
+          Rejouer une partie →
+        </button>
+      </div>
 
     </div>
   </div>
@@ -223,14 +319,15 @@ onMounted(async () => {
   z-index: 150;
   background: #0f0f13;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  overflow: hidden;
+  overflow-y: auto;
+  padding: 24px 16px 40px;
 }
 
 /* ── Confettis ── */
 .conf {
-  position: absolute;
+  position: fixed;
   border-radius: 2px;
   pointer-events: none;
   will-change: transform;
@@ -246,8 +343,7 @@ onMounted(async () => {
   flex-direction: column;
   align-items: center;
   gap: 14px;
-  padding: 32px 24px;
-  max-width: 640px;
+  max-width: 660px;
   width: 100%;
 }
 
@@ -263,7 +359,7 @@ onMounted(async () => {
 /* ── Nom gagnant ── */
 .winner-name {
   font-family: 'Space Mono', monospace;
-  font-size: clamp(28px, 6vw, 52px);
+  font-size: clamp(28px, 6vw, 48px);
   font-weight: 700;
   margin: 0;
   line-height: 1.1;
@@ -273,7 +369,6 @@ onMounted(async () => {
   background-clip: text;
   text-align: center;
 }
-
 .acc {
   color: #f58a35;
   -webkit-text-fill-color: #f58a35;
@@ -294,21 +389,19 @@ onMounted(async () => {
   flex-direction: column;
   gap: 10px;
   width: 100%;
-  margin-top: 4px;
 }
 
 /* ── Carte joueur ── */
 .player-card {
   display: grid;
-  grid-template-columns: 60px 1fr 110px;
+  grid-template-columns: 52px 1fr 90px;
   align-items: center;
-  gap: 16px;
-  padding: 16px 20px;
+  gap: 14px;
+  padding: 14px 18px;
   background: #23232f;
   border: 1px solid #2e2e3e;
   border-radius: 14px;
 }
-
 .player-card--winner {
   border-color: #f5d742;
   background: linear-gradient(135deg, rgba(245, 215, 66, 0.07), rgba(245, 138, 53, 0.03));
@@ -319,7 +412,7 @@ onMounted(async () => {
 .pc-rank {
   font-family: 'Space Mono', monospace;
   font-weight: 700;
-  font-size: 32px;
+  font-size: 28px;
   background: linear-gradient(135deg, #f5d742, #f58a35);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -327,67 +420,49 @@ onMounted(async () => {
   line-height: 1;
   text-align: center;
 }
-.pc-rank sup {
-  font-size: 13px;
-  -webkit-text-fill-color: #f58a35;
-  vertical-align: super;
-}
-.pc-rank--dim {
-  background: none;
-  -webkit-text-fill-color: #6e6e88;
-  color: #6e6e88;
-  font-size: 28px;
-}
+.pc-rank sup { font-size: 12px; -webkit-text-fill-color: #f58a35; vertical-align: super; }
+.pc-rank--dim { background: none; -webkit-text-fill-color: #6e6e88; color: #6e6e88; font-size: 24px; }
 
 /* ── Corps ── */
 .pc-body {
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  gap: 5px;
   min-width: 0;
 }
-
 .pc-top {
   display: flex;
   align-items: center;
   gap: 8px;
 }
-
 .pc-name {
   font-family: 'Space Mono', monospace;
   font-weight: 700;
-  font-size: 14px;
+  font-size: 13px;
   color: #e8e8f0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-
 .pc-tag {
   font-family: 'Nunito', sans-serif;
   font-size: 10px;
-  font-weight: 400;
   color: #f5d742;
   background: rgba(245, 215, 66, 0.15);
   padding: 2px 7px;
   border-radius: 99px;
   margin-left: 2px;
 }
-
-.pc-medal {
-  color: #f5d742;
-  font-size: 15px;
-}
+.pc-medal { color: #f5d742; font-size: 14px; }
 
 /* ── Barre ── */
 .pc-bar {
-  height: 7px;
+  height: 6px;
   background: #1a1a24;
   border-radius: 99px;
   overflow: hidden;
   border: 1px solid #2e2e3e;
 }
-
 .pc-bar-fill {
   display: block;
   height: 100%;
@@ -395,35 +470,73 @@ onMounted(async () => {
   border-radius: 99px;
   transform-origin: left center;
 }
+.pc-bar-fill--dim { background: linear-gradient(90deg, #3e3e52, #6e6e88); }
 
-.pc-bar-fill--dim {
-  background: linear-gradient(90deg, #3e3e52, #6e6e88);
+/* ── Couleurs ── */
+.pc-colors {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+.pc-color-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  flex-shrink: 0;
+}
+.pc-color-dot--first { border-color: white; }
+.pc-color-dot--others { opacity: 0.6; border-color: rgba(255,255,255,0.3); }
+.pc-color-dot--none { background: #2e2e3e !important; opacity: 0.35; }
+
+.pc-score-part {
+  font-family: 'Space Mono', monospace;
+  font-size: 10px;
+  color: #6e6e88;
+  margin-left: 3px;
 }
 
-/* ── Détail ── */
-.pc-detail {
+/* ── Colonnes ── */
+.pc-columns {
   display: flex;
-  gap: 12px;
+  align-items: center;
+  gap: 4px;
   flex-wrap: wrap;
+}
+.pc-col-chip {
+  font-family: 'Space Mono', monospace;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 5px;
+  border-radius: 5px;
+  background: rgba(91, 159, 245, 0.12);
+  color: #5b9ff5;
+  border: 1px solid rgba(91, 159, 245, 0.25);
+}
+.pc-col-chip--first {
+  background: rgba(92, 201, 110, 0.12);
+  color: #5cc96e;
+  border-color: rgba(92, 201, 110, 0.25);
+}
+
+/* ── Extras (jokers + étoiles) ── */
+.pc-extras {
+  display: flex;
+  gap: 10px;
+}
+.pc-extra {
   font-family: 'Nunito', sans-serif;
   font-size: 11px;
-  color: #6e6e88;
+  color: #9a9ab0;
 }
-
-.pc-detail b {
-  color: #e8e8f0;
-  font-family: 'Space Mono', monospace;
-  margin-left: 2px;
-}
-
-.pc-stars { color: #e85a82; }
-.pc-stars b { color: #e85a82; }
+.pc-extra--neg { color: #e85a82; }
 
 /* ── Score ── */
 .pc-num {
   font-family: 'Space Mono', monospace;
   font-weight: 700;
-  font-size: 38px;
+  font-size: 34px;
   text-align: right;
   background: linear-gradient(135deg, #f5d742, #f58a35);
   -webkit-background-clip: text;
@@ -435,28 +548,73 @@ onMounted(async () => {
   align-items: flex-end;
   gap: 2px;
 }
-
 .pc-num--dim {
   background: none;
   -webkit-text-fill-color: #6e6e88;
   color: #6e6e88;
-  font-size: 32px;
+  font-size: 28px;
 }
-
 .pc-unit {
-  font-size: 11px;
+  font-size: 10px;
   color: rgba(245, 215, 66, 0.55);
   -webkit-text-fill-color: rgba(245, 215, 66, 0.55);
   font-weight: 400;
 }
-.pc-num--dim .pc-unit {
+.pc-num--dim .pc-unit { color: #6e6e88; -webkit-text-fill-color: #6e6e88; }
+
+/* ── Bouton voir grilles ── */
+.btn-grids {
+  padding: 9px 20px;
+  border-radius: 8px;
+  border: 1px solid #3e3e52;
+  background: rgba(232, 232, 240, 0.04);
+  color: #9a9ab0;
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+.btn-grids:hover { border-color: #6e6e88; color: #e8e8f0; }
+
+/* ── Section grilles ── */
+.grids-section {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.grids-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.grid-tab {
+  padding: 6px 14px;
+  border-radius: 99px;
+  border: 1px solid #2e2e3e;
+  background: transparent;
   color: #6e6e88;
-  -webkit-text-fill-color: #6e6e88;
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.grid-tab--active {
+  border-color: #f5d742;
+  color: #f5d742;
+  background: rgba(245, 215, 66, 0.08);
+}
+.grid-view {
+  background: #1a1a24;
+  border: 1px solid #2e2e3e;
+  border-radius: 12px;
+  padding: 16px;
+  overflow-x: auto;
 }
 
 /* ── CTA ── */
+.endgame-cta-wrap { width: 100%; display: flex; justify-content: center; }
 .endgame-cta {
-  margin-top: 4px;
   padding: 14px 28px;
   border: none;
   border-radius: 10px;
@@ -466,29 +624,21 @@ onMounted(async () => {
   font-size: 14px;
   font-weight: 700;
   cursor: pointer;
-  letter-spacing: 0.03em;
   transition: transform 0.12s ease, box-shadow 0.12s ease;
 }
-
 .endgame-cta:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(245, 215, 66, 0.35);
 }
-
 .endgame-cta:active { transform: translateY(0); }
 
 /* ── Responsive ── */
 @media (max-width: 520px) {
-  .player-card {
-    grid-template-columns: 48px 1fr 80px;
-    gap: 10px;
-    padding: 12px 14px;
-  }
-
-  .pc-rank { font-size: 24px; }
-  .pc-rank--dim { font-size: 22px; }
-  .pc-num { font-size: 28px; }
-  .pc-num--dim { font-size: 24px; }
+  .player-card { grid-template-columns: 44px 1fr 70px; gap: 10px; padding: 12px 12px; }
+  .pc-rank { font-size: 22px; }
+  .pc-rank--dim { font-size: 20px; }
+  .pc-num { font-size: 26px; }
+  .pc-num--dim { font-size: 22px; }
   .winner-name { font-size: 26px; }
 }
 </style>

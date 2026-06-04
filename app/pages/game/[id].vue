@@ -190,6 +190,7 @@
       v-if="store.gameOver && store.phase === 'turn_end' && !store.lastColorCompleted"
       :players="endGamePlayers"
       :turn-number="store.turnNumber"
+      :grid="store.grid"
       @replay="handleReplay"
     />
 
@@ -276,12 +277,13 @@ const endGamePlayers = computed(() =>
     name: p.name,
     isLocal: p.id === lobby.localPlayerId,
     score: store.scoreForPlayer(p.id),
-    colors: Object.values(p.colorBonus).filter(v => v !== null).length,
-    columns: Object.values(p.columnBonus).filter(v => v !== null).length,
-    jokers: store.grid.jokers - p.jokersUsed,   // jokers RESTANTS
-    stars: store.grid.cells.filter(([_, star], idx) =>
+    colorBonus: p.colorBonus,
+    columnBonus: p.columnBonus,
+    jokers: store.grid.jokers - p.jokersUsed,
+    starMalus: store.grid.cells.filter(([_, star], idx) =>
       star && !p.checkedCells.has(idx)
-    ).length * -2,   // malus étoiles non cochées (−2 chacune)
+    ).length * -2,
+    checkedCells: Array.from(p.checkedCells),
   }))
 )
 
@@ -452,15 +454,17 @@ onMounted(async () => {
   store.initGrid(lobby.gridId)
 
   // Init sync (store + canal + replay)
-  isReconnecting.value = true
+  const isFirstStart = lobby.justStartedGame
+  isReconnecting.value = !isFirstStart   // pas de loader sur premier lancement
   loaderReady.value = false
   await sync.setup(gameId, lobby.localPlayerId, lobby.players)
   loaderReady.value = true
 
-  // Distinguer premier lancement vs reconnexion
-  if (lobby.justStartedGame) {
+  // Premier lancement : animation de lancement uniquement (pas le loader)
+  if (isFirstStart) {
     showLaunchAnim.value = true
     lobby.justStartedGame = false
+    isReconnecting.value = false
   }
 
   // Positionner la vue sur le joueur local

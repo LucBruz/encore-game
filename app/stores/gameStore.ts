@@ -117,10 +117,12 @@ export const useGameStore = defineStore('game', {
         turnNumber: 0,
         gameOver: false,
         completionQueue: [] as { playerId: string; color: ColorKey }[],
-        // Snapshot de l'état des couleurs au début du tour (avant tout placement)
-        // Permet à plusieurs joueurs du même tour de tous recevoir 'first'
+        // Snapshot des couleurs/colonnes complétées AVANT ce tour (pour first/others équitable)
         turnStartColorCompleted: {} as Record<string, boolean>,
         turnStartColumnCompleted: {} as Record<string, boolean>,
+        // Ce que le joueur actif a complété PENDANT son tour (priorité sur les passifs, tours ≥3)
+        turnActiveCompletedColors: [] as ColorKey[],
+        turnActiveCompletedColumns: [] as string[],
         // File d'attente interne au tour — flushée vers completionQueue à turn_end
         pendingColorAnimations: [] as { playerId: string; color: ColorKey }[],
         activePlayerId: 'p1',
@@ -270,6 +272,8 @@ export const useGameStore = defineStore('game', {
             this.pendingColorAnimations = []
             this.turnStartColorCompleted = {}
             this.turnStartColumnCompleted = {}
+            this.turnActiveCompletedColors = []
+            this.turnActiveCompletedColumns = []
         },
 
         initGrid(gridId: string) {
@@ -319,7 +323,8 @@ export const useGameStore = defineStore('game', {
                 colKeys.map(col => [col, this.players.some(p => p.columnBonus[col] !== null)])
             )
             this.pendingColorAnimations = []
-            this.pendingColumnAnimations = []
+            this.turnActiveCompletedColors = []
+            this.turnActiveCompletedColumns = []
         },
 
         /**
@@ -558,12 +563,16 @@ export const useGameStore = defineStore('game', {
             Object.keys(colorTotals).forEach(color => {
                 const c = color as ColorKey
                 if (colorChecked[c] === colorTotals[c] && player.colorBonus[c] === null) {
-                    // Utilise le snapshot du début du tour : si personne n'avait complété
-                    // cette couleur AVANT ce tour, tous les joueurs qui la complètent ce tour
-                    // obtiennent 'first' (équitable en simultané).
                     const wasCompletedBeforeTurn = this.turnStartColorCompleted[c] ?? false
-                    player.colorBonus[c] = wasCompletedBeforeTurn ? 'others' : 'first'
+                    // Tours ≥3 : si le joueur actif a déjà complété cette couleur ce tour,
+                    // les joueurs passifs obtiennent 'others' (priorité au lanceur de dés).
+                    // Tours 0-2 (simultanés) : seul le snapshot compte, tous sont équivalents.
+                    const wasCompletedByActive = this.turnNumber >= 3 && this.turnActiveCompletedColors.includes(c)
+                    player.colorBonus[c] = (wasCompletedBeforeTurn || wasCompletedByActive) ? 'others' : 'first'
                     this.pendingColorAnimations.push({ playerId: player.id, color: c })
+                    if (player.id === this.activePlayerId) {
+                        this.turnActiveCompletedColors.push(c)
+                    }
                 }
             })
         },
@@ -575,7 +584,11 @@ export const useGameStore = defineStore('game', {
                     .every(idx => player.checkedCells.has(idx))
                 if (complete) {
                     const wasCompletedBeforeTurn = this.turnStartColumnCompleted[col] ?? false
-                    player.columnBonus[col] = wasCompletedBeforeTurn ? 'others' : 'first'
+                    const wasCompletedByActive = this.turnNumber >= 3 && this.turnActiveCompletedColumns.includes(col)
+                    player.columnBonus[col] = (wasCompletedBeforeTurn || wasCompletedByActive) ? 'others' : 'first'
+                    if (player.id === this.activePlayerId) {
+                        this.turnActiveCompletedColumns.push(col)
+                    }
                 }
             })
         },
@@ -637,6 +650,8 @@ export const useGameStore = defineStore('game', {
             this.pendingColorAnimations = []
             this.turnStartColorCompleted = {}
             this.turnStartColumnCompleted = {}
+            this.turnActiveCompletedColors = []
+            this.turnActiveCompletedColumns = []
         },
     },
 })

@@ -55,7 +55,6 @@
 
         <!-- Sidebar droite : joker couleur -->
         <div v-if="selectedColorIsJoker" class="joker-sidebar">
-          <span class="joker-sidebar__label">Couleur</span>
           <div class="joker-sidebar__colors">
             <button
               v-for="c in COLOR_KEYS"
@@ -70,7 +69,6 @@
 
         <!-- Sidebar droite : joker chiffre -->
         <div v-if="selectedNumberIsJoker" class="joker-sidebar">
-          <span class="joker-sidebar__label">Valeur</span>
           <div class="joker-sidebar__numbers">
             <button
               v-for="n in [1, 2, 3, 4, 5]"
@@ -450,9 +448,9 @@ function handlePass() {
 .joker-sidebar {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 5px 5px;
-  border-radius: 10px;
+  gap: 4px;
+  padding: 4px 3px;
+  border-radius: 8px;
   background: rgba(232, 232, 240, 0.05);
   border: 1px solid rgba(232, 232, 240, 0.1);
   flex-shrink: 0;
@@ -463,14 +461,6 @@ function handlePass() {
   flex-direction: column;
   gap: 4px;
   align-items: center;
-}
-
-.joker-sidebar__label {
-  font-size: 9px;
-  font-weight: 700;
-  color: #6e6e88;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
 }
 
 .joker-sidebar__colors {
@@ -495,7 +485,7 @@ function handlePass() {
 }
 
 .joker-picker__color {
-  @apply w-5 h-5 rounded-full cursor-pointer transition-all border-2;
+  @apply w-4 h-4 rounded-full cursor-pointer transition-all border-2;
   border-color: transparent;
 }
 
@@ -506,11 +496,12 @@ function handlePass() {
 .joker-picker__color--selected {
   border-color: white;
   transform: scale(1.2);
-  box-shadow: 0 0 8px rgba(255,255,255,0.4);
+  box-shadow: 0 0 6px rgba(255,255,255,0.4);
 }
 
 .joker-picker__number {
-  @apply w-6 h-6 rounded-lg font-black text-xs cursor-pointer transition-all;
+  @apply w-5 h-5 rounded-md font-black cursor-pointer transition-all;
+  font-size: 10px;
   background: #23232f;
   border: 2px solid #3e3e52;
   color: #e8e8f0;
