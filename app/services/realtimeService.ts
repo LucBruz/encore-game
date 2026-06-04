@@ -12,6 +12,7 @@ export type GameActionType =
     | 'USE_JOKER'
     | 'NEXT_TURN'
     | 'TIMER_EXPIRED'
+    | 'GAME_OVER'
 
 export interface GameAction {
     type: GameActionType

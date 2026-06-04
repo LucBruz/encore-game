@@ -101,7 +101,10 @@
                 }"
               >5</span>
               <span class="color-chip__sep">/</span>
-              <span class="color-chip__val color-chip__val--others">3</span>
+              <span
+                class="color-chip__val color-chip__val--others"
+                :class="{ 'color-chip__val--done-first': viewedPlayer.colorBonus[key as ColorKey] === 'others' }"
+              >3</span>
             </div>
           </div>
 
@@ -173,6 +176,17 @@
       @done="showLaunchAnim = false"
     />
 
+    <!-- Dernier coup (passifs quand le joueur actif termine la partie) -->
+    <Teleport to="body">
+      <Transition name="last-turn">
+        <div v-if="showLastTurn" class="last-turn-banner">
+          <span class="lt-flag">⚑</span>
+          <span class="lt-text">DERNIER COUP !</span>
+          <span class="lt-sub">Jouez votre dernier placement</span>
+        </div>
+      </Transition>
+    </Teleport>
+
     <!-- Color completion -->
     <Teleport to="body">
       <ColorCompletionOverlay
@@ -216,6 +230,7 @@ const currentViewPlayer = ref('')
 const isReconnecting = ref(true)
 const loaderReady = ref(false)
 const showLaunchAnim = ref(false)
+const showLastTurn = ref(false)
 
 // ── Computed ──────────────────────────────────────────────────────────────────
 
@@ -349,6 +364,21 @@ function startTimer() {
     }
   })
 }
+
+// ── Watcher gameOver ─────────────────────────────────────────────────────────
+
+watch(() => store.gameOver, (isOver) => {
+  if (!isOver) return
+  // Broadcast explicite pour éviter la race condition NEXT_TURN vs CONFIRM_PLACEMENT
+  if (sync.localPlayerId.value === store.activePlayerId) {
+    sync.dispatch('GAME_OVER', {})
+  }
+  // Afficher "Dernier coup" aux joueurs passifs si la partie n'est pas encore terminée
+  if (sync.localPlayerId.value !== store.activePlayerId && store.phase !== 'turn_end') {
+    showLastTurn.value = true
+    setTimeout(() => { showLastTurn.value = false }, 3500)
+  }
+})
 
 // ── Watcher phases ────────────────────────────────────────────────────────────
 
@@ -816,4 +846,51 @@ onUnmounted(async () => {
 
 .game-over h2 { @apply text-2xl font-black mb-4; }
 .game-over__player { @apply text-lg py-1; }
+
+/* ── Dernier coup banner ──────────────────────────────────────────────────── */
+.last-turn-banner {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 9990;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 20px 36px;
+  background: rgba(15, 15, 19, 0.96);
+  border: 2px solid #e85a82;
+  border-radius: 16px;
+  box-shadow: 0 0 40px rgba(232, 90, 130, 0.35);
+  pointer-events: none;
+  text-align: center;
+}
+.lt-flag {
+  font-size: 28px;
+  color: #e85a82;
+}
+.lt-text {
+  font-family: 'Space Mono', monospace;
+  font-size: 22px;
+  font-weight: 700;
+  color: #e85a82;
+  letter-spacing: 0.08em;
+}
+.lt-sub {
+  font-family: 'Nunito', sans-serif;
+  font-size: 13px;
+  color: #9a9ab0;
+}
+
+.last-turn-enter-active { animation: lt-in 0.4s ease; }
+.last-turn-leave-active { animation: lt-out 0.4s ease forwards; }
+@keyframes lt-in {
+  from { opacity: 0; transform: translate(-50%, -60%) scale(0.88); }
+  to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+@keyframes lt-out {
+  from { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  to   { opacity: 0; transform: translate(-50%, -40%) scale(0.92); }
+}
 </style>

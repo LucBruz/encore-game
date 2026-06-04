@@ -608,6 +608,10 @@ export const useGameStore = defineStore('game', {
             })
         },
 
+        setGameOver() {
+            this.gameOver = true
+        },
+
         nextTurn() {
             if (this.phase !== 'turn_end') return
             if (this.gameOver) return

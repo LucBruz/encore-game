@@ -79,6 +79,9 @@ export function useGameSync() {
             case 'NEXT_TURN':
                 store.nextTurn()
                 break
+            case 'GAME_OVER':
+                store.setGameOver()
+                break
         }
     }
 
@@ -139,7 +142,7 @@ export function useGameSync() {
     const VALID_EVENT_TYPES: GameActionType[] = [
         'ROLL_DICES', 'CONFIRM_ACTIVE', 'CONFIRM_PASSIVE', 'PASS_ACTIVE',
         'PASS_PASSIVE', 'TOGGLE_CELL', 'CONFIRM_PLACEMENT', 'CANCEL_PLACEMENT',
-        'USE_JOKER', 'NEXT_TURN', 'TIMER_EXPIRED',
+        'USE_JOKER', 'NEXT_TURN', 'TIMER_EXPIRED', 'GAME_OVER',
     ]
 
     async function replayEvents(gameId: string) {
