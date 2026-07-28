@@ -376,7 +376,7 @@ watch(() => store.gameOver, (isOver) => {
   // Afficher "Dernier coup" aux joueurs passifs si la partie n'est pas encore terminée
   if (sync.localPlayerId.value !== store.activePlayerId && store.phase !== 'turn_end') {
     showLastTurn.value = true
-    setTimeout(() => { showLastTurn.value = false }, 3500)
+    setTimeout(() => { showLastTurn.value = false }, 1000)
   }
 })
 
