@@ -1,0 +1,99 @@
+name: Deploy
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-encore-game
+  cancel-in-progress: false
+
+env:
+  APP_DIR: /home/projets/encore-game
+  PM2_NAME: encore-game
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: pnpm
+
+      - name: Installer les dependances
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: pnpm run build
+
+      - name: Verifier que la config Supabase est bien dans le build
+        run: |
+          if ! grep -rqE 'https://[a-z0-9]{15,25}\.supabase\.co' .output/; then
+            echo "::error::URL Supabase absente du build : les secrets SUPABASE_URL / SUPABASE_KEY sont manquants ou vides."
+            exit 1
+          fi
+          echo "Config Supabase presente dans le build."
+
+      - name: Configurer SSH
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.SSH_KEY }}" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          printf '%s\n' '188.245.245.42 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHgbR/a06GkTbnDIv0pRsObDTqxEpPDTWsWC5HuTHPuq' > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Envoyer le build
+        run: |
+          rsync -az --delete \
+            -e "ssh -i ~/.ssh/id_deploy -o IdentitiesOnly=yes" \
+            .output/ "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:$APP_DIR/.output.new/"
+
+      - name: Basculer et redemarrer
+        run: |
+          ssh -i ~/.ssh/id_deploy -o IdentitiesOnly=yes \
+            "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
+            "set -e
+             cd $APP_DIR
+             rm -rf .output.old
+             if [ -d .output ]; then mv .output .output.old; fi
+             mv .output.new .output
+             pm2 reload $PM2_NAME --update-env
+             pm2 save"
+
+      - name: Verifier que l application repond
+        run: |
+          ssh -i ~/.ssh/id_deploy -o IdentitiesOnly=yes \
+            "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
+            "sleep 4
+             code=\$(curl -s -o /dev/null -w '%{http_code}' http://localhost:3001/)
+             echo \"HTTP local : \$code\"
+             pm2 describe $PM2_NAME | grep -E 'status|restarts'
+             test \"\$code\" = 200"
+
+      - name: Rollback si echec
+        if: failure()
+        run: |
+          if [ -f ~/.ssh/id_deploy ]; then
+            ssh -i ~/.ssh/id_deploy -o IdentitiesOnly=yes \
+              "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
+              "cd $APP_DIR
+               if [ -d .output.old ]; then
+                 rm -rf .output && mv .output.old .output && pm2 reload $PM2_NAME --update-env
+                 echo 'Rollback effectue.'
+               fi" || true
+          fi
+
+      - name: Nettoyer la cle
+        if: always()
+        run: rm -f ~/.ssh/id_deploy
