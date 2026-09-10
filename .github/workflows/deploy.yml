@@ -55,7 +55,7 @@ jobs:
 
       - name: Envoyer le build
         run: |
-          rsync -az --delete \
+          rsync -az --delete --chown=root:root \
             -e "ssh -i ~/.ssh/id_deploy -o IdentitiesOnly=yes" \
             .output/ "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:$APP_DIR/.output.new/"
 
