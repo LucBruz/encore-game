@@ -99,8 +99,17 @@
         <button
           v-if="canSelect && comboIsReady"
           class="btn-confirm"
+          :disabled="!comboIsPlayable"
           @click="confirmCombo"
         >✓ Confirmer</button>
+      </div>
+
+      <!-- Pourquoi la confirmation est bloquée -->
+      <div v-if="canSelect && comboIsReady && !comboIsPlayable" class="combo-hint">
+        Aucun placement possible avec cette combinaison
+      </div>
+      <div v-else-if="noPlayableCombo" class="combo-hint">
+        Aucune combinaison jouable sur ta grille — tu dois passer
       </div>
 
       <!-- Badge phase bas-droite -->
@@ -245,6 +254,31 @@ const comboIsReady = computed(() => {
   if (selectedColorIsJoker.value && !jokerColor.value) return false
   if (selectedNumberIsJoker.value && !jokerCount.value) return false
   return true
+})
+
+// Combo effective, jokers résolus
+const resolvedCombo = computed((): { color: ColorKey; count: number } | null => {
+  if (!comboIsReady.value) return null
+  const colorVal = colorDices.value[selectedColor.value!]?.value
+  const numberVal = numberDices.value[selectedNumber.value!]?.value
+  const color = colorVal === 'joker' ? jokerColor.value : (colorVal as ColorKey)
+  const count = numberVal === 'joker' ? jokerCount.value : (numberVal as number)
+  if (!color || !count) return null
+  return { color, count }
+})
+
+// Confirmer une combo sans placement légal enfermerait le joueur : on l'en empêche
+// en amont plutôt que de compter sur l'auto-pass du store.
+const comboIsPlayable = computed(() => {
+  const combo = resolvedCombo.value
+  if (!combo) return false
+  return store.canPlayCombo(props.playerId, combo.color, combo.count)
+})
+
+// Aucune des combinaisons encore disponibles ne donne de placement : il faut passer.
+const noPlayableCombo = computed(() => {
+  if (!canSelect.value || !store.currentRoll) return false
+  return !store.hasAnyPlayableCombo(props.playerId)
 })
 
 async function handleRoll() {
@@ -535,9 +569,20 @@ function handlePass() {
   border: none;
 }
 
-.btn-confirm:hover {
+.btn-confirm:hover:not(:disabled) {
   filter: brightness(1.1);
   transform: translateY(-1px);
+}
+
+.btn-confirm:disabled {
+  @apply opacity-40 cursor-not-allowed;
+}
+
+.combo-hint {
+  @apply text-xs px-3 py-2 rounded-lg mt-2;
+  background: rgba(232, 90, 130, 0.15);
+  color: #e85a82;
+  border: 1px solid rgba(232, 90, 130, 0.3);
 }
 
 </style>

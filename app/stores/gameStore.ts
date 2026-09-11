@@ -4,11 +4,12 @@ import type { ColorKey } from '~/data/grids/grid-01'
 import { GRID_MAP } from '~/data/grids/index'
 import type { GridId } from '~/data/grids/index'
 import {
-    findAllValidCombos,
-    getSelectableCells,
+    hasLegalPlacement,
+    legalPlacements,
+    selectableCells,
     validatePlacement,
-    findPlacementCandidates,
-} from '~/utils/gameRules'
+} from '~~/engine/placement'
+import { maskFromSet } from '~~/engine/mask'
 
 // ─── TYPES ────────────────────────────────────────────────────────────────────
 
@@ -51,6 +52,10 @@ export interface PlayerState {
     // Toutes les combos valides complètes calculées à la confirmation des dés
     validCombos: number[][]
     jokersUsed: number
+    // Jokers engagés par la combo confirmée mais PAS ENCORE dépensés : ils ne sont
+    // débités qu'au moment où le placement est réellement validé, pour qu'un joueur
+    // qui confirme puis passe ne perde pas son point d'exclamation.
+    pendingJokers: number
     colorBonus: Record<ColorKey, 'first' | 'others' | null>
     columnBonus: Record<string, 'first' | 'others' | null>
     hasPassed: boolean
@@ -69,6 +74,7 @@ function createPlayer(id: string, name: string): PlayerState {
         pendingCells: [],
         validCombos: [],
         jokersUsed: 0,
+        pendingJokers: 0,
         colorBonus: { g: null, y: null, b: null, p: null, o: null },
         columnBonus: Object.fromEntries(
             ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O'].map(c => [c, null])
@@ -196,24 +202,64 @@ export const useGameStore = defineStore('game', {
             const { count } = player.confirmedCombo
             if (player.pendingCells.length >= count) return new Set()
 
-            return getSelectableCells(player.validCombos, player.pendingCells)
+            return selectableCells(player.validCombos, player.pendingCells)
         },
 
         canPlaceForPlayer: (state) => (playerId: string): boolean => {
             const player = state.players.find(p => p.id === playerId)
             if (!player || !player.confirmedCombo) return false
-
             const { color, count } = player.confirmedCombo
-            const isFirstMove = player.checkedCells.size === 0
+            return hasLegalPlacement(state.grid.cells, maskFromSet(player.checkedCells), color, count)
+        },
 
-            const candidates = findPlacementCandidates({
-                cells: state.grid.cells,
-                checkedCells: player.checkedCells,
-                color,
-                count,
-                isFirstMove,
-            })
-            return candidates.length > 0
+        /**
+         * Cette combo donnerait-elle au moins un placement légal ?
+         * Appelé AVANT confirmation pour ne pas laisser un joueur s'enfermer.
+         */
+        canPlayCombo: (state) => (playerId: string, color: ColorKey, count: number): boolean => {
+            const player = state.players.find(p => p.id === playerId)
+            if (!player) return false
+            if (count < 1 || count > 5) return false
+            return hasLegalPlacement(state.grid.cells, maskFromSet(player.checkedCells), color, count)
+        },
+
+        /**
+         * Existe-t-il, parmi les dés encore disponibles pour ce joueur, au moins une
+         * combinaison jouable ? Si non, le joueur n'a plus qu'à passer et l'UI le dit.
+         */
+        hasAnyPlayableCombo(state): (playerId: string) => boolean {
+            return (playerId: string): boolean => {
+                const player = state.players.find(p => p.id === playerId)
+                if (!player || !state.currentRoll) return false
+
+                const isActive = player.id === state.activePlayerId
+                const useAllDices = isActive || state.turnNumber < 3
+                const pool = useAllDices
+                    ? { colorDices: [...state.currentRoll.colorDices], numberDices: [...state.currentRoll.numberDices] }
+                    : this.availableForPassive
+
+                const mask = maskFromSet(player.checkedCells)
+                const jokersLeft = state.grid.jokers - player.jokersUsed
+                const allColors: ColorKey[] = ['g', 'y', 'b', 'p', 'o']
+
+                for (const colorDice of pool.colorDices) {
+                    for (const numberDice of pool.numberDices) {
+                        const jokersNeeded =
+                            (colorDice.value === 'joker' ? 1 : 0) + (numberDice.value === 'joker' ? 1 : 0)
+                        if (jokersNeeded > jokersLeft) continue
+
+                        const colors = colorDice.value === 'joker' ? allColors : [colorDice.value as ColorKey]
+                        const counts = numberDice.value === 'joker' ? [1, 2, 3, 4, 5] : [numberDice.value as number]
+
+                        for (const color of colors) {
+                            for (const count of counts) {
+                                if (hasLegalPlacement(state.grid.cells, mask, color, count)) return true
+                            }
+                        }
+                    }
+                }
+                return false
+            }
         },
 
         jokersAvailable: (state) => (playerId: string): number => {
@@ -309,6 +355,7 @@ export const useGameStore = defineStore('game', {
                 p.pendingCells = []
                 p.validCombos = []
                 p.confirmedCombo = null
+                p.pendingJokers = 0
             })
             this.placementError = null
 
@@ -359,21 +406,31 @@ export const useGameStore = defineStore('game', {
                 return
             }
 
-            player.jokersUsed += jokersNeeded
+            // Les jokers sont engagés, pas encore débités — voir confirmPendingCells.
+            player.pendingJokers = jokersNeeded
             player.confirmedCombo = { color, count }
             player.hasConfirmed = true
             this.activeSelection = { colorDiceIndex, numberDiceIndex }
 
-            // Précalcul de toutes les combos valides
-            player.validCombos = findAllValidCombos({
-                cells: this.grid.cells,
-                checkedCells: player.checkedCells,
-                color,
-                count,
-                isFirstMove: player.checkedCells.size === 0,
-            })
+            // Précalcul de tous les placements légaux
+            player.validCombos = legalPlacements(
+                this.grid.cells, maskFromSet(player.checkedCells), color, count,
+            )
 
             this.phase = 'passive_selecting'
+
+            // Filet de sécurité : aucun placement possible. Le joueur passe au lieu de
+            // rester bloqué sans case cliquable, et ses jokers ne sont pas consommés.
+            // L'UI empêche normalement d'en arriver là (combos injouables désactivées).
+            if (player.validCombos.length === 0) {
+                player.pendingJokers = 0
+                player.confirmedCombo = null
+                player.hasConfirmed = false
+                player.hasPassed = true
+                player.hasPlaced = true
+                this.activeSelection = null
+                this.placementError = 'Aucun placement possible avec cette combinaison — tour passé'
+            }
         },
 
         passActiveTurn() {
@@ -382,6 +439,8 @@ export const useGameStore = defineStore('game', {
             if (player) {
                 player.hasPassed = true
                 player.hasPlaced = true
+                // Passer libère les jokers engagés : rien n'a été coché.
+                player.pendingJokers = 0
             }
 
             this.activeSelection = null
@@ -422,19 +481,26 @@ export const useGameStore = defineStore('game', {
                 return
             }
 
-            player.jokersUsed += jokersNeeded
+            // Les jokers sont engagés, pas encore débités — voir confirmPendingCells.
+            player.pendingJokers = jokersNeeded
             player.confirmedCombo = { color, count }
             player.hasConfirmed = true
             this.passiveSelections[playerId] = { colorDiceIndex, numberDiceIndex }
 
-            // Précalcul de toutes les combos valides
-            player.validCombos = findAllValidCombos({
-                cells: this.grid.cells,
-                checkedCells: player.checkedCells,
-                color,
-                count,
-                isFirstMove: player.checkedCells.size === 0,
-            })
+            // Précalcul de tous les placements légaux
+            player.validCombos = legalPlacements(
+                this.grid.cells, maskFromSet(player.checkedCells), color, count,
+            )
+
+            // Filet de sécurité, même logique que pour le joueur actif.
+            if (player.validCombos.length === 0) {
+                player.pendingJokers = 0
+                player.confirmedCombo = null
+                player.hasConfirmed = false
+                this.passiveSelections[playerId] = null
+                this.placementError = 'Aucun placement possible avec cette combinaison — tour passé'
+                this.passPassiveTurn(playerId)
+            }
         },
 
         passPassiveTurn(playerId: string) {
@@ -442,6 +508,8 @@ export const useGameStore = defineStore('game', {
             if (player) {
                 player.hasPassed = true
                 player.hasPlaced = true
+                // Passer libère les jokers engagés : rien n'a été coché.
+                player.pendingJokers = 0
             }
             if (this.allPassiveDone) {
                 this.flushPendingAnimations()
@@ -484,10 +552,12 @@ export const useGameStore = defineStore('game', {
                 return
             }
 
-            // Vérification via les combos pré-calculées
-            const selectable = getSelectableCells(player.validCombos, player.pendingCells)
+            // Vérification via les placements pré-calculés
+            const selectable = selectableCells(player.validCombos, player.pendingCells)
             if (!selectable.has(cellIdx)) {
-                this.placementError = 'Cette case ne peut pas être cochée ici'
+                this.placementError = player.pendingCells.length > 0
+                    ? 'Impossible à partir des cases déjà choisies — annule pour repartir'
+                    : 'Cette case ne peut pas être cochée ici'
                 return
             }
 
@@ -500,15 +570,10 @@ export const useGameStore = defineStore('game', {
             if (!player || !player.confirmedCombo) return
 
             const { color, count } = player.confirmedCombo
-            const isFirstMove = player.checkedCells.size === 0
 
-            const validation = validatePlacement(player.pendingCells, {
-                cells: this.grid.cells,
-                checkedCells: player.checkedCells,
-                color,
-                count,
-                isFirstMove,
-            })
+            const validation = validatePlacement(
+                player.pendingCells, this.grid.cells, maskFromSet(player.checkedCells), color, count,
+            )
 
             if (!validation.valid) {
                 this.placementError = validation.reason ?? 'Placement invalide'
@@ -519,6 +584,9 @@ export const useGameStore = defineStore('game', {
             player.pendingCells = []
             player.validCombos = []
             player.hasPlaced = true
+            // Les jokers ne sont débités qu'ici : le placement est effectivement joué.
+            player.jokersUsed += player.pendingJokers
+            player.pendingJokers = 0
             this.placementError = null
 
             this.checkColorCompletion(player)
@@ -545,12 +613,6 @@ export const useGameStore = defineStore('game', {
 
         toggleCell(playerId: string, cellIdx: number) {
             this.togglePendingCell(playerId, cellIdx)
-        },
-
-        useJoker(playerId: string) {
-            const player = this.players.find(p => p.id === playerId)
-            if (!player || player.jokersUsed >= this.grid.jokers) return
-            player.jokersUsed++
         },
 
         checkColorCompletion(player: PlayerState) {
@@ -616,13 +678,15 @@ export const useGameStore = defineStore('game', {
             if (this.phase !== 'turn_end') return
             if (this.gameOver) return
 
-            // Sécurité : flush les pending non confirmées
+            // Sécurité : une sélection restée en attente est validée seulement si elle
+            // forme un placement légal complet. Sinon elle est abandonnée — la règle
+            // impose de cocher exactement le nombre de cases du dé, jamais moins.
             this.players.forEach(p => {
-                if (p.pendingCells.length > 0) {
-                    p.pendingCells.forEach(idx => p.checkedCells.add(idx))
-                    p.pendingCells = []
-                }
+                if (p.pendingCells.length > 0) this.confirmPendingCells(p.id)
+                p.pendingCells = []
                 p.validCombos = []
+                p.confirmedCombo = null
+                p.pendingJokers = 0
             })
 
             this.currentPlayerIndex = (this.currentPlayerIndex + 1) % this.players.length

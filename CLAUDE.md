@@ -5,22 +5,32 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 ```bash
+pnpm install      # installs + runs `nuxt prepare` (postinstall hook)
 pnpm dev          # Start dev server at http://localhost:3000
 pnpm build        # Production build
 pnpm preview      # Preview production build
 pnpm generate     # Static site generation
+pnpm test         # Run the vitest suite (engine + store)
+pnpm bench        # Time the placement enumerator
 ```
-
-No test runner is configured in this project.
 
 ## Architecture Overview
 
 This is a Nuxt 4 multiplayer board game called "Encore!" — a dice + grid colouring game (inspired by *Encore/That's Pretty Clever*). Stack: Vue 3 + Pinia + Supabase + Tailwind CSS.
 
+### Project config
+- Nuxt 4 `app/` directory layout (pages/stores/composables/services/data under `app/`).
+- Pure game rules live in `engine/` at the **project root**, not under `app/` — imported as `~~/engine/...` so Node scripts (bots, training) can use them with no Nuxt runtime.
+- TypeScript `strict: false` (see `nuxt.config.ts`) — do not assume strict null checks.
+- `@nuxtjs/supabase` with `redirect: false` — no built-in auth redirect. Player identity is anonymous, tracked via `localStorage` key `encore_player_id`, not Supabase Auth.
+- Requires env vars `SUPABASE_URL` and `SUPABASE_KEY` (standard `@nuxtjs/supabase` names). No `.env.example` in repo.
+- No migrations folder in repo; schema (`games`, `game_players`, `game_events`) lives only in the remote Supabase project — apply schema changes there manually.
+
 ### Game rules summary
 - 7×15 grid (105 cells), each cell has a **colour** (`g/y/b/p/o`) and optionally a **star**.
 - Each turn, 3 colour dice + 3 number dice are rolled. Players pick one colour die + one number die to form a combo (colour × count).
-- Players must check exactly `count` contiguous cells of the chosen colour, adjacent to their existing checked cells. First move must include column H (index 7).
+- Players must check exactly `count` cells of the chosen colour. The cells checked in one turn must be mutually contiguous (already-checked cells do **not** bridge a gap), all inside one colour block, and the group must be anchored.
+- **Anchoring**: a group is legal if it touches an already-checked cell orthogonally **or** contains a cell in the start column H (index 7). Column H is a **permanent** anchor, not a first-move-only rule — see the German original quoted in `engine/placement.ts`. The first-move rule needs no special case: with nothing checked, "touches a checked cell" is false everywhere, so the predicate reduces to "contains an H cell".
 - Scoring: completing a full colour = 5pts (first) / 3pts (others); completing a column = variable points; jokers left = +1 each; unchecked stars at game end = −2 each.
 - Game ends when any player completes 2 full colours.
 - **First 3 turns**: all players play simultaneously (no "active player" distinction).
@@ -34,10 +44,12 @@ waiting_roll → active_selecting → passive_selecting → turn_end → (next t
 ### State management
 
 **`app/stores/gameStore.ts`** — single source of truth for all game state:
-- `players[]`: each player tracks `checkedCells`, `pendingCells`, `validCombos`, `colorBonus`, `columnBonus`, `jokersUsed`
+- `players[]`: each player tracks `checkedCells`, `pendingCells`, `validCombos`, `colorBonus`, `columnBonus`, `jokersUsed`, `pendingJokers`
 - `phase`, `currentRoll`, `activePlayerId`, `turnNumber`
 - Key actions: `rollDicesWithResult()`, `confirmActiveCombo()`, `confirmPassiveCombo()`, `togglePendingCell()`, `confirmPendingCells()`, `nextTurn()`
-- Cell placement uses pre-computed `validCombos` (set on combo confirmation) filtered via `getSelectableCells()` on each click
+- Cell placement uses pre-computed `validCombos` (set on combo confirmation) filtered via `selectableCells()` on each click
+- **Jokers are debited in `confirmPendingCells()`, not on combo confirmation.** A confirmed-then-passed combo must not burn an exclamation point. `pendingJokers` holds the committed-but-unspent amount. Event replay reconstructs `jokersUsed` from the same CONFIRM/PLACE stream, so no payload carries it.
+- Confirming a combo with no legal placement auto-passes the player (safety net); `canPlayCombo()` / `hasAnyPlayableCombo()` let the UI disable it beforehand
 
 **`app/stores/lobbyStore.ts`** — pre-game lobby: create/join by 6-character code, ready-up flow, Supabase Realtime watching `game_players` table. Player identity persisted in `localStorage` (`encore_player_id`).
 
@@ -60,11 +72,11 @@ Remote clients bypass store guards that check `phase` (e.g. `PASS_ACTIVE` is app
 
 ### Game logic
 
-**`app/utils/gameRules.ts`** — pure functions, no store dependency:
-- `findAllValidCombos()` / `findPlacementCandidates()`: BFS + DFS to find all valid contiguous placements for a given (colour, count) combo
-- `getSelectableCells()`: filters pre-computed combos by already-pending cells to show what's clickable next
-- `validatePlacement()`: final validation before committing pending cells
-- Grid is 15 columns wide; column H = index 7 (first move anchor)
+**`engine/`** — headless rules engine, plain data, zero Vue/Pinia. Shared by the app, the tests and the bots.
+- `grid.ts`: dimensions, precomputed orthogonal `NEIGHBORS`, `START_COL = 7`
+- `mask.ts`: `CheckedMask` = `Uint8Array(105)`; `maskFromSet` / `setFromMask` convert at the store boundary
+- `placement.ts`: `isAnchor()`, `legalPlacements()` (ESU connected-subgraph enumeration — each placement produced exactly once, no dedup pass), `hasLegalPlacement()`, `selectableCells()`, `validatePlacement()`
+- Tests in `engine/__tests__/` encode the rulebook, including a property test against a brute-force reference
 
 ### Supabase schema (3 tables)
 - `games`: id, code (6-char), status, grid_id, max_players, turn_duration
@@ -78,6 +90,7 @@ Remote clients bypass store guards that check `phase` (e.g. `PASS_ACTIVE` is app
 ### Key composables
 - **`Usegamesync.ts`** — multiplayer sync (see above)
 - **`Useturntimer.ts`** — countdown timer; on expiry the active player auto-passes any players who haven't acted
+- Filename convention: capitalised `Use*.ts` (non-standard; Nuxt auto-import usually expects `useX.ts`). Keep the pattern when adding new ones to match existing imports.
 
 ### Timer logic
 - Roll timer: 15s auto-roll if active player doesn't roll

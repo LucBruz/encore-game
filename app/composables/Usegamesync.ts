@@ -74,7 +74,9 @@ export function useGameSync() {
                 store.cancelPendingCells(payload.playerId as string)
                 break
             case 'USE_JOKER':
-                store.useJoker(payload.playerId as string)
+                // Obsolète : les jokers sont désormais débités par CONFIRM_PLACEMENT,
+                // à partir de la combo confirmée. Aucun client n'émet cet event ;
+                // le cas reste ici pour ne pas casser le rejeu d'anciennes parties.
                 break
             case 'NEXT_TURN':
                 store.nextTurn()
