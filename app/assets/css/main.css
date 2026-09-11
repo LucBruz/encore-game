@@ -1,0 +1,24 @@
+/* Fond de page global.
+ *
+ * Pourquoi ici et pas dans une page : le fond du jeu etait peint par le
+ * conteneur de chaque page (`.page`, `.ia-page`), qui est centre et borne en
+ * largeur sur /solo (1120px) et /ia (1000px). Au-dela de cette largeur, le
+ * canevas du navigateur restait non peint -- donc blanc sur un navigateur en
+ * theme clair. Le fond doit etre porte par la racine : le fond de `html` se
+ * propage au canevas, c'est-a-dire tout le viewport, marges de rebond
+ * comprises, quelle que soit la hauteur du contenu.
+ *
+ * Ce fichier est charge via `css:` dans nuxt.config.ts, donc il atterrit dans
+ * le bundle d'entree -- present avant le moindre chunk de page. Le mettre dans
+ * un composant reproduirait la meme erreur d'un cran : du CSS de page qui
+ * arrive apres le premier rendu.
+ */
+html {
+    background: #0f0f13;
+    color: #e8e8f0;
+    font-family: 'Nunito', sans-serif;
+    /* Aligne le theme des controles natifs, des ascenseurs et du canevas par
+       defaut. C'est aussi ce qui evite le blanc si jamais la regle ci-dessus
+       n'etait pas encore appliquee. */
+    color-scheme: dark;
+}

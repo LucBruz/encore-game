@@ -4,8 +4,17 @@ export default defineNuxtConfig({
   // Enregistre tous les composants par leur nom de fichier sans préfixe de dossier
   // (ex. EndGameOverlay, LaunchOverlay au lieu de AnimationsEndGameOverlay)
   components: [{ path: '~/components', pathPrefix: false }],
+  // Fond de page global. Charge ici (et pas dans un composant) pour atterrir
+  // dans le bundle d'entree, donc avant tout chunk de page.
+  css: ['~/assets/css/main.css'],
   app: {
     head: {
+      meta: [
+        // Annonce le theme sombre des le HTML servi : aucune feuille de style
+        // n'est encore resolue a ce moment-la, donc c'est la seule chose qui
+        // empeche un flash blanc au tout premier rendu.
+        { name: 'color-scheme', content: 'dark' },
+      ],
       link: [
         { rel: 'icon', type: 'image/webp', href: '/jeu-de-dés.webp' },
         // Les deux familles sont referencees dans tout le CSS du jeu mais
