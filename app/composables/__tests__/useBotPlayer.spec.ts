@@ -1,6 +1,8 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { useGameStore, rollAllDices } from '~/stores/gameStore'
+import { useGameStore } from '~/stores/gameStore'
+import type { DiceColor, DiceNumber, DicesRoll } from '~/stores/gameStore'
+import { makeRng, rollDice } from '~~/engine/dice'
 import { DIFFICULTIES, useBotPlayer } from '../useBotPlayer'
 import type { DifficultyId } from '../useBotPlayer'
 import { validatePlacement } from '~~/engine/placement'
@@ -15,9 +17,26 @@ import { maskFromSet } from '~~/engine/mask'
 describe('useBotPlayer — pilotage du store', () => {
     beforeEach(() => setActivePinia(createPinia()))
 
-    function playSoloGame(gridId: string, maxTurns = 60, difficulty: DifficultyId = 'hard') {
+    /**
+     * Des tires d'un PRNG a graine fixe. `rollAllDices()` du store utilise
+     * Math.random : s'en servir ici rendrait le test non deterministe, et il l'a
+     * effectivement ete (un echec sur trois executions).
+     */
+    function seededRolls(seed: number): () => DicesRoll {
+        const rng = makeRng(seed)
+        return () => {
+            const r = rollDice(rng)
+            return {
+                colorDices: r.colors.map(v => ({ type: 'color', value: v })) as DicesRoll['colorDices'],
+                numberDices: r.numbers.map(v => ({ type: 'number', value: v })) as DicesRoll['numberDices'],
+            }
+        }
+    }
+
+    function playSoloGame(gridId: string, maxTurns = 60, difficulty: DifficultyId = 'hard', seed = 424242) {
         const store = useGameStore()
-        const bot = useBotPlayer(difficulty)
+        const bot = useBotPlayer(difficulty, seed)
+        const nextRoll = seededRolls(seed)
         store.initPlayers([{ id: 'bot-1', name: 'A' }, { id: 'bot-2', name: 'B' }])
         store.initGrid(gridId)
 
@@ -29,7 +48,7 @@ describe('useBotPlayer — pilotage du store', () => {
             if (store.turnNumber >= maxTurns) break
 
             if (store.phase === 'waiting_roll') {
-                store.rollDicesWithResult(rollAllDices())
+                store.rollDicesWithResult(nextRoll())
                 continue
             }
 
@@ -111,9 +130,16 @@ describe('useBotPlayer — pilotage du store', () => {
     })
 
     it('produit des scores nettement superieurs a une feuille vide', () => {
-        const { store } = playSoloGame('01', 80)
-        const scores = store.players.map(p => store.scoreForPlayer(p.id))
-        for (const s of scores) expect(s).toBeGreaterThan(10)
+        // Moyenne sur plusieurs graines plutot qu'un seuil par joueur : une partie
+        // isolee peut mal tourner sans que l'agent soit en cause.
+        const scores: number[] = []
+        for (const seed of [1, 2, 3, 4, 5, 6]) {
+            const { store } = playSoloGame('01', 80, 'hard', seed * 7919)
+            for (const p of store.players) scores.push(store.scoreForPlayer(p.id))
+        }
+        const mean = scores.reduce((a, b) => a + b, 0) / scores.length
+        expect(mean).toBeGreaterThan(15)
+        for (const s of scores) expect(s).toBeGreaterThan(0)
     })
 
     it('joue legalement aux trois niveaux de difficulte', () => {

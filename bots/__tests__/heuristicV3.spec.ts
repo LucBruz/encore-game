@@ -4,7 +4,7 @@ import { makeRng, rollDice } from '../../engine/dice'
 import { CELL_COUNT, NEIGHBORS } from '../../engine/grid'
 import { createMask } from '../../engine/mask'
 import { applyMove, cloneSheet, createSheet, legalMoves } from '../../engine/state'
-import { gridStats } from '../heuristic'
+import { gridStats } from '../../engine/scoring'
 import {
     DEFAULT_WEIGHTS_V3, V3Scorer, V3_KEYS, vecToWeightsV3, weightsV3ToVec,
 } from '../heuristicV3'

@@ -1,25 +1,32 @@
 {
-  "policy": "greedy-v3",
-  "games": 800,
+  "policy": "v3-multi",
+  "games": 500,
   "seed": 818181,
+  "mode": "4 joueurs, adversaires au niveau maximal",
   "levels": [
     {
       "id": "easy",
-      "temperature": 0.912109375,
-      "mean": 20.063125,
-      "stdev": 6.588917038055269
+      "temperature": 0.3779296875,
+      "winRate": 6.8,
+      "meanScore": 11.288,
+      "stdev": 7.4165393547125555,
+      "passes": 4.524
     },
     {
       "id": "medium",
-      "temperature": 0.458984375,
-      "mean": 30.1275,
-      "stdev": 5.731273309658155
+      "temperature": 0.1787109375,
+      "winRate": 21,
+      "meanScore": 16.83,
+      "stdev": 7.931273542124243,
+      "passes": 3.91
     },
     {
       "id": "hard",
       "temperature": 0,
-      "mean": 36.113125,
-      "stdev": 4.347055352117684
+      "winRate": 27.4,
+      "meanScore": 18.616,
+      "stdev": 7.322058726888204,
+      "passes": 3.798
     }
   ]
 }

@@ -1,8 +1,8 @@
-import type { Move } from '../engine/state'
+import type { Move } from '../../engine/state'
 import { DEFAULT_WEIGHTS, evaluateSheet, gridStats } from './heuristic'
 import type { GridStats, HeuristicWeights } from './heuristic'
-import type { Bot, TurnContext } from './types'
-import type { Cells } from '../engine/types'
+import type { Bot, TurnContext } from '../types'
+import type { Cells } from '../../engine/types'
 
 /** Coup legal tire au hasard. Plancher de reference. */
 export const randomBot: Bot = {

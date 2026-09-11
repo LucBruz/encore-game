@@ -1,12 +1,12 @@
-import { COLUMN_POINTS, COLS } from '../app/data/grids/grid-01'
-import { CELL_COUNT, COL_OF, GRID_COLS, GRID_ROWS, NEIGHBORS, START_COL } from '../engine/grid'
-import { COLOR_KEYS } from '../engine/scoring'
-import type { Move } from '../engine/state'
-import { DEFAULT_TOTAL_JOKERS } from '../engine/state'
-import type { Cells, CheckedMask, ColorKey } from '../engine/types'
+import { COLUMN_POINTS, COLS } from '../../app/data/grids/grid-01'
+import { CELL_COUNT, COL_OF, GRID_COLS, GRID_ROWS, NEIGHBORS, START_COL } from '../../engine/grid'
+import { COLOR_KEYS } from '../../engine/scoring'
+import type { Move } from '../../engine/state'
+import { DEFAULT_TOTAL_JOKERS } from '../../engine/state'
+import type { Cells, CheckedMask, ColorKey } from '../../engine/types'
 import { gridStats } from './heuristic'
 import type { GridStats } from './heuristic'
-import type { Bot, TurnContext } from './types'
+import type { Bot, TurnContext } from '../types'
 
 /**
  * Heuristique v2 — teste si la FORME de la v1 etait limitante.

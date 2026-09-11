@@ -14,9 +14,9 @@
 import { writeFileSync, mkdirSync } from 'node:fs'
 import { ALL_GRIDS } from '../app/data/grids/index'
 import { makeRng } from '../engine/dice'
-import { makeGreedyBot } from '../bots/basic'
-import { DEFAULT_WEIGHTS } from '../bots/heuristic'
-import type { HeuristicWeights } from '../bots/heuristic'
+import { makeGreedyBot } from '../bots/baselines/basic'
+import { DEFAULT_WEIGHTS } from '../bots/baselines/heuristic'
+import type { HeuristicWeights } from '../bots/baselines/heuristic'
 import { playGame } from '../bots/play'
 
 function arg(name: string, fallback: string): string {

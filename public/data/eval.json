@@ -68,7 +68,7 @@
           "count": 1
         }
       ],
-      "msPerGame": 2.259,
+      "msPerGame": 1.84,
       "paired": {
         "vs": "greedy-cem",
         "delta": -35.05,
@@ -123,7 +123,7 @@
           "count": 6
         }
       ],
-      "msPerGame": 4.069,
+      "msPerGame": 3.085,
       "paired": {
         "vs": "greedy-cem",
         "delta": -4.39,
@@ -178,7 +178,7 @@
           "count": 1
         }
       ],
-      "msPerGame": 4.902,
+      "msPerGame": 3.83,
       "paired": null
     },
     {
@@ -224,7 +224,7 @@
           "count": 1
         }
       ],
-      "msPerGame": 3.54,
+      "msPerGame": 2.784,
       "paired": {
         "vs": "greedy-cem",
         "delta": -0.56,
@@ -239,54 +239,54 @@
     {
       "bot": "greedy-v3",
       "games": 2000,
-      "mean": 36.33,
-      "median": 37,
-      "stdev": 4.32,
-      "p10": 30.5,
-      "p90": 41.5,
-      "min": 17.5,
-      "max": 45.5,
-      "meanTurns": 39.7,
-      "naturalEndRate": 0.979,
-      "meanPasses": 1.98,
+      "mean": 38.88,
+      "median": 39.5,
+      "stdev": 4.75,
+      "p10": 32.5,
+      "p90": 44,
+      "min": 19,
+      "max": 48,
+      "meanTurns": 42.3,
+      "naturalEndRate": 0.914,
+      "meanPasses": 5.72,
       "histogram": [
         {
           "bin": 15,
-          "count": 4
+          "count": 2
         },
         {
           "bin": 20,
-          "count": 24
+          "count": 22
         },
         {
           "bin": 25,
-          "count": 136
+          "count": 59
         },
         {
           "bin": 30,
-          "count": 469
+          "count": 273
         },
         {
           "bin": 35,
-          "count": 929
+          "count": 654
         },
         {
           "bin": 40,
-          "count": 430
+          "count": 822
         },
         {
           "bin": 45,
-          "count": 8
+          "count": 168
         }
       ],
-      "msPerGame": 8.954,
+      "msPerGame": 7.602,
       "paired": {
         "vs": "greedy-cem",
-        "delta": 0.42,
-        "stderr": 0.118,
+        "delta": 2.96,
+        "stderr": 0.131,
         "ci95": [
-          0.19,
-          0.65
+          2.71,
+          3.22
         ],
         "significant": true
       }

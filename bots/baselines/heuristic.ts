@@ -1,9 +1,10 @@
-import { COLUMN_POINTS, COLS } from '../app/data/grids/grid-01'
-import { CELL_COUNT, GRID_COLS, GRID_ROWS } from '../engine/grid'
-import { COLOR_KEYS, colorTotals } from '../engine/scoring'
-import type { Sheet } from '../engine/state'
-import { DEFAULT_TOTAL_JOKERS } from '../engine/state'
-import type { Cells, CheckedMask, ColorKey } from '../engine/types'
+import { COLUMN_POINTS, COLS } from '../../app/data/grids/grid-01'
+import { CELL_COUNT, GRID_COLS, GRID_ROWS } from '../../engine/grid'
+import { COLOR_KEYS, gridStats } from '../../engine/scoring'
+import type { GridStats } from '../../engine/scoring'
+import type { Sheet } from '../../engine/state'
+import { DEFAULT_TOTAL_JOKERS } from '../../engine/state'
+import type { Cells, CheckedMask, ColorKey } from '../../engine/types'
 
 /**
  * Evaluation heuristique d'une feuille, en "points esperes".
@@ -40,17 +41,6 @@ export const DEFAULT_WEIGHTS: HeuristicWeights = {
 
 /** Points de chaque colonne, en mode "average" (moyenne first/others). */
 const COLUMN_VALUE: number[] = COLS.map(c => (COLUMN_POINTS[c].first + COLUMN_POINTS[c].others) / 2)
-
-export interface GridStats {
-    colorTotals: Record<ColorKey, number>
-    starCount: number
-}
-
-export function gridStats(cells: Cells): GridStats {
-    let starCount = 0
-    for (let i = 0; i < CELL_COUNT; i++) if (cells[i][1]) starCount++
-    return { colorTotals: colorTotals(cells), starCount }
-}
 
 export function evaluateSheet(
     cells: Cells,
@@ -104,3 +94,6 @@ export function evaluate(
 ): number {
     return evaluateSheet(cells, sheet.mask, sheet.jokersUsed, stats, weights, totalJokers)
 }
+
+export { gridStats }
+export type { GridStats }

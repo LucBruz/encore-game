@@ -34,8 +34,10 @@ pnpm dev          # http://localhost:3000
 pnpm test         # suite vitest (moteur, store, agents, intégration bot/store)
 pnpm eval         # benchmark des agents      -> public/data/eval.json
 pnpm tune         # optimisation CEM des poids -> public/data/tuned-weights.json
-pnpm tune:v3      # optimisation de l'heuristique v3 -> public/data/tuned-weights-v3.json
-pnpm calibrate    # calibration des 3 niveaux -> public/data/difficulty.json
+pnpm tune:v3      # optimisation en solitaire (conservee comme temoin)
+pnpm tune:multi   # optimisation en partie a 4 -> public/data/tuned-weights-multi.json
+pnpm duel         # tournoi multijoueur        -> public/data/duel.json
+pnpm calibrate    # calibration des 3 niveaux  -> public/data/difficulty.json
 pnpm bench        # chronométrage de l'énumérateur de placements
 ```
 
@@ -81,6 +83,29 @@ Les règles sont testées contre une **référence par force brute** appliquant 
 prédicats séparément (taille, contiguïté mutuelle, ancrage), sur des positions aléatoires
 où le binomial reste calculable.
 
+## Le protocole avant les chiffres
+
+Les agents ont d'abord ete optimises **en solitaire** : une feuille, pas d'adversaire, une
+limite de 50 tours comme garde-fou. C'etait faux, et pas qu'un peu — le classement obtenu
+est inverse au sommet.
+
+| agent | solitaire, 50 tours | table de 4 joueurs |
+|---|---|---|
+| le mieux note en solitaire | **38,88**, 1er | **15,11**, **dernier**, 3,8 % de victoires |
+| le meme, prive du droit de passer | ~36 | 20,73, 27,2 % de victoires |
+
+Le solitaire ne punit pas la temporisation : l'agent y decide seul quand la partie
+s'arrete. Il avait donc appris a thesauriser ses 8 jokers (+8 points garantis) et a passer
+12 fois par partie. A une vraie table, les autres finissent a sa place.
+
+Trois choses n'existent que dans `bots/playMulti.ts` :
+
+- **le deni de des** — le joueur actif met sa paire de cote, les passifs n'ont que les 4 restants
+- **la fin decidee par autrui** — le premier a completer deux couleurs coupe tout le monde
+- **les bonus premier / suivants** — qui recompensent la vitesse
+
+Tout ce qui suit est donc mesure a une table de 4.
+
 ## Agents et mesure
 
 Toutes les comparaisons sont **appariées** : à index de partie égal, chaque agent reçoit
@@ -88,23 +113,34 @@ la même graine, donc la même suite de dés sur la même grille. Le harnais rep
 apparié avec son intervalle à 95 %, parce qu'une différence de moyennes ne veut rien dire
 sans savoir de combien elle fluctue.
 
-2000 parties par agent, 8 grilles officielles, mode de bonus `average` :
+2000 parties, tables de 4 tirees parmi 5 agents, rotation des sieges, 8 grilles :
 
-| agent | score moyen | écart apparié vs `greedy-cem` |
-|---|---|---|
-| `random` | 0,86 | −35,05 [−35,39, −34,71] |
-| `greedy` (poids à la main) | 31,52 | −4,39 [−4,63, −4,15] |
-| `greedy-cem` (poids optimisés) | 35,91 | référence |
-| `greedy-v2` (21 paramètres) | 35,36 | −0,56 [−0,78, −0,33] |
-| **`greedy-v3`** (forme + timing) | **36,33** | **+0,42 [+0,19, +0,65]** |
+| agent | score moyen | victoires | a termine | écart apparié |
+|---|---|---|---|---|
+| **`v3-multi`** | **26,58** | **73,0 %** | 74,8 % | référence |
+| `v3-sans-passe` | 20,73 | 27,2 % | 28,3 % | −7,45 [−8,04, −6,87] |
+| `v3-joker-1.5` | 16,93 | 10,9 % | 11,1 % | −10,66 [−11,17, −10,15] |
+| `greedy-cem` | 16,81 | 10,1 % | 7,6 % | −10,75 [−11,26, −10,24] |
+| `v3-thesauriseur` (meilleur en solitaire) | 15,11 | 3,8 % | 2,5 % | −12,87 [−13,35, −12,39] |
 
-L'optimisation par **entropie croisée** vaut +4,39 points, validés sur un jeu de graines
-disjoint de celui d'optimisation. Deux poids appris sont instructifs : un joker vaut
-beaucoup plus que le point qu'il rapporte en fin de partie, et l'exposant de progression
-des couleurs devient **sous-linéaire** — mieux vaut étaler ses croix que finir une
-couleur. C'est exactement le conseil du livret (« Plus vous dispersez vos croix, plus vos
-possibilités de choix augmentent »), retrouvé seul par l'optimiseur. L'effet se lit dans
-les passes par partie, qui tombent de 5,77 à 2,68.
+Le vainqueur est aussi celui qui **termine** les parties : 74,8 % contre 2,5 % pour le
+thesauriseur. Aller vite est une strategie, pas un effet de bord.
+
+Les poids sont optimises par **entropie croisee**, avec pour cible la marge contre le
+meilleur adversaire de la table, et valides sur un jeu de graines disjoint. Le panel
+d'adversaires est volontairement heterogene : s'entrainer contre un seul style apprendrait
+a battre ce style, pas a jouer.
+
+Le passage du solitaire au multijoueur inverse plusieurs poids, et chaque inversion se lit
+comme une regle de jeu :
+
+| poids | solitaire | multijoueur | ce que ça dit |
+|---|---|---|---|
+| `colorExponent` | 0,46 | **1,88** | le solitaire disait « etale-toi », le multijoueur dit « finis tes couleurs » — parce que finir met fin a la partie |
+| `lateHorizon` | 33,1 | **24,3** | la phase couleurs demarre bien plus tot |
+| `jokerValue` | 6,40 | **3,60** | thesauriser est puni |
+| `orphan1` | 0,39 | **2,25** | les cases isolees redeviennent cheres |
+| `extremeColumnEarly` | 5,65 | **8,84** | finir tot les colonnes A et O : le signal le plus robuste du projet |
 
 ### Ce qui a fini par marcher : des features dictées par un joueur
 
@@ -134,11 +170,16 @@ lit aussi dans le jeu : passes par partie 2,68 → 1,98, parties terminées 95,4
 Une seule politique, un seul bouton : température softmax sur les valeurs z-scorées à
 chaque décision, puis **dichotomie sur un score cible**.
 
-| niveau | température | score moyen | écart |
+Mesure faite en partie a 4 contre trois exemplaires du niveau maximal. La cible est un
+**taux de victoire** et non un score : a une table de 4, un score absolu depend autant des
+adversaires que de l'agent. Le plafond est ~25 %, quatre joueurs identiques se partageant
+les victoires.
+
+| niveau | température | victoires | score moyen |
 |---|---|---|---|
-| facile | 0,912 | 20,1 | — |
-| moyen | 0,459 | 30,1 | +1,8 écart-type |
-| difficile | 0 | 36,1 | +1,4 écart-type |
+| facile | 0,378 | 6,8 % | 11,3 |
+| moyen | 0,179 | 21,0 % | 16,8 |
+| difficile | 0 | 27,4 % | 18,6 |
 
 L'alternative naïve — prendre `random`, `greedy` et `greedy-cem` comme les trois niveaux —
 ne marche pas : `random` est à **7 écarts-types** sous `greedy` (absurde, pas facile), et
@@ -164,10 +205,13 @@ Ces deux premières sondes testent au fond la même hypothèse — « modéliser
 flexibilité future aide-t-il ? ». Ce sont donc deux résultats négatifs *corrélés*, pas deux
 confirmations indépendantes.
 
-La conclusion tenable : la marge restante n'est pas dans la recherche ni dans une
-représentation plus riche « en général », mais dans des features **spécifiques au jeu** et
-**datées par la phase de partie**. La v3 récupère environ la moitié du gain du Monte-Carlo
-pour 1 750 fois moins cher.
+Ces resultats negatifs ont tous ete mesures **en solitaire**, donc dans le cadrage dont on
+sait maintenant qu'il classe mal. Ils restent valables comme constats sur ce cadrage, pas
+comme verdicts sur le jeu ; les reverifier a une table de 4 reste a faire.
+
+La lecon principale du projet n'est pas un chiffre : **le protocole de mesure comptait plus
+que l'algorithme**. Le meilleur agent selon le premier protocole est le pire selon le
+second, et aucun reglage n'aurait rattrape ca.
 
 ## Licence
 

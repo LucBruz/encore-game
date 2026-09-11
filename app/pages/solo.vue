@@ -5,8 +5,8 @@
       <NuxtLink to="/" class="back">← Retour</NuxtLink>
       <h1>Partie solo</h1>
       <p class="lede">
-        Affronte <strong>greedy-v3</strong>, l'agent dont les poids d'évaluation ont été
-        optimisés par entropie croisée. Aucune connexion : tout tourne dans ton navigateur.
+        Affronte <strong>v3-multi</strong>, dont les poids d'évaluation ont été optimisés
+        par entropie croisée <strong>directement en partie à 4 joueurs</strong>. Aucune connexion : tout tourne dans ton navigateur.
         <NuxtLink to="/ia" class="link">Voir le benchmark →</NuxtLink>
       </p>
 
@@ -41,8 +41,9 @@
         </div>
         <p class="hint">
           Même politique pour les trois niveaux, dégradée par température et
-          <strong>calibrée par mesure</strong> : {{ DIFFICULTIES[difficulty].meanScore }} points
-          de moyenne sur 800 parties.
+          <strong>calibrée par mesure</strong> en partie à 4 joueurs :
+          {{ DIFFICULTIES[difficulty].winRate }} % de victoires contre trois bots au niveau
+          maximal, où le plafond théorique est 25 %.
         </p>
       </div>
 

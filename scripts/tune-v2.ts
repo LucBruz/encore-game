@@ -12,10 +12,10 @@ import { writeFileSync, mkdirSync, readFileSync } from 'node:fs'
 import { ALL_GRIDS } from '../app/data/grids/index'
 import { makeRng } from '../engine/dice'
 import { runCem } from '../bots/cem'
-import { makeGreedyBot } from '../bots/basic'
+import { makeGreedyBot } from '../bots/baselines/basic'
 import {
     DEFAULT_WEIGHTS_V2, V2_PARAM_COUNT, makeGreedyV2Bot, vecToWeightsV2, weightsV2ToVec,
-} from '../bots/heuristicV2'
+} from '../bots/baselines/heuristicV2'
 import { playGame } from '../bots/play'
 import type { Bot } from '../bots/types'
 

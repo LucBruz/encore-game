@@ -1,11 +1,10 @@
 import { COLUMN_POINTS, COLS } from '../app/data/grids/grid-01'
 import { CELL_COUNT, COL_OF, GRID_COLS, GRID_ROWS, NEIGHBORS, START_COL } from '../engine/grid'
-import { COLOR_KEYS } from '../engine/scoring'
+import { COLOR_KEYS, gridStats } from '../engine/scoring'
+import type { GridStats } from '../engine/scoring'
 import type { Move } from '../engine/state'
 import { DEFAULT_TOTAL_JOKERS } from '../engine/state'
 import type { Cells, CheckedMask, ColorKey } from '../engine/types'
-import { gridStats } from './heuristic'
-import type { GridStats } from './heuristic'
 import type { Bot, TurnContext } from './types'
 
 /**
@@ -307,8 +306,12 @@ export function makeGreedyV3Bot(w: WeightsV3 = DEFAULT_WEIGHTS_V3, name = 'greed
             const scorer = new V3Scorer(
                 cells, sheet.mask, sheet.jokersUsed, statsFor(cells), w, totalJokers, turn,
             )
+            // "Passer" est un candidat a part entiere, de valeur egale a la feuille
+            // inchangee. La regle l'autorise, et l'ignorer coutait 1,51 point par
+            // partie : dans 11 % des tours le seul coup legal depense un joker qui
+            // vaut plus que ce qu'il rapporte, et il valait mieux ne rien cocher.
             let best: Move | null = null
-            let bestValue = -Infinity
+            let bestValue = scorer.value
             for (const move of moves) {
                 const value = scorer.scoreAfter(move)
                 if (value > bestValue) { bestValue = value; best = move }

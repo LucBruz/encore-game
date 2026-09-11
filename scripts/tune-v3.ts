@@ -14,7 +14,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { ALL_GRIDS } from '../app/data/grids/index'
 import { makeRng } from '../engine/dice'
 import { runCem } from '../bots/cem'
-import { makeGreedyBot } from '../bots/basic'
+import { makeGreedyBot } from '../bots/baselines/basic'
 import {
     DEFAULT_WEIGHTS_V3, V3_KEYS, makeGreedyV3Bot, vecToWeightsV3, weightsV3ToVec,
 } from '../bots/heuristicV3'
@@ -35,6 +35,13 @@ const TRAIN_SEED = Number(arg('seed', '606060'))
 const HOLDOUT_SEED = Number(arg('holdoutSeed', '999331'))
 const HOLDOUT_GAMES = Number(arg('holdoutGames', '2000'))
 const OUT = arg('out', 'public/data/tuned-weights-v3.json')
+/**
+ * Horizon de partie. Le defaut n'est PAS un detail : a 50 tours l'optimiseur
+ * apprend a temporiser (thesauriser les jokers, passer souvent), ce qui ne coute
+ * rien en solitaire mais se fait punir en vraie partie, ou c'est l'adversaire qui
+ * decide de la fin. Une partie reelle se termine vers le tour 41.
+ */
+const MAX_TURNS = Number(arg('maxTurns', '40'))
 
 // Bornes par parametre, dans l'ordre de V3_KEYS.
 const BOUNDS: Record<keyof WeightsV3, [number, number]> = {
@@ -59,7 +66,7 @@ function meanScore(bot: Bot, games: number, seedBase: number): number {
     let sum = 0
     for (let i = 0; i < games; i++) {
         const grid = ALL_GRIDS[i % ALL_GRIDS.length]
-        sum += playGame(grid.cells, bot, makeRng(seedBase + i * 7919), { maxTurns: 50 }).score
+        sum += playGame(grid.cells, bot, makeRng(seedBase + i * 7919), { maxTurns: MAX_TURNS }).score
     }
     return sum / games
 }
@@ -69,8 +76,8 @@ function pairedDelta(a: Bot, b: Bot, games: number, seedBase: number) {
     const diffs: number[] = []
     for (let i = 0; i < games; i++) {
         const grid = ALL_GRIDS[i % ALL_GRIDS.length]
-        const sa = playGame(grid.cells, a, makeRng(seedBase + i * 7919), { maxTurns: 50 }).score
-        const sb = playGame(grid.cells, b, makeRng(seedBase + i * 7919), { maxTurns: 50 }).score
+        const sa = playGame(grid.cells, a, makeRng(seedBase + i * 7919), { maxTurns: MAX_TURNS }).score
+        const sb = playGame(grid.cells, b, makeRng(seedBase + i * 7919), { maxTurns: MAX_TURNS }).score
         diffs.push(sa - sb)
     }
     const m = diffs.reduce((x, y) => x + y, 0) / diffs.length
@@ -80,7 +87,7 @@ function pairedDelta(a: Bot, b: Bot, games: number, seedBase: number) {
 }
 
 console.log('CEM — heuristique v3 (forme + timing, 13 parametres)')
-console.log(`  iterations ${ITERS}  population ${POP}  elites ${ELITE}  parties/candidat ${GAMES}`)
+console.log(`  iterations ${ITERS}  population ${POP}  elites ${ELITE}  parties/candidat ${GAMES}  maxTurns ${MAX_TURNS}`)
 const base = meanScore(makeGreedyV3Bot(DEFAULT_WEIGHTS_V3), GAMES, TRAIN_SEED)
 console.log(`  depart (poids a la main) : ${base.toFixed(2)}\n`)
 

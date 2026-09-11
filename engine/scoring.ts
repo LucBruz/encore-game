@@ -38,6 +38,18 @@ export function colorChecked(cells: Cells, mask: CheckedMask): Record<ColorKey, 
     return checked
 }
 
+/** Constantes d'une grille, calculees une fois et partagees par les evaluations. */
+export interface GridStats {
+    colorTotals: Record<ColorKey, number>
+    starCount: number
+}
+
+export function gridStats(cells: Cells): GridStats {
+    let starCount = 0
+    for (let i = 0; i < CELL_COUNT; i++) if (cells[i][1]) starCount++
+    return { colorTotals: colorTotals(cells), starCount }
+}
+
 export function completedColors(cells: Cells, mask: CheckedMask): ColorKey[] {
     const totals = colorTotals(cells)
     const checked = colorChecked(cells, mask)

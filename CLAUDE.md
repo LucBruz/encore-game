@@ -113,6 +113,19 @@ Plain TypeScript on top of `engine/`, no Nuxt runtime. Run via `tsx`.
 
 **`app/composables/useBotPlayer.ts`** bridges engine and store: converts `checkedCells` to a mask, calls `legalMoves`, and maps the chosen move back to dice indices. Those indices are **relative to the dice list passed in** — for a passive player that is `availableForPassive`, which is what the store actions expect.
 
+### Measurement protocol — read this before trusting any number
+
+Agents were first tuned **single-agent** (one sheet, no opponent, 50-turn cap). That
+framing ranks agents **wrongly at the top**: the best single-agent agent (38.88 solo)
+finishes **last** at a 4-player table (15.11, 3.8% wins). Solitaire does not punish
+stalling, because the agent alone decides when the game ends — so it learned to hoard all
+8 jokers and pass 12 times a game.
+
+`bots/playMulti.ts` implements the real game: dice denial (passive players only get the 4
+remaining dice), the game ending when the first player completes two colours, and
+first/others bonuses. **Tune and evaluate there** (`pnpm tune:multi`, `pnpm duel`).
+`scripts/tune-v3.ts` and `scripts/eval.ts` are single-agent, kept as witnesses.
+
 ### Measured findings
 
 Numbers come from `pnpm eval` (2000 paired games, 8 grids). Comparisons are paired: at equal game index every agent sees the same dice on the same grid, and the harness reports the paired delta with a 95% interval.
@@ -122,6 +135,16 @@ Numbers come from `pnpm eval` (2000 paired games, 8 grids). Comparisons are pair
 - The 21-parameter heuristic (v2) is **-0.56 [-0.78, -0.33]** — a richer representation with *flat* counters does not help.
 - The v3 heuristic is **+0.42 [+0.19, +0.65]** on the tuning seeds and **+0.72 [+0.50, +0.95]** on disjoint holdout seeds, for ~2x the cost. The difference from v2 is that its terms are gated by turn number. Passes per game fall 2.68 -> 1.98.
 - Monte-Carlo rollouts with the tuned policy are the only thing that genuinely beats it: **+1.60 [+0.30, +2.90]** over 64 paired games, for ~3500x the cost.
+
+All of the above is **single-agent** and therefore suspect. At a 4-player table (2000 games,
+rotating seats): `v3-multi` 26.58 mean / 73.0% wins, `v3-sans-passe` 20.73, `greedy-cem`
+16.81, and the solo champion last at 15.11. The winner is also the one that *finishes*
+games (74.8% vs 2.5%) — speed is a strategy here, not a side effect.
+
+Voluntary passing is a real option the move generator did not represent (`legalMoves`
+treats passing as "no legal move"). Adding it was worth +1.51 solo — and is exactly what
+sinks the agent in a real game. The multiplayer-tuned agent keeps the option but almost
+never uses it.
 
 Keep the negative results. They are measurements, not gaps.
 

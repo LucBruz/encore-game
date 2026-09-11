@@ -1,11 +1,11 @@
-import { makeRng, rollDice } from '../engine/dice'
-import type { Roll } from '../engine/dice'
-import { applyMove, cloneSheet, isGameOver, legalMoves } from '../engine/state'
-import type { Move, Sheet } from '../engine/state'
-import type { Cells } from '../engine/types'
+import { makeRng, rollDice } from '../../engine/dice'
+import type { Roll } from '../../engine/dice'
+import { applyMove, cloneSheet, isGameOver, legalMoves } from '../../engine/state'
+import type { Move, Sheet } from '../../engine/state'
+import type { Cells } from '../../engine/types'
 import { DEFAULT_WEIGHTS, evaluateSheet, gridStats } from './heuristic'
 import type { GridStats, HeuristicWeights } from './heuristic'
-import type { Bot, TurnContext } from './types'
+import type { Bot, TurnContext } from '../types'
 
 export interface ExpectimaxOptions {
     weights?: HeuristicWeights

@@ -1,0 +1,131 @@
+{
+  "tuned": {
+    "columnExponent": 2.4787708412689367,
+    "extremeColumnEarly": 8.842288811459799,
+    "colorExponent": 1.8797397355151617,
+    "colorValueEarly": 1.4016881755598023,
+    "colorValueLate": 3.9926933647467795,
+    "orphan1": 2.248850642928218,
+    "orphan2": 1.7119253244706065,
+    "frontierEarly": 1.1592315861150693,
+    "jokerValue": 3.603089193920802,
+    "starValue": 1.5705709057903305,
+    "cellValue": 0.4563390359362296,
+    "earlyHorizon": 18.72383768267534,
+    "lateHorizon": 24.31417233161694
+  },
+  "from": {
+    "columnExponent": 2.536133496834988,
+    "extremeColumnEarly": 5.644801501473076,
+    "colorExponent": 0.46429847355430914,
+    "colorValueEarly": 1.5038856447372113,
+    "colorValueLate": 1.2535582970746586,
+    "orphan1": 0.38678200101360144,
+    "orphan2": 0.1611134185681177,
+    "frontierEarly": 0.4858232799715645,
+    "jokerValue": 6.399849906071828,
+    "starValue": 2.513254388615634,
+    "cellValue": 0.06934456486582188,
+    "earlyHorizon": 14.83012029573985,
+    "lateHorizon": 33.12812525299018
+  },
+  "history": [
+    {
+      "iter": 0,
+      "best": -5.47,
+      "eliteMean": -8.17
+    },
+    {
+      "iter": 1,
+      "best": -5,
+      "eliteMean": -6.18
+    },
+    {
+      "iter": 2,
+      "best": -0.03,
+      "eliteMean": -3.13
+    },
+    {
+      "iter": 3,
+      "best": -1.31,
+      "eliteMean": -2.28
+    },
+    {
+      "iter": 4,
+      "best": 3.17,
+      "eliteMean": 0.12
+    },
+    {
+      "iter": 5,
+      "best": 1.19,
+      "eliteMean": 0.45
+    },
+    {
+      "iter": 6,
+      "best": 3.47,
+      "eliteMean": 2.63
+    },
+    {
+      "iter": 7,
+      "best": 5.77,
+      "eliteMean": 4.22
+    },
+    {
+      "iter": 8,
+      "best": 6.14,
+      "eliteMean": 5.21
+    },
+    {
+      "iter": 9,
+      "best": 7.16,
+      "eliteMean": 6.19
+    },
+    {
+      "iter": 10,
+      "best": 7.2,
+      "eliteMean": 6.4
+    },
+    {
+      "iter": 11,
+      "best": 7.13,
+      "eliteMean": 6.55
+    },
+    {
+      "iter": 12,
+      "best": 7.03,
+      "eliteMean": 6.77
+    },
+    {
+      "iter": 13,
+      "best": 6.97,
+      "eliteMean": 6.59
+    },
+    {
+      "iter": 14,
+      "best": 7.05,
+      "eliteMean": 6.7
+    },
+    {
+      "iter": 15,
+      "best": 7.11,
+      "eliteMean": 6.47
+    },
+    {
+      "iter": 16,
+      "best": 7.98,
+      "eliteMean": 7.05
+    },
+    {
+      "iter": 17,
+      "best": 8.58,
+      "eliteMean": 7.33
+    }
+  ],
+  "opponents": [
+    "v3-sans-passe",
+    "greedy-cem",
+    "v3-joker-1.5"
+  ],
+  "games": 64,
+  "maxTurns": 60
+}

@@ -1,13 +1,13 @@
-import { makeRng, rollDice } from '../engine/dice'
-import { scoreSheet } from '../engine/scoring'
-import type { BonusMode } from '../engine/scoring'
-import { applyMove, cloneSheet, isGameOver, legalMoves } from '../engine/state'
-import type { Move, Sheet } from '../engine/state'
-import type { Cells } from '../engine/types'
+import { makeRng, rollDice } from '../../engine/dice'
+import { scoreSheet } from '../../engine/scoring'
+import type { BonusMode } from '../../engine/scoring'
+import { applyMove, cloneSheet, isGameOver, legalMoves } from '../../engine/state'
+import type { Move, Sheet } from '../../engine/state'
+import type { Cells } from '../../engine/types'
 import { DEFAULT_WEIGHTS, evaluateSheet, gridStats } from './heuristic'
 import type { GridStats, HeuristicWeights } from './heuristic'
 import { makeGreedyBot } from './basic'
-import type { Bot, TurnContext } from './types'
+import type { Bot, TurnContext } from '../types'
 
 export interface MonteCarloOptions {
     /** Coups candidats retenus, classes par heuristique. Borne le cout. */

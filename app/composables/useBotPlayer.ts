@@ -13,39 +13,49 @@ import type { ColorKey } from '~/data/grids/grid-01'
 type GameStore = ReturnType<typeof useGameStore>
 
 /**
- * Poids de l'heuristique v3, appris par CEM (scripts/tune-v3.ts) et recopies ici
- * pour eviter un fetch au runtime. Voir public/data/tuned-weights-v3.json.
+ * Poids de l'heuristique v3, optimises par CEM DIRECTEMENT EN PARTIE A 4 JOUEURS
+ * (scripts/tune-multi.ts). Voir public/data/tuned-weights-multi.json.
+ *
+ * Ne pas revenir a un reglage solitaire : mesure faite, l'agent le mieux note en
+ * solitaire arrive DERNIER a une table de 4 (15,27 contre 26,65), parce que le
+ * solitaire ne punit pas la temporisation — l'agent y decide seul de la fin.
  */
 export const V3_WEIGHTS: WeightsV3 = {
-    columnExponent: 2.7615,
-    extremeColumnEarly: 4.5099,
-    colorExponent: 0.51,
-    colorValueEarly: 0.2709,
-    colorValueLate: 1.3273,
-    orphan1: 0.2506,
-    orphan2: 0.7549,
-    frontierEarly: 0.1803,
-    jokerValue: 4.9948,
-    starValue: 3.0055,
-    cellValue: 0.0397,
-    earlyHorizon: 16.088,
-    lateHorizon: 31.674,
+    columnExponent: 2.4788,
+    extremeColumnEarly: 8.8423,
+    colorExponent: 1.8797,
+    colorValueEarly: 1.4017,
+    colorValueLate: 3.9927,
+    orphan1: 2.2489,
+    orphan2: 1.7119,
+    frontierEarly: 1.1592,
+    jokerValue: 3.6031,
+    starValue: 1.5706,
+    cellValue: 0.4563,
+    earlyHorizon: 18.7238,
+    lateHorizon: 24.3142,
 }
 
 export type DifficultyId = 'easy' | 'medium' | 'hard'
 
 /**
- * Temperatures calibrees par dichotomie sur un score cible (scripts/calibrate.ts).
- * Les moyennes sont mesurees sur 800 parties, 8 grilles en rotation.
+ * Temperatures calibrees par dichotomie (scripts/calibrate.ts), mesurees EN PARTIE
+ * A 4 JOUEURS : chaque niveau affronte trois exemplaires du niveau maximal.
+ *
+ * La cible est un TAUX DE VICTOIRE et non un score : a une table de 4, un score
+ * absolu depend autant des adversaires que de l'agent, alors que la frequence de
+ * victoire est ce qu'un joueur humain ressent. Le plafond est ~25 pour cent,
+ * puisque quatre joueurs identiques se partagent les victoires.
  */
 export const DIFFICULTIES: Record<DifficultyId, {
     label: string
     temperature: number
+    winRate: number
     meanScore: number
 }> = {
-    easy: { label: 'Facile', temperature: 0.912, meanScore: 20.1 },
-    medium: { label: 'Moyen', temperature: 0.459, meanScore: 30.1 },
-    hard: { label: 'Difficile', temperature: 0, meanScore: 36.1 },
+    easy: { label: 'Facile', temperature: 0.378, winRate: 6.8, meanScore: 11.3 },
+    medium: { label: 'Moyen', temperature: 0.179, winRate: 21.0, meanScore: 16.8 },
+    hard: { label: 'Difficile', temperature: 0, winRate: 27.4, meanScore: 18.6 },
 }
 
 export interface BotDecision {
@@ -64,11 +74,13 @@ export interface BotDecision {
  * passif, cette liste est `availableForPassive`, deja amputee du choix du joueur
  * actif — c'est bien cette indexation qu'attendent `confirmPassiveCombo` et compagnie.
  */
-export function useBotPlayer(difficulty: DifficultyId = 'hard') {
+export function useBotPlayer(difficulty: DifficultyId = 'hard', seed?: number) {
     const scorer = makeV3MoveScorer(V3_WEIGHTS)
     const { temperature, label } = DIFFICULTIES[difficulty]
     const bot: Bot = makeTemperedBot(scorer, temperature, `v3-${difficulty}`)
-    const rng = makeRng(Date.now() >>> 0)
+    // Graine explicite en test, horloge en jeu : les niveaux 'easy' et 'medium'
+    // tirent au sort, donc sans graine fixe un test devient non deterministe.
+    const rng = makeRng(seed ?? (Date.now() >>> 0))
 
     function decide(store: GameStore, playerId: string): BotDecision | null {
         const player = store.players.find(p => p.id === playerId)
