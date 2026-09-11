@@ -1,22 +1,23 @@
 {
   "mode": "average",
-  "games": 48,
+  "games": 64,
   "seed": 20260911,
   "maxTurns": 50,
+  "baseline": "greedy-cem",
   "results": [
     {
       "bot": "greedy-cem",
-      "games": 48,
-      "mean": 35.76,
-      "median": 37.5,
-      "stdev": 4.98,
-      "p10": 27,
+      "games": 64,
+      "mean": 35.61,
+      "median": 37,
+      "stdev": 4.65,
+      "p10": 29.5,
       "p90": 40.5,
       "min": 21.5,
       "max": 43.5,
-      "meanTurns": 42.3,
-      "naturalEndRate": 0.958,
-      "meanPasses": 3.27,
+      "meanTurns": 42.2,
+      "naturalEndRate": 0.953,
+      "meanPasses": 3.33,
       "histogram": [
         {
           "bin": 20,
@@ -28,32 +29,33 @@
         },
         {
           "bin": 30,
-          "count": 9
+          "count": 16
         },
         {
           "bin": 35,
-          "count": 23
+          "count": 30
         },
         {
           "bin": 40,
-          "count": 9
+          "count": 11
         }
       ],
-      "msPerGame": 5.604
+      "msPerGame": 5.757,
+      "paired": null
     },
     {
       "bot": "mc-cem",
-      "games": 48,
-      "mean": 36.8,
-      "median": 37.5,
-      "stdev": 3.77,
-      "p10": 29.5,
+      "games": 64,
+      "mean": 37.21,
+      "median": 38,
+      "stdev": 3.6,
+      "p10": 32.5,
       "p90": 41.5,
       "min": 27.5,
-      "max": 43,
-      "meanTurns": 46.7,
-      "naturalEndRate": 0.917,
-      "meanPasses": 3.23,
+      "max": 43.5,
+      "meanTurns": 46.6,
+      "naturalEndRate": 0.938,
+      "meanPasses": 3.13,
       "histogram": [
         {
           "bin": 25,
@@ -61,18 +63,28 @@
         },
         {
           "bin": 30,
-          "count": 5
+          "count": 6
         },
         {
           "bin": 35,
-          "count": 29
+          "count": 39
         },
         {
           "bin": 40,
-          "count": 9
+          "count": 14
         }
       ],
-      "msPerGame": 20640.689
+      "msPerGame": 20002.213,
+      "paired": {
+        "vs": "greedy-cem",
+        "delta": 1.6,
+        "stderr": 0.664,
+        "ci95": [
+          0.3,
+          2.9
+        ],
+        "significant": true
+      }
     }
   ]
 }

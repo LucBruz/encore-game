@@ -116,7 +116,7 @@ Numbers come from `pnpm eval` (2000 paired games, 8 grids). Comparisons are pair
 - CEM tuning is worth **+4.39 [+4.15, +4.63]** over hand-set weights, validated on disjoint holdout seeds.
 - 2-ply expectimax: **+0.28 [-0.26, +0.82]** — not significant, for ~140x the cost. Dice are fully rerolled each turn, so one turn of lookahead adds nothing the position evaluation does not already capture.
 - The 21-parameter heuristic is **-0.56 [-0.78, -0.33]** — the richer representation does not help.
-- Monte-Carlo rollouts with the tuned policy are the only thing that genuinely beats it, by roughly +1 point for ~3700x the cost.
+- Monte-Carlo rollouts with the tuned policy are the only thing that genuinely beats it: **+1.60 [+0.30, +2.90]** over 64 paired games, for ~3500x the cost.
 
 Keep the negative results. They are measurements, not gaps.
 

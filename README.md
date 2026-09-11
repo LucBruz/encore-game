@@ -110,8 +110,9 @@ les passes par partie, qui tombent de 5,77 à 2,68.
   rien que l'évaluation de position ne capture déjà.
 - **Heuristique à 21 paramètres** (taille de frontière, couleurs encore accessibles, tables
   de valeur libres) : −0,56. La représentation enrichie n'aide pas.
-- **Déroulements Monte-Carlo** avec la politique optimisée : la seule chose qui la batte
-  réellement, d'environ +1 point, pour ~3 700× son coût.
+- **Déroulements Monte-Carlo** avec la politique optimisée (192 déroulements par décision) :
+  la seule chose qui la batte réellement, de **+1,60 [+0,30, +2,90]** sur 64 parties
+  appariées — significatif, mais pour ~3 500× son coût et un intervalle large.
 
 Ces deux premières sondes testent au fond la même hypothèse — « modéliser explicitement la
 flexibilité future aide-t-il ? ». Ce sont donc deux résultats négatifs *corrélés*, pas deux
