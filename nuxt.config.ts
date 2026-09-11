@@ -7,7 +7,15 @@ export default defineNuxtConfig({
   app: {
     head: {
       link: [
-        { rel: 'icon', type: 'image/webp', href: '/jeu-de-dés.webp' }
+        { rel: 'icon', type: 'image/webp', href: '/jeu-de-dés.webp' },
+        // Les deux familles sont referencees dans tout le CSS du jeu mais
+        // n'etaient chargees nulle part : le site tombait sur les polices systeme.
+        { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
+        { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' },
+        {
+          rel: 'stylesheet',
+          href: 'https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&family=Space+Mono:wght@400;700&display=swap',
+        },
       ]
     }
   },

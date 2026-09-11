@@ -43,10 +43,17 @@
       </div>
 
       <div class="bars">
-        <div v-for="a in duel.agents" :key="`b-${a.name}`" class="bar">
+        <div v-for="(a, i) in duel.agents" :key="`b-${a.name}`" class="bar">
+          <span class="bar__dot" :style="{ background: AGENT_COLORS[i % AGENT_COLORS.length] }" />
           <span class="bar__label">{{ a.name }}</span>
           <div class="bar__track">
-            <div class="bar__fill" :style="{ width: `${(a.winRate / maxWin) * 100}%` }" />
+            <div
+              class="bar__fill"
+              :style="{
+                width: `${(a.winRate / maxWin) * 100}%`,
+                background: AGENT_COLORS[i % AGENT_COLORS.length],
+              }"
+            />
           </div>
           <span class="bar__value">{{ a.winRate.toFixed(1) }} %</span>
         </div>
@@ -241,6 +248,9 @@ const { data: multi } = await useFetch<MultiData>('/data/tuned-weights-multi.jso
 
 const maxWin = computed(() => Math.max(1, ...(duel.value?.agents.map(a => a.winRate) ?? [1])))
 
+/** Les cinq couleurs de la grille, pour rester dans l'univers visuel du jeu. */
+const AGENT_COLORS = ['#5cc96e', '#5b9ff5', '#f5d742', '#f58a35', '#e85a82']
+
 const STORIES: Record<string, string> = {
   colorExponent: "le solitaire disait « étale-toi », le multijoueur dit « finis tes couleurs » — parce que finir met fin à la partie",
   lateHorizon: "la phase couleurs démarre bien plus tôt",
@@ -275,88 +285,246 @@ const denialRows = [
 </script>
 
 <style scoped>
+/* Charte identique au reste du jeu : fond #0f0f13, cartes #1a1a24,
+   encarts #23232f, bordures #2e2e3e, Nunito pour le texte et Space Mono
+   pour tout ce qui est chiffre. */
 .ia-page {
-  @apply mx-auto px-4 py-8 flex flex-col gap-6;
-  max-width: 980px;
+  @apply min-h-screen mx-auto px-4 py-10 flex flex-col gap-6;
+  max-width: 1000px;
+  background: #0f0f13;
   color: #e8e8f0;
+  font-family: 'Nunito', sans-serif;
 }
 
-.ia-header h1 { @apply text-3xl font-black mt-2; font-family: 'Space Mono', monospace; }
-.back { @apply text-xs; color: #6e6e88; }
-.back:hover { color: #5cc96e; }
-.link { color: #5b9ff5; }
+.ia-header { @apply flex flex-col gap-1; }
+
+.ia-header h1 {
+  @apply text-4xl font-black tracking-tight mt-1;
+  font-family: 'Space Mono', monospace;
+  background: linear-gradient(135deg, #f5d742, #f58a35);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.back {
+  @apply text-xs font-bold uppercase tracking-wider transition-colors;
+  color: #6e6e88;
+}
+.back:hover { color: #f5d742; }
+
+.link { color: #5b9ff5; font-weight: 700; }
 .link:hover { text-decoration: underline; }
-.lede { @apply text-sm mt-2 leading-relaxed; color: #a0a0b8; max-width: 72ch; }
+
+.lede { @apply text-sm leading-relaxed mt-1; color: #a0a0b8; max-width: 72ch; }
 
 .card {
-  @apply rounded-2xl p-5 flex flex-col gap-4;
-  background: #17171f;
+  @apply flex flex-col gap-4 p-6 rounded-2xl;
+  background: #1a1a24;
   border: 1px solid #2e2e3e;
 }
-.card--lesson { border-color: #4a3a2e; }
-.card h2 { @apply text-lg font-black; font-family: 'Space Mono', monospace; }
+
+.card--lesson { border-color: #f58a35; }
+
+.card h2 {
+  @apply text-lg font-black;
+  color: #f5d742;
+}
 
 .meta { @apply text-xs leading-relaxed; color: #6e6e88; max-width: 78ch; }
 
-code { @apply px-1 rounded; background: #23232f; color: #f5d742; font-family: 'Space Mono', monospace; }
+code {
+  @apply px-1.5 py-0.5 rounded;
+  background: #23232f;
+  color: #f5d742;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.9em;
+}
 
-.table-wrap { @apply overflow-x-auto; }
-table { @apply w-full text-xs; border-collapse: collapse; font-family: 'Space Mono', monospace; }
+/* ── Tableaux ─────────────────────────────────────────────────────────────── */
+
+.table-wrap { @apply overflow-x-auto rounded-xl; }
+
+table {
+  @apply w-full text-xs;
+  border-collapse: collapse;
+  font-family: 'Space Mono', monospace;
+}
+
 th {
-  @apply text-left py-2 px-2 font-bold;
+  @apply text-left py-2.5 px-3 font-bold uppercase tracking-wider;
   color: #6e6e88;
-  border-bottom: 1px solid #2e2e3e;
+  background: #23232f;
+  white-space: nowrap;
+  font-size: 0.68rem;
+}
+
+th:first-child { border-top-left-radius: 0.75rem; }
+th:last-child { border-top-right-radius: 0.75rem; }
+
+td {
+  @apply py-2.5 px-3;
+  border-bottom: 1px solid #23232f;
   white-space: nowrap;
 }
-td { @apply py-2 px-2; border-bottom: 1px solid #23232f; white-space: nowrap; }
+
+tbody tr:last-child td { border-bottom: none; }
+
 .num { @apply text-right; }
 .strong { @apply font-black; color: #5cc96e; }
 .dim { color: #6e6e88; }
 .good { color: #5cc96e; }
-.bot { color: #e8e8f0; }
-.story { @apply text-xs; color: #a0a0b8; white-space: normal; min-width: 22ch; font-family: inherit; }
-.row--best { background: rgba(92, 201, 110, 0.07); }
+.bot { color: #e8e8f0; font-weight: 700; }
 
-.bars { @apply flex flex-col gap-2 mt-2; }
-.bar { @apply flex items-center gap-3 text-xs; font-family: 'Space Mono', monospace; }
-.bar__label { @apply shrink-0; width: 15ch; color: #a0a0b8; }
-.bar__track { @apply flex-1 rounded; height: 10px; background: #12121a; }
-.bar__fill { @apply rounded; height: 10px; background: #5cc96e; }
-.bar__value { @apply shrink-0 text-right; width: 6ch; color: #6e6e88; }
-
-.flip { @apply flex items-stretch gap-3 flex-wrap; }
-.flip__col {
-  @apply flex-1 rounded-xl p-3 flex flex-col gap-2;
-  min-width: 240px;
-  background: #12121a;
-  border: 1px solid #23232f;
+.story {
+  @apply text-xs;
+  color: #a0a0b8;
+  white-space: normal;
+  min-width: 24ch;
+  font-family: 'Nunito', sans-serif;
 }
-.flip__title { @apply text-xs font-bold uppercase; color: #6e6e88; letter-spacing: 0.05em; }
-.flip__row { @apply flex items-baseline justify-between gap-3 text-xs; color: #a0a0b8; }
-.flip__row strong { @apply text-lg; font-family: 'Space Mono', monospace; color: #e8e8f0; }
-.flip__row--win strong { color: #5cc96e; }
-.flip__row--lose strong { color: #e85a82; }
-.flip__arrow { @apply self-center; color: #4a4a5e; }
 
-.levels { @apply grid gap-3; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
-.level {
-  @apply rounded-xl p-3 flex flex-col gap-1;
-  background: #12121a;
+.row--best { background: rgba(92, 201, 110, 0.08); }
+.row--best .bot { color: #5cc96e; }
+
+/* ── Barres de victoires ──────────────────────────────────────────────────── */
+
+.bars {
+  @apply flex flex-col gap-2.5 p-4 rounded-xl;
+  background: #23232f;
   border: 1px solid #2e2e3e;
 }
-.level__id { @apply text-xs font-bold uppercase; color: #6e6e88; letter-spacing: 0.05em; }
-.level__score { @apply text-2xl font-black; color: #5cc96e; font-family: 'Space Mono', monospace; }
-.level__meta { @apply text-xs; color: #6e6e88; font-family: 'Space Mono', monospace; }
+
+.bar { @apply flex items-center gap-3 text-xs; }
+
+.bar__dot {
+  @apply shrink-0 rounded-full;
+  width: 9px;
+  height: 9px;
+}
+
+.bar__label {
+  @apply shrink-0 font-bold;
+  width: 16ch;
+  color: #a0a0b8;
+  font-family: 'Space Mono', monospace;
+}
+
+.bar__track {
+  @apply flex-1 rounded-full overflow-hidden;
+  height: 8px;
+  background: #0f0f13;
+}
+
+.bar__fill {
+  @apply rounded-full;
+  height: 8px;
+  transition: width 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.bar__value {
+  @apply shrink-0 text-right font-black;
+  width: 6ch;
+  color: #e8e8f0;
+  font-family: 'Space Mono', monospace;
+}
+
+/* ── Renversement solitaire / multijoueur ─────────────────────────────────── */
+
+.flip { @apply flex items-stretch gap-3 flex-wrap; }
+
+.flip__col {
+  @apply flex-1 rounded-xl p-4 flex flex-col gap-2.5;
+  min-width: 250px;
+  background: #23232f;
+  border: 1px solid #2e2e3e;
+}
+
+.flip__title {
+  @apply text-xs font-bold uppercase tracking-wider;
+  color: #6e6e88;
+}
+
+.flip__row {
+  @apply flex items-baseline justify-between gap-3 text-xs;
+  color: #a0a0b8;
+}
+
+.flip__row strong {
+  @apply text-xl font-black;
+  font-family: 'Space Mono', monospace;
+  color: #e8e8f0;
+}
+
+.flip__row--win strong { color: #5cc96e; }
+.flip__row--lose strong { color: #e85a82; }
+
+.flip__arrow {
+  @apply self-center text-2xl;
+  color: #f58a35;
+}
+
+/* ── Niveaux ──────────────────────────────────────────────────────────────── */
+
+.levels {
+  @apply grid gap-3;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+}
+
+.level {
+  @apply rounded-xl p-4 flex flex-col gap-1.5;
+  background: #23232f;
+  border: 2px solid #2e2e3e;
+  transition: border-color 0.2s;
+}
+
+.level:last-child {
+  border-color: #f5d742;
+  background: rgba(245, 215, 66, 0.08);
+}
+
+.level__id {
+  @apply text-xs font-black uppercase tracking-wider;
+  color: #6e6e88;
+}
+
+.level:last-child .level__id { color: #f5d742; }
+
+.level__score {
+  @apply text-3xl font-black;
+  color: #5cc96e;
+  font-family: 'Space Mono', monospace;
+  line-height: 1;
+}
+
+.level__meta {
+  @apply text-xs;
+  color: #6e6e88;
+  font-family: 'Space Mono', monospace;
+}
+
+/* ── Encarts explicatifs ──────────────────────────────────────────────────── */
 
 .note {
-  @apply text-xs leading-relaxed rounded-xl p-3;
-  background: #12121a;
-  border: 1px solid #23232f;
+  @apply text-xs leading-relaxed p-4 rounded-xl;
+  background: #23232f;
+  border-left: 3px solid #f5d742;
   color: #a0a0b8;
-  max-width: 82ch;
+  max-width: 84ch;
 }
+
 .note strong { color: #e8e8f0; }
 
-.method { @apply flex flex-col gap-2 text-xs leading-relaxed; color: #a0a0b8; max-width: 82ch; }
+.method {
+  @apply flex flex-col gap-2.5 text-xs leading-relaxed;
+  color: #a0a0b8;
+  max-width: 84ch;
+}
+
+.method li {
+  @apply pl-4;
+  border-left: 2px solid #2e2e3e;
+}
+
 .method strong { color: #e8e8f0; }
 </style>

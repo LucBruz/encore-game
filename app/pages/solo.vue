@@ -316,113 +316,211 @@ watch(() => store.players.map(p => `${p.hasPlaced}${p.hasPassed}`).join(), () =>
 </script>
 
 <style scoped>
+/* Charte identique au reste du jeu : fond #0f0f13, cartes #1a1a24,
+   encarts #23232f, bordures #2e2e3e, Nunito pour le texte et Space Mono
+   pour tout ce qui est chiffre. */
 .page {
-  @apply mx-auto px-4 py-8;
-  max-width: 1100px;
+  @apply min-h-screen mx-auto px-4 py-10;
+  max-width: 1120px;
+  background: #0f0f13;
   color: #e8e8f0;
+  font-family: 'Nunito', sans-serif;
 }
 
-.back { @apply text-xs; color: #6e6e88; }
-.back:hover { color: #5cc96e; }
+.back {
+  @apply text-xs font-bold uppercase tracking-wider transition-colors;
+  color: #6e6e88;
+}
+.back:hover { color: #f5d742; }
+
+.link { color: #5b9ff5; font-weight: 700; }
+.link:hover { text-decoration: underline; }
+
+/* ── Ecran de configuration ───────────────────────────────────────────────── */
 
 .setup {
-  @apply mx-auto flex flex-col gap-5 rounded-2xl p-6;
-  max-width: 520px;
-  background: #17171f;
+  @apply mx-auto flex flex-col gap-5 p-6 rounded-2xl;
+  max-width: 540px;
+  background: #1a1a24;
   border: 1px solid #2e2e3e;
 }
 
 .setup h1 {
-  @apply text-2xl font-black;
+  @apply text-4xl font-black tracking-tight;
   font-family: 'Space Mono', monospace;
+  background: linear-gradient(135deg, #f5d742, #f58a35);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .lede { @apply text-sm leading-relaxed; color: #a0a0b8; }
-.link { color: #5b9ff5; }
-.link:hover { text-decoration: underline; }
 
 .field { @apply flex flex-col gap-2; }
-.field > span { @apply text-xs font-bold uppercase; color: #6e6e88; letter-spacing: 0.05em; }
+
+.field > span {
+  @apply text-xs font-bold uppercase tracking-wider;
+  color: #6e6e88;
+}
 
 .field input {
-  @apply px-3 py-2 rounded-lg text-sm;
-  background: #12121a;
+  @apply w-full px-4 py-2.5 rounded-xl text-sm outline-none transition-all;
+  background: #23232f;
   border: 1px solid #2e2e3e;
   color: #e8e8f0;
 }
-.field input:focus { outline: none; border-color: #5cc96e; }
+.field input:focus { border-color: #f5d742; }
+.field input::placeholder { color: #3e3e52; }
 
-.chips { @apply flex gap-2 flex-wrap; }
-
-.hint { @apply text-xs leading-relaxed mt-1; color: #6e6e88; }
+.hint {
+  @apply text-xs leading-relaxed p-3 rounded-xl;
+  background: #23232f;
+  border-left: 3px solid #5b9ff5;
+  color: #6e6e88;
+}
 .hint strong { color: #a0a0b8; }
 
+.chips { @apply flex gap-1.5 flex-wrap; }
+
 .chip {
-  @apply px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-all;
-  background: #12121a;
-  border: 1px solid #2e2e3e;
-  color: #a0a0b8;
+  @apply px-3.5 py-2 rounded-lg text-sm font-black cursor-pointer transition-all;
   font-family: 'Space Mono', monospace;
+  background: #23232f;
+  border: 2px solid #2e2e3e;
+  color: #6e6e88;
 }
-.chip--on { background: #5cc96e; color: #0f0f13; border-color: #5cc96e; }
+
+.chip:hover { border-color: #6e6e88; color: #e8e8f0; }
+
+.chip--on {
+  border-color: #f5d742;
+  background: rgba(245, 215, 66, 0.1);
+  color: #f5d742;
+}
 
 .btn-start {
   @apply px-5 py-2.5 rounded-xl font-black text-sm cursor-pointer transition-all;
-  background: #5cc96e;
+  background: linear-gradient(135deg, #f5d742, #f58a35);
   color: #0f0f13;
   border: none;
 }
-.btn-start:hover:not(:disabled) { filter: brightness(1.1); }
+
+.btn-start:hover:not(:disabled) {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
 .btn-start:disabled { @apply opacity-40 cursor-not-allowed; }
 
-.game-header { @apply flex items-center gap-4 flex-wrap mb-5; }
-.title { @apply text-xl font-black; font-family: 'Space Mono', monospace; }
+/* ── Partie ───────────────────────────────────────────────────────────────── */
+
+.game-header {
+  @apply flex items-center gap-4 flex-wrap mb-6 pb-4;
+  border-bottom: 1px solid #2e2e3e;
+}
+
+.title {
+  @apply text-2xl font-black tracking-tight;
+  font-family: 'Space Mono', monospace;
+  background: linear-gradient(135deg, #f5d742, #f58a35);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
 .chips-players { @apply flex gap-2 flex-wrap; }
 
 .pchip {
-  @apply px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer flex items-center gap-1.5;
-  background: #17171f;
+  @apply px-3 py-1.5 rounded-xl text-xs font-bold cursor-pointer flex items-center gap-2 transition-all;
+  background: #1a1a24;
   border: 1px solid #2e2e3e;
   color: #a0a0b8;
 }
-.pchip--view { border-color: #5cc96e; color: #e8e8f0; }
+
+.pchip:hover { border-color: #3e3e52; }
+.pchip--view { border-color: #f5d742; color: #e8e8f0; }
 .pchip--active { background: #23232f; }
-.pchip__score { color: #5cc96e; }
 
-.turn { @apply ml-auto text-xs; color: #6e6e88; font-family: 'Space Mono', monospace; }
+.pchip__score {
+  @apply font-black;
+  color: #5cc96e;
+  font-family: 'Space Mono', monospace;
+}
 
-.layout { @apply grid gap-5; grid-template-columns: minmax(280px, 340px) 1fr; }
-@media (max-width: 860px) { .layout { grid-template-columns: 1fr; } }
+.turn {
+  @apply ml-auto text-xs font-bold uppercase tracking-wider;
+  color: #6e6e88;
+  font-family: 'Space Mono', monospace;
+}
+
+.layout { @apply grid gap-5; grid-template-columns: minmax(290px, 350px) 1fr; }
+@media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
 
 .left { @apply flex flex-col gap-4; }
 
 .thinking {
-  @apply text-xs px-3 py-2 rounded-lg;
+  @apply text-xs font-bold px-4 py-2.5 rounded-xl;
   background: rgba(91, 159, 245, 0.12);
-  border: 1px solid rgba(91, 159, 245, 0.3);
+  border: 1px solid rgba(91, 159, 245, 0.35);
   color: #5b9ff5;
 }
 
 .info {
-  @apply flex flex-col gap-3 rounded-xl p-3;
-  background: #17171f;
+  @apply flex flex-col gap-3 p-4 rounded-2xl;
+  background: #1a1a24;
   border: 1px solid #2e2e3e;
 }
-.info__row { @apply flex items-center justify-between; }
-.info__name { @apply text-sm font-bold; }
-.combo { @apply flex items-center gap-1.5 text-xs font-bold; }
-.combo i { @apply inline-block rounded; width: 14px; height: 14px; }
 
-.score { @apply flex items-center justify-between text-xs; color: #6e6e88; }
-.score strong { @apply text-lg; color: #5cc96e; font-family: 'Space Mono', monospace; }
+.info__row { @apply flex items-center justify-between; }
+.info__name { @apply text-sm font-black; color: #e8e8f0; }
+
+.combo {
+  @apply flex items-center gap-2 text-xs font-black px-2.5 py-1 rounded-lg;
+  background: #23232f;
+  font-family: 'Space Mono', monospace;
+}
+.combo i { @apply inline-block rounded; width: 13px; height: 13px; }
+
+.score {
+  @apply flex items-center justify-between text-xs font-bold uppercase tracking-wider pt-3;
+  border-top: 1px solid #2e2e3e;
+  color: #6e6e88;
+}
+
+.score strong {
+  @apply text-2xl font-black;
+  color: #5cc96e;
+  font-family: 'Space Mono', monospace;
+}
+
+/* ── Fin de partie ────────────────────────────────────────────────────────── */
 
 .over {
-  @apply mt-6 rounded-2xl p-5 flex flex-col gap-3;
-  background: #17171f;
+  @apply mt-6 p-6 rounded-2xl flex flex-col gap-4;
+  background: #1a1a24;
   border: 1px solid #5cc96e;
 }
-.over h2 { @apply text-lg font-black; font-family: 'Space Mono', monospace; }
-.over ol { @apply flex flex-col gap-1; }
-.over li { @apply flex justify-between text-sm py-1; border-bottom: 1px solid #23232f; }
-.over li.me { color: #5cc96e; }
+
+.over h2 {
+  @apply text-xl font-black;
+  color: #f5d742;
+  font-family: 'Space Mono', monospace;
+}
+
+.over ol { @apply flex flex-col gap-1.5; }
+
+.over li {
+  @apply flex justify-between items-center text-sm px-3 py-2 rounded-xl;
+  background: #23232f;
+  border: 1px solid #2e2e3e;
+  color: #a0a0b8;
+}
+
+.over li strong {
+  @apply font-black;
+  font-family: 'Space Mono', monospace;
+  color: #e8e8f0;
+}
+
+.over li.me { border-color: #5cc96e; }
+.over li.me strong { color: #5cc96e; }
 </style>
