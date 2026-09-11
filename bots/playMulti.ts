@@ -123,10 +123,15 @@ export function playMultiGame(
             const pool = (simultaneous || idx === activeIndex) ? roll : poolForPassives
             const moves = legalMoves(cells, p.sheet, pool, { totalJokers })
 
+            const isActive = !simultaneous && idx === activeIndex
             const move = moves.length === 0
                 ? null
                 : p.bot.chooseMove({
                     cells, sheet: p.sheet, moves, turn, totalJokers, rng,
+                    // Contexte multijoueur : seul un agent conscient du deni s'en sert.
+                    isActive,
+                    fullRoll: pool,
+                    opponents: players.filter((_, i) => i !== idx).map(o => o.sheet),
                 })
 
             if (!move) {

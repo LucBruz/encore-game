@@ -190,6 +190,34 @@ Le softmax est préféré à l'ε-greedy parce que ce dernier produit des **bour
 parfaitement puis poser cinq croix n'importe où. Un joueur faible joue un coup correct mais
 pas le meilleur, ce que le softmax reproduit.
 
+### Le déni de dés : mesuré, puis écarté
+
+La regle donne au joueur actif un second levier : il met sa paire de des de cote, et les
+autres ne choisissent que parmi les 4 restants. Son choix a donc deux effets, et aucun
+agent ne modelisait le second.
+
+Deux prerequis avant de pouvoir l'exprimer. D'abord enumerer les coups **par paire de
+des** : la generation normale fusionne les paires equivalentes pour soi — dans plus de
+8 tours sur 10 — et jette donc exactement l'information qui compte pour autrui. Ensuite
+lire les feuilles adverses, ce qui est licite puisqu'elles sont publiques.
+
+Mesure isolee, table de 4, memes poids partout, seul le prix du deni change, 1600 parties :
+
+| prix du deni | score | victoires | écart apparié vs sans déni |
+|---|---|---|---|
+| 0 (base) | 16,73 | 19,7 % | référence |
+| 0,6 | 17,85 | 23,8 % | +1,12 [0,67, 1,56] |
+| **0,8** | 18,42 | 26,9 % | **+1,69 [1,24, 2,13]** |
+| 1,1 | 18,43 | 29,6 % | +1,70 [1,23, 2,16] |
+| 1,6 | 18,32 | 27,1 % | +1,27 [0,81, 1,73] |
+
+Le gain est reel et l'optimum est **interieur** : trop denier nuit aussi. Cout mesure x5,6,
+soit 1,24 ms par decision, donc negligeable en navigateur.
+
+**Non integre au jeu**, par choix : lire les feuilles adverses complique nettement le bot,
+et rendre l'adversaire plus fort n'etait pas l'objectif. Le code reste dans
+`bots/baselines/denial.ts` pour que le resultat soit reproductible.
+
 ### Résultats négatifs, conservés
 
 - **Expectimax profondeur 2** : +0,28 [−0,26, +0,82] — indistinguable du bruit, pour ~140×

@@ -104,3 +104,52 @@ export function applyMove(sheet: Sheet, move: Move): void {
 export function isGameOver(cells: Cells, sheet: Sheet): boolean {
     return hasTwoCompletedColors(cells, sheet.mask)
 }
+
+/**
+ * Comme `legalMoves`, mais SANS fusionner les paires de des menant a la meme
+ * combo (couleur, nombre). Indispensable au raisonnement sur le deni de des : la
+ * fusion jette l'information "quel de physique je retire aux autres", et elle
+ * s'applique dans plus de 8 tours sur 10.
+ *
+ * Le resultat contient donc des placements repetes, un par paire de des qui les
+ * permet. C'est voulu : ce sont des coups differents du point de vue des adversaires.
+ */
+export function legalMovesByDicePair(
+    cells: Cells,
+    sheet: Sheet,
+    roll: Roll,
+    opts: MoveOptions = {},
+): Move[] {
+    const totalJokers = opts.totalJokers ?? DEFAULT_TOTAL_JOKERS
+    const jokersLeft = totalJokers - sheet.jokersUsed
+    const out: Move[] = []
+    const cache = new Map<string, number[][]>()
+
+    for (let ci = 0; ci < roll.colors.length; ci++) {
+        const colorFace = roll.colors[ci]
+        const colors: ColorKey[] = colorFace === 'joker' ? [...COLOR_KEYS] : [colorFace]
+
+        for (let ni = 0; ni < roll.numbers.length; ni++) {
+            const numberFace = roll.numbers[ni]
+            const counts: number[] = numberFace === 'joker' ? [1, 2, 3, 4, 5] : [numberFace]
+            const jokersSpent = (colorFace === 'joker' ? 1 : 0) + (numberFace === 'joker' ? 1 : 0)
+            if (jokersSpent > jokersLeft) continue
+
+            for (const color of colors) {
+                for (const count of counts) {
+                    if (count < MIN_COUNT || count > MAX_COUNT) continue
+                    const key = `${color}:${count}`
+                    let placements = cache.get(key)
+                    if (!placements) {
+                        placements = legalPlacements(cells, sheet.mask, color, count)
+                        cache.set(key, placements)
+                    }
+                    for (const placement of placements) {
+                        out.push({ color, count, jokersSpent, placement, colorDieIndex: ci, numberDieIndex: ni })
+                    }
+                }
+            }
+        }
+    }
+    return out
+}

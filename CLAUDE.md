@@ -141,6 +141,18 @@ rotating seats): `v3-multi` 26.58 mean / 73.0% wins, `v3-sans-passe` 20.73, `gre
 16.81, and the solo champion last at 15.11. The winner is also the one that *finishes*
 games (74.8% vs 2.5%) — speed is a strategy here, not a side effect.
 
+**Dice denial** was implemented, measured and deliberately left out of the game.
+`legalMovesByDicePair` in `engine/state.ts` exists for it: the normal generator merges
+dice pairs that are equivalent *for the player*, which happens in over 8 turns in 10 and
+throws away exactly the information that matters *for the opponents*. With opponent sheets
+(public in the real game) an active player can price what a choice hands to the others.
+Measured at a 4-player table, same weights throughout, 1600 games: **+1.69 [1.24, 2.13]**
+and 19.7% -> 26.9% wins, with an interior optimum around 0.8-1.1 (denying too much also
+hurts), for ~1.24 ms per decision. Not shipped: reading opponent sheets complicates the
+in-game bot and a stronger opponent was not the goal. Code kept in
+`bots/baselines/denial.ts`; `TurnContext` carries the optional `isActive` / `fullRoll` /
+`opponents` fields it needs, which `playMulti` populates and other bots ignore.
+
 Voluntary passing is a real option the move generator did not represent (`legalMoves`
 treats passing as "no legal move"). Adding it was worth +1.51 solo — and is exactly what
 sinks the agent in a real game. The multiplayer-tuned agent keeps the option but almost

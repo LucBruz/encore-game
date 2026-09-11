@@ -21,6 +21,7 @@ import { makeGreedyV3Bot, V3Scorer } from '../bots/heuristicV3'
 import type { WeightsV3 } from '../bots/heuristicV3'
 import { gridStats } from '../engine/scoring'
 import { playMultiGame } from '../bots/playMulti'
+import { makeDenialBot } from '../bots/baselines/denial'
 import type { Bot, TurnContext } from '../bots/types'
 import type { Cells } from '../engine/types'
 
@@ -74,6 +75,13 @@ const bots: Bot[] = [
 // 5. Optimise directement en partie a 4 : il remplace le thesauriseur, qui n'a
 // plus d'interet que comme temoin de ce que produit un cadrage solitaire.
 if (vMulti) bots.push(makeGreedyV3Bot(vMulti, 'v3-multi'))
+
+// Variantes conscientes du deni de des : memes poids, seul le prix du service
+// rendu aux adversaires change. denialWeight = 0 serait l'agent de base.
+const DENIALS = arg('denials', '0.3,0.8').split(',').map(Number).filter(x => x > 0)
+if (vMulti) for (const w of DENIALS) {
+    bots.push(makeDenialBot({ weights: vMulti, denialWeight: w, name: `deni-${w}` }))
+}
 
 const SEATS = 4
 const B = bots.length
