@@ -5,6 +5,10 @@
     <header class="page-header">
       <h1 class="page-title">ENCORE!</h1>
       <p class="page-subtitle">Jeu de société multijoueur en temps réel</p>
+      <nav v-if="!lobby.gameId" class="page-nav">
+        <NuxtLink to="/solo" class="nav-link nav-link--solo">🤖 Jouer contre un bot</NuxtLink>
+        <NuxtLink to="/ia" class="nav-link">📊 Benchmark des agents</NuxtLink>
+      </nav>
     </header>
 
     <!-- Erreur globale -->
@@ -279,6 +283,26 @@ onMounted(() => {
 .page-subtitle {
   @apply text-sm mt-2;
   color: #6e6e88;
+}
+
+.page-nav {
+  @apply flex items-center justify-center gap-3 mt-4 flex-wrap;
+}
+
+.nav-link {
+  @apply px-3 py-1.5 rounded-lg text-xs font-bold transition-all;
+  background: #17171f;
+  border: 1px solid #2e2e3e;
+  color: #a0a0b8;
+}
+
+.nav-link:hover {
+  border-color: #5b9ff5;
+  color: #e8e8f0;
+}
+
+.nav-link--solo:hover {
+  border-color: #5cc96e;
 }
 
 .error-banner {

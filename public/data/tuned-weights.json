@@ -1,0 +1,86 @@
+{
+  "tuned": {
+    "columnExponent": 2.777301151279552,
+    "colorExponent": 0.5294154826121508,
+    "colorValue": 1.0749577913599866,
+    "starValue": 2.0329954843342564,
+    "jokerValue": 3.6783683429736698,
+    "cellValue": 0.033587367625845375
+  },
+  "default": {
+    "columnExponent": 2,
+    "colorExponent": 2,
+    "colorValue": 4,
+    "starValue": 2,
+    "jokerValue": 1,
+    "cellValue": 0.05
+  },
+  "history": [
+    {
+      "iter": 0,
+      "best": 34.54,
+      "eliteMean": 33.12
+    },
+    {
+      "iter": 1,
+      "best": 35.87,
+      "eliteMean": 35.22
+    },
+    {
+      "iter": 2,
+      "best": 36.39,
+      "eliteMean": 36.1
+    },
+    {
+      "iter": 3,
+      "best": 36.84,
+      "eliteMean": 36.3
+    },
+    {
+      "iter": 4,
+      "best": 36.5,
+      "eliteMean": 36.35
+    },
+    {
+      "iter": 5,
+      "best": 36.88,
+      "eliteMean": 36.54
+    },
+    {
+      "iter": 6,
+      "best": 36.76,
+      "eliteMean": 36.68
+    },
+    {
+      "iter": 7,
+      "best": 36.68,
+      "eliteMean": 36.57
+    },
+    {
+      "iter": 8,
+      "best": 36.91,
+      "eliteMean": 36.7
+    },
+    {
+      "iter": 9,
+      "best": 36.84,
+      "eliteMean": 36.65
+    },
+    {
+      "iter": 10,
+      "best": 36.84,
+      "eliteMean": 36.76
+    },
+    {
+      "iter": 11,
+      "best": 36.83,
+      "eliteMean": 36.68
+    }
+  ],
+  "holdout": {
+    "games": 1500,
+    "seed": 999331,
+    "base": 31.692,
+    "tuned": 35.81
+  }
+}

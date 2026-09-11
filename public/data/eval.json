@@ -1,0 +1,240 @@
+{
+  "mode": "average",
+  "games": 2000,
+  "seed": 20260911,
+  "maxTurns": 50,
+  "baseline": "greedy-cem",
+  "results": [
+    {
+      "bot": "random",
+      "games": 2000,
+      "mean": 0.86,
+      "median": 0.5,
+      "stdev": 6.4,
+      "p10": -7,
+      "p90": 9,
+      "min": -21.5,
+      "max": 32,
+      "meanTurns": 50,
+      "naturalEndRate": 0.017,
+      "meanPasses": 7.49,
+      "histogram": [
+        {
+          "bin": -25,
+          "count": 1
+        },
+        {
+          "bin": -20,
+          "count": 4
+        },
+        {
+          "bin": -15,
+          "count": 63
+        },
+        {
+          "bin": -10,
+          "count": 245
+        },
+        {
+          "bin": -5,
+          "count": 575
+        },
+        {
+          "bin": 0,
+          "count": 622
+        },
+        {
+          "bin": 5,
+          "count": 326
+        },
+        {
+          "bin": 10,
+          "count": 113
+        },
+        {
+          "bin": 15,
+          "count": 39
+        },
+        {
+          "bin": 20,
+          "count": 9
+        },
+        {
+          "bin": 25,
+          "count": 2
+        },
+        {
+          "bin": 30,
+          "count": 1
+        }
+      ],
+      "msPerGame": 1.837,
+      "paired": {
+        "vs": "greedy-cem",
+        "delta": -35.05,
+        "stderr": 0.173,
+        "ci95": [
+          -35.39,
+          -34.71
+        ],
+        "significant": true
+      }
+    },
+    {
+      "bot": "greedy",
+      "games": 2000,
+      "mean": 31.52,
+      "median": 32,
+      "stdev": 4.53,
+      "p10": 25.5,
+      "p90": 37,
+      "min": 13,
+      "max": 41,
+      "meanTurns": 41.6,
+      "naturalEndRate": 0.877,
+      "meanPasses": 5.77,
+      "histogram": [
+        {
+          "bin": 10,
+          "count": 1
+        },
+        {
+          "bin": 15,
+          "count": 29
+        },
+        {
+          "bin": 20,
+          "count": 127
+        },
+        {
+          "bin": 25,
+          "count": 482
+        },
+        {
+          "bin": 30,
+          "count": 845
+        },
+        {
+          "bin": 35,
+          "count": 510
+        },
+        {
+          "bin": 40,
+          "count": 6
+        }
+      ],
+      "msPerGame": 3.292,
+      "paired": {
+        "vs": "greedy-cem",
+        "delta": -4.39,
+        "stderr": 0.123,
+        "ci95": [
+          -4.63,
+          -4.15
+        ],
+        "significant": true
+      }
+    },
+    {
+      "bot": "greedy-cem",
+      "games": 2000,
+      "mean": 35.91,
+      "median": 36.5,
+      "stdev": 4.19,
+      "p10": 30,
+      "p90": 41,
+      "min": 17.5,
+      "max": 45,
+      "meanTurns": 41.4,
+      "naturalEndRate": 0.954,
+      "meanPasses": 2.68,
+      "histogram": [
+        {
+          "bin": 15,
+          "count": 1
+        },
+        {
+          "bin": 20,
+          "count": 22
+        },
+        {
+          "bin": 25,
+          "count": 144
+        },
+        {
+          "bin": 30,
+          "count": 533
+        },
+        {
+          "bin": 35,
+          "count": 952
+        },
+        {
+          "bin": 40,
+          "count": 347
+        },
+        {
+          "bin": 45,
+          "count": 1
+        }
+      ],
+      "msPerGame": 4.148,
+      "paired": null
+    },
+    {
+      "bot": "greedy-v2",
+      "games": 2000,
+      "mean": 35.36,
+      "median": 36,
+      "stdev": 4.18,
+      "p10": 30,
+      "p90": 40,
+      "min": 16.5,
+      "max": 45,
+      "meanTurns": 43.1,
+      "naturalEndRate": 0.888,
+      "meanPasses": 4.45,
+      "histogram": [
+        {
+          "bin": 15,
+          "count": 3
+        },
+        {
+          "bin": 20,
+          "count": 42
+        },
+        {
+          "bin": 25,
+          "count": 148
+        },
+        {
+          "bin": 30,
+          "count": 543
+        },
+        {
+          "bin": 35,
+          "count": 1045
+        },
+        {
+          "bin": 40,
+          "count": 218
+        },
+        {
+          "bin": 45,
+          "count": 1
+        }
+      ],
+      "msPerGame": 3.543,
+      "paired": {
+        "vs": "greedy-cem",
+        "delta": -0.56,
+        "stderr": 0.113,
+        "ci95": [
+          -0.78,
+          -0.33
+        ],
+        "significant": true
+      }
+    }
+  ]
+}

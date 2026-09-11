@@ -10,9 +10,14 @@ pnpm dev          # Start dev server at http://localhost:3000
 pnpm build        # Production build
 pnpm preview      # Preview production build
 pnpm generate     # Static site generation
-pnpm test         # Run the vitest suite (engine + store)
+pnpm test         # Run the vitest suite (engine, store, bots, bot/store integration)
 pnpm bench        # Time the placement enumerator
+pnpm eval         # Agent benchmark -> public/data/eval.json
+pnpm tune         # CEM weight optimisation -> public/data/tuned-weights.json
+pnpm tune:v2      # CEM on the 21-parameter heuristic -> public/data/tuned-weights-v2.json
 ```
+
+`eval` and `tune` accept flags after `--`, e.g. `pnpm eval -- --games 500 --mode first`.
 
 ## Architecture Overview
 
@@ -72,10 +77,13 @@ Remote clients bypass store guards that check `phase` (e.g. `PASS_ACTIVE` is app
 
 ### Game logic
 
-**`engine/`** — headless rules engine, plain data, zero Vue/Pinia. Shared by the app, the tests and the bots.
+**`engine/`** — headless rules engine, plain data, zero Vue/Pinia. Shared by the app, the tests and the bots. Imported as `~~/engine/...` from the app (Nuxt maps `~~` to the project root) and by relative path from Node scripts.
 - `grid.ts`: dimensions, precomputed orthogonal `NEIGHBORS`, `START_COL = 7`
 - `mask.ts`: `CheckedMask` = `Uint8Array(105)`; `maskFromSet` / `setFromMask` convert at the store boundary
 - `placement.ts`: `isAnchor()`, `legalPlacements()` (ESU connected-subgraph enumeration — each placement produced exactly once, no dedup pass), `hasLegalPlacement()`, `selectableCells()`, `validatePlacement()`
+- `scoring.ts`: colour/column completion, star malus, `BonusMode` (`first`/`others`/`average`). Single-agent play has no opponent, so the mode is an explicit choice and is always reported with any score
+- `dice.ts`: faces, seeded RNG, and the 56 roll classes per die type (`C(8,3)`, probabilities sum to 1)
+- `state.ts`: `Sheet` (pure data), `legalMoves` (resolves joker faces, keeps the cheapest dice pair per combo), `applyMove`
 - Tests in `engine/__tests__/` encode the rulebook, including a property test against a brute-force reference
 
 ### Supabase schema (3 tables)
@@ -86,6 +94,31 @@ Remote clients bypass store guards that check `phase` (e.g. `PASS_ACTIVE` is app
 ### Pages
 - `/` (`app/pages/index.vue`) — home: create or join a game
 - `/game/[id]` (`app/pages/game/[id].vue`) — main game view; handles page-refresh reconnection by re-fetching from Supabase if lobby state is empty
+- `/solo` (`app/pages/solo.vue`) — local game against bots. **No Supabase, no Realtime**: drives `gameStore` directly, so it works offline and needs no schema change
+- `/ia` (`app/pages/ia.vue`) — agent benchmark, read from `public/data/*.json`
+
+### Agents (`bots/`)
+
+Plain TypeScript on top of `engine/`, no Nuxt runtime. Run via `tsx`.
+
+- `heuristic.ts` — 6-parameter position evaluation. Scores **progress**, not raw score: the real score is 0 for most of a game, so a greedy choice on raw score is degenerate.
+- `heuristicV2.ts` — 21-parameter version (frontier size, live colours, free value tables). `V2Scorer` aggregates the sheet once per turn and evaluates each candidate by **local delta** — a full rescan per candidate was ~25x too slow. The delta is property-tested against a full recompute.
+- `cem.ts` — cross-entropy method, shared by both tuners.
+- `basic.ts` (random, greedy), `expectimax.ts`, `montecarlo.ts` — the last two are offline probes, far too slow for the browser.
+- `play.ts` — headless single-agent game loop.
+
+**`app/composables/useBotPlayer.ts`** bridges engine and store: converts `checkedCells` to a mask, calls `legalMoves`, and maps the chosen move back to dice indices. Those indices are **relative to the dice list passed in** — for a passive player that is `availableForPassive`, which is what the store actions expect.
+
+### Measured findings
+
+Numbers come from `pnpm eval` (2000 paired games, 8 grids). Comparisons are paired: at equal game index every agent sees the same dice on the same grid, and the harness reports the paired delta with a 95% interval.
+
+- CEM tuning is worth **+4.39 [+4.15, +4.63]** over hand-set weights, validated on disjoint holdout seeds.
+- 2-ply expectimax: **+0.28 [-0.26, +0.82]** — not significant, for ~140x the cost. Dice are fully rerolled each turn, so one turn of lookahead adds nothing the position evaluation does not already capture.
+- The 21-parameter heuristic is **-0.56 [-0.78, -0.33]** — the richer representation does not help.
+- Monte-Carlo rollouts with the tuned policy are the only thing that genuinely beats it, by roughly +1 point for ~3700x the cost.
+
+Keep the negative results. They are measurements, not gaps.
 
 ### Key composables
 - **`Usegamesync.ts`** — multiplayer sync (see above)

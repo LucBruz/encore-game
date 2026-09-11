@@ -1,0 +1,78 @@
+{
+  "mode": "average",
+  "games": 48,
+  "seed": 20260911,
+  "maxTurns": 50,
+  "results": [
+    {
+      "bot": "greedy-cem",
+      "games": 48,
+      "mean": 35.76,
+      "median": 37.5,
+      "stdev": 4.98,
+      "p10": 27,
+      "p90": 40.5,
+      "min": 21.5,
+      "max": 43.5,
+      "meanTurns": 42.3,
+      "naturalEndRate": 0.958,
+      "meanPasses": 3.27,
+      "histogram": [
+        {
+          "bin": 20,
+          "count": 1
+        },
+        {
+          "bin": 25,
+          "count": 6
+        },
+        {
+          "bin": 30,
+          "count": 9
+        },
+        {
+          "bin": 35,
+          "count": 23
+        },
+        {
+          "bin": 40,
+          "count": 9
+        }
+      ],
+      "msPerGame": 5.604
+    },
+    {
+      "bot": "mc-cem",
+      "games": 48,
+      "mean": 36.8,
+      "median": 37.5,
+      "stdev": 3.77,
+      "p10": 29.5,
+      "p90": 41.5,
+      "min": 27.5,
+      "max": 43,
+      "meanTurns": 46.7,
+      "naturalEndRate": 0.917,
+      "meanPasses": 3.23,
+      "histogram": [
+        {
+          "bin": 25,
+          "count": 5
+        },
+        {
+          "bin": 30,
+          "count": 5
+        },
+        {
+          "bin": 35,
+          "count": 29
+        },
+        {
+          "bin": 40,
+          "count": 9
+        }
+      ],
+      "msPerGame": 20640.689
+    }
+  ]
+}

@@ -10,7 +10,10 @@
     "postinstall": "nuxt prepare",
     "test": "vitest run",
     "test:watch": "vitest",
-    "bench": "tsx scripts/bench-placement.ts"
+    "bench": "tsx scripts/bench-placement.ts",
+    "eval": "tsx scripts/eval.ts",
+    "tune": "tsx scripts/tune.ts",
+    "tune:v2": "tsx scripts/tune-v2.ts"
   },
   "dependencies": {
     "@nuxtjs/supabase": "2.0.4",
