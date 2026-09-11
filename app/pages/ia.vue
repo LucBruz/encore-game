@@ -4,214 +4,207 @@
       <NuxtLink to="/" class="back">← Retour</NuxtLink>
       <h1>Agents & benchmark</h1>
       <p class="lede">
-        Comparaison d'agents sur la version headless du jeu. Toutes les mesures sont
-        <strong>appariées</strong> : à index de partie égal, chaque agent affronte exactement
-        la même suite de dés sur la même grille.
+        Des agents de jeu construits sur un moteur de règles headless, et surtout la mesure
+        qui permet de dire lequel est meilleur — et de combien.
+        <NuxtLink to="/solo" class="link">Jouer contre eux →</NuxtLink>
       </p>
     </header>
 
-    <section v-if="evalData" class="card">
-      <h2>Distribution des scores</h2>
+    <!-- ─── Tournoi multijoueur : le résultat qui fait foi ─────────────── -->
+    <section v-if="duel" class="card">
+      <h2>Tournoi à {{ duel.seats }} joueurs</h2>
       <p class="meta">
-        {{ evalData.games }} parties par agent · mode de bonus <code>{{ evalData.mode }}</code> ·
-        graine {{ evalData.seed }} · limite {{ evalData.maxTurns }} tours · 8 grilles officielles en rotation
+        {{ duel.games }} parties, tables de {{ duel.seats }} tirées parmi
+        {{ duel.agents.length }} agents avec rotation des sièges, 8 grilles officielles.
+        Durée moyenne {{ duel.meanTurns }} tours,
+        {{ (duel.naturalEndRate * 100).toFixed(1) }} % des parties terminées par deux
+        couleurs complètes.
       </p>
 
       <div class="table-wrap">
         <table>
           <thead>
             <tr>
-              <th>agent</th><th>moyenne</th><th>médiane</th><th>écart-type</th>
-              <th>p10</th><th>p90</th><th>fin 2 couleurs</th><th>passes</th><th>ms/partie</th>
-              <th>écart apparié vs {{ evalData.baseline }}</th>
+              <th>agent</th><th>score moyen</th><th>victoires</th>
+              <th>a terminé la partie</th><th>passes</th><th>jokers dépensés</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="r in evalData.results" :key="r.bot" :class="{ 'row--best': r.bot === bestBot }">
-              <td class="bot">{{ r.bot }}</td>
-              <td class="num strong">{{ r.mean.toFixed(2) }}</td>
-              <td class="num">{{ r.median }}</td>
-              <td class="num">{{ r.stdev.toFixed(2) }}</td>
-              <td class="num">{{ r.p10 }}</td>
-              <td class="num">{{ r.p90 }}</td>
-              <td class="num">{{ (r.naturalEndRate * 100).toFixed(1) }}%</td>
-              <td class="num">{{ r.meanPasses.toFixed(2) }}</td>
-              <td class="num dim">{{ r.msPerGame.toFixed(2) }}</td>
-              <td class="num">
-                <template v-if="r.paired">
-                  <span :class="r.paired.significant ? (r.paired.delta > 0 ? 'good' : 'bad') : 'dim'">
-                    {{ r.paired.delta > 0 ? '+' : '' }}{{ r.paired.delta.toFixed(2) }}
-                  </span>
-                  <span class="ci">[{{ r.paired.ci95[0] }}, {{ r.paired.ci95[1] }}]</span>
-                </template>
-                <span v-else class="dim">référence</span>
-              </td>
+            <tr v-for="(a, i) in duel.agents" :key="a.name" :class="{ 'row--best': i === 0 }">
+              <td class="bot">{{ a.name }}</td>
+              <td class="num strong">{{ a.meanScore.toFixed(2) }}</td>
+              <td class="num">{{ a.winRate.toFixed(1) }} %</td>
+              <td class="num">{{ a.endRate.toFixed(1) }} %</td>
+              <td class="num dim">{{ a.meanPasses.toFixed(2) }}</td>
+              <td class="num dim">{{ a.meanJokers.toFixed(2) }}</td>
             </tr>
           </tbody>
         </table>
       </div>
 
-      <div class="histograms">
-        <div v-for="r in evalData.results" :key="`h-${r.bot}`" class="histo">
-          <div class="histo__title">
-            {{ r.bot }}
-            <span class="histo__mean">moyenne {{ r.mean.toFixed(1) }}</span>
+      <div class="bars">
+        <div v-for="a in duel.agents" :key="`b-${a.name}`" class="bar">
+          <span class="bar__label">{{ a.name }}</span>
+          <div class="bar__track">
+            <div class="bar__fill" :style="{ width: `${(a.winRate / maxWin) * 100}%` }" />
           </div>
-          <div class="histo__bars">
-            <div
-              v-for="b in r.histogram"
-              :key="b.bin"
-              class="histo__bar"
-              :style="{
-                height: `${(b.count / maxBinCount(r)) * 100}%`,
-                left: `${((b.bin - histoMin) / histoSpan) * 100}%`,
-                width: `${(5 / histoSpan) * 100}%`,
-              }"
-              :title="`${b.bin} à ${b.bin + 5} points : ${b.count} parties`"
-            />
-          </div>
-          <div class="histo__axis">
-            <span>{{ histoMin }}</span>
-            <span>0</span>
-            <span>{{ histoMin + histoSpan }}</span>
-          </div>
+          <span class="bar__value">{{ a.winRate.toFixed(1) }} %</span>
         </div>
-      </div>
-    </section>
-
-    <section v-if="tuned" class="card">
-      <h2>Optimisation des poids par entropie croisée</h2>
-      <p class="meta">
-        Les poids de la fonction d'évaluation sont optimisés par CEM — échantillonner une
-        gaussienne, garder les meilleurs, refitter sur eux. Sans gradient, robuste au bruit
-        d'évaluation. Le résultat est validé sur un jeu de graines <strong>disjoint</strong>
-        de celui d'optimisation.
-      </p>
-
-      <div class="holdout">
-        <div class="holdout__item">
-          <span class="holdout__label">poids à la main</span>
-          <span class="holdout__value">{{ tuned.holdout.base.toFixed(2) }}</span>
-        </div>
-        <div class="holdout__arrow">→</div>
-        <div class="holdout__item holdout__item--win">
-          <span class="holdout__label">poids optimisés</span>
-          <span class="holdout__value">{{ tuned.holdout.tuned.toFixed(2) }}</span>
-        </div>
-        <div class="holdout__delta">
-          +{{ (tuned.holdout.tuned - tuned.holdout.base).toFixed(2) }} pts
-          <span class="dim">sur {{ tuned.holdout.games }} parties hors échantillon</span>
-        </div>
-      </div>
-
-      <svg class="curve" :viewBox="`0 0 ${curveW} ${curveH}`" preserveAspectRatio="none">
-        <polyline :points="curvePoints(tuned.history, 'best')" class="curve__line curve__line--best" />
-        <polyline :points="curvePoints(tuned.history, 'eliteMean')" class="curve__line curve__line--elite" />
-      </svg>
-      <div class="legend">
-        <span class="legend__item"><i class="swatch swatch--best" /> meilleur candidat</span>
-        <span class="legend__item"><i class="swatch swatch--elite" /> moyenne des élites</span>
-        <span class="dim">itérations 0 → {{ tuned.history.length - 1 }}</span>
-      </div>
-
-      <h3>Poids appris</h3>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>paramètre</th><th>à la main</th><th>optimisé</th></tr></thead>
-          <tbody>
-            <tr v-for="k in weightKeys" :key="k">
-              <td class="bot">{{ k }}</td>
-              <td class="num dim">{{ tuned.default[k] }}</td>
-              <td class="num strong">{{ tuned.tuned[k].toFixed(3) }}</td>
-            </tr>
-          </tbody>
-        </table>
       </div>
 
       <p class="note">
-        Deux poids sont instructifs. <code>jokerValue</code> passe de 1 à
-        {{ tuned.tuned.jokerValue.toFixed(2) }} : un joker vaut bien plus que le point
-        qu'il rapporte à la fin. Et <code>colorExponent</code> tombe à
-        {{ tuned.tuned.colorExponent.toFixed(2) }}, donc sous-linéaire — mieux vaut
-        <strong>étaler ses croix</strong> sur plusieurs couleurs que d'en finir une. C'est
-        exactement le conseil du livret : « Plus vous dispersez vos croix, plus vos
-        possibilités de choix augmentent. » L'optimiseur l'a retrouvé seul, et l'effet se lit
-        dans les passes par partie, qui s'effondrent.
+        Le vainqueur est aussi celui qui <strong>termine</strong> les parties :
+        {{ duel.agents[0].endRate.toFixed(1) }} % contre
+        {{ duel.agents[duel.agents.length - 1].endRate.toFixed(1) }} % pour le dernier. En
+        Encore!, aller vite est une stratégie et non un effet de bord — compléter deux
+        couleurs met fin à la partie et coupe tout le monde.
       </p>
     </section>
 
+    <!-- ─── La leçon du projet ─────────────────────────────────────────── -->
+    <section class="card card--lesson">
+      <h2>Le protocole comptait plus que l'algorithme</h2>
+      <p class="meta">
+        Les agents ont d'abord été optimisés <strong>en solitaire</strong> : une feuille,
+        pas d'adversaire, une limite de 50 tours posée comme garde-fou anti-boucle. Ce
+        cadrage classe les agents <strong>à l'envers au sommet</strong>.
+      </p>
+
+      <div class="flip">
+        <div class="flip__col">
+          <span class="flip__title">en solitaire</span>
+          <div class="flip__row flip__row--win"><span>agent thésauriseur</span><strong>38,88</strong></div>
+          <div class="flip__row"><span>le même, sans droit de passer</span><strong>~36</strong></div>
+        </div>
+        <div class="flip__arrow">→</div>
+        <div class="flip__col">
+          <span class="flip__title">à une table de 4</span>
+          <div class="flip__row flip__row--lose"><span>agent thésauriseur</span><strong>15,11</strong></div>
+          <div class="flip__row flip__row--win"><span>le même, sans droit de passer</span><strong>20,73</strong></div>
+        </div>
+      </div>
+
+      <p class="note">
+        Le solitaire ne punit pas la temporisation, puisque l'agent y décide seul quand la
+        partie s'arrête. Il avait donc appris à thésauriser ses 8 jokers — +8 points
+        garantis au décompte — et à passer 12 fois par partie. À une vraie table, les
+        autres finissent à sa place.
+        <br><br>
+        Trois choses n'existent que dans le simulateur multijoueur : le <strong>déni de
+        dés</strong> (le joueur actif met sa paire de côté, les passifs n'ont que les 4
+        restants), la <strong>fin décidée par autrui</strong>, et les bonus
+        <strong>premier / suivants</strong> qui récompensent la vitesse.
+      </p>
+    </section>
+
+    <!-- ─── Poids appris ───────────────────────────────────────────────── -->
+    <section v-if="weightStories.length" class="card">
+      <h2>Ce que l'optimiseur a appris</h2>
+      <p class="meta">
+        Les poids de l'évaluation sont optimisés par <strong>entropie croisée</strong> —
+        échantillonner une gaussienne, garder les meilleurs, refitter sur eux. Sans
+        gradient, robuste au bruit de mesure. La cible est la marge contre le meilleur
+        adversaire de la table, et le panel d'adversaires est volontairement hétérogène :
+        s'entraîner contre un seul style apprendrait à battre ce style, pas à jouer.
+      </p>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>paramètre</th><th>solitaire</th><th>multijoueur</th><th>ce que ça dit</th></tr>
+          </thead>
+          <tbody>
+            <tr v-for="w in weightStories" :key="w.key">
+              <td class="bot">{{ w.key }}</td>
+              <td class="num dim">{{ w.solo }}</td>
+              <td class="num strong">{{ w.multi }}</td>
+              <td class="story">{{ w.story }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ─── Niveaux ────────────────────────────────────────────────────── -->
     <section v-if="difficulty" class="card">
       <h2>Les trois niveaux</h2>
       <p class="meta">
-        Une seule politique (<code>{{ difficulty.policy }}</code>), un seul bouton : une
-        température softmax sur les valeurs z-scorées à chaque décision. À température
-        nulle c'est la politique brute ; plus elle monte, plus l'agent pioche dans le haut
-        du classement au lieu de prendre systématiquement le meilleur coup.
+        Une seule politique, un seul bouton : une température softmax sur les valeurs
+        z-scorées à chaque décision. À température nulle c'est la politique brute ; plus
+        elle monte, plus l'agent pioche dans le haut du classement au lieu de prendre
+        systématiquement le meilleur coup.
       </p>
 
       <div class="levels">
         <div v-for="l in difficulty.levels" :key="l.id" class="level">
           <span class="level__id">{{ l.id }}</span>
-          <span class="level__score">{{ l.mean.toFixed(1) }}</span>
-          <span class="level__meta">T = {{ l.temperature.toFixed(3) }} · écart-type {{ l.stdev.toFixed(1) }}</span>
+          <span class="level__score">{{ l.winRate.toFixed(1) }} %</span>
+          <span class="level__meta">
+            T = {{ l.temperature.toFixed(3) }} · score {{ l.meanScore.toFixed(1) }}
+          </span>
         </div>
       </div>
 
       <p class="note">
-        Les températures sont trouvées par <strong>dichotomie sur un score cible</strong>,
-        pas réglées à la main. L'échelle obtenue est espacée de 1,8 puis 1,4 écart-type — un
-        joueur sent la différence.
+        Les températures sont trouvées par <strong>dichotomie sur un taux de victoire
+        cible</strong>, mesuré en partie à 4 contre trois exemplaires du niveau maximal. La
+        cible est un taux de victoire et non un score : à une table de 4, un score absolu
+        dépend autant des adversaires que de l'agent, alors que la fréquence de victoire
+        est ce qu'un joueur ressent. Le plafond est ~25 %, quatre joueurs identiques se
+        partageant les victoires.
         <br><br>
-        L'alternative naïve aurait été de prendre <code>random</code>, <code>greedy</code> et
-        <code>greedy-cem</code> comme les trois niveaux. Elle ne marche pas : <code>random</code>
-        est à <strong>7 écarts-types</strong> sous <code>greedy</code>, ce qui ne donne pas un
-        adversaire facile mais un adversaire absurde ; et <code>greedy</code> n'est qu'à
-        <strong>1 écart-type</strong> de <code>greedy-cem</code>, indistinguable sur une partie.
-        Une échelle faite d'artefacts historiques est mal espacée par accident.
+        Le softmax est préféré à l'ε-greedy, qui produit des <strong>bourdes</strong> :
+        jouer parfaitement puis poser cinq croix n'importe où. Un joueur faible joue un
+        coup correct mais pas le meilleur, ce que le softmax reproduit.
       </p>
     </section>
 
+    <!-- ─── Déni de dés ────────────────────────────────────────────────── -->
     <section class="card">
-      <h2>Où est le plafond ?</h2>
+      <h2>Le déni de dés : mesuré, puis écarté</h2>
       <p class="meta">
-        Une fois les poids optimisés, la question devient : reste-t-il de la marge, et par
-        quel moyen ? Deux sondes, chacune coûteuse, chacune comparée en apparié contre
-        <code>greedy-cem</code>. Les deux résultats sont conservés ici, y compris quand ils
-        sont négatifs.
+        Quand on est joueur actif, le choix a deux effets : ce qu'il rapporte, et ce qu'il
+        retire aux autres. Aucun agent ne modélisait le second. Mesure isolée — mêmes poids
+        partout, seul le prix du déni change, 1600 parties.
       </p>
 
-      <div class="probes">
-        <div v-for="p in probes" :key="p.name" class="probe" :class="{ 'probe--null': !p.significant }">
-          <div class="probe__head">
-            <span class="probe__name">{{ p.name }}</span>
-            <span class="probe__delta" :class="p.significant ? 'good' : 'dim'">
-              {{ p.delta > 0 ? '+' : '' }}{{ p.delta.toFixed(2) }} pt
-            </span>
-          </div>
-          <div class="probe__ci">
-            intervalle 95 % [{{ p.ci[0] }}, {{ p.ci[1] }}]
-            <strong v-if="!p.significant"> — indistinguable du bruit</strong>
-          </div>
-          <p class="probe__note">{{ p.note }}</p>
-        </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>prix du déni</th><th>score</th><th>victoires</th><th>écart apparié vs sans déni</th></tr>
+          </thead>
+          <tbody>
+            <tr v-for="d in denialRows" :key="d.w" :class="{ 'row--best': d.best }">
+              <td class="bot">{{ d.w }}</td>
+              <td class="num">{{ d.score }}</td>
+              <td class="num">{{ d.win }}</td>
+              <td class="num" :class="d.delta === '—' ? 'dim' : 'good'">{{ d.delta }}</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
 
       <p class="note">
-        <strong>Honnêteté sur ces deux sondes :</strong> elles testent au fond la même chose —
-        « modéliser explicitement la flexibilité future aide-t-il ? ». La recherche l'estime
-        par simulation, l'heuristique enrichie la compte directement. Ce sont donc deux
-        résultats négatifs <em>corrélés</em>, pas deux confirmations indépendantes.
+        Le gain est réel et l'optimum est <strong>intérieur</strong> : trop dénier nuit
+        aussi. Il a fallu au préalable énumérer les coups <strong>par paire de dés</strong>,
+        la génération normale fusionnant les paires équivalentes pour soi — dans plus de 8
+        tours sur 10 — et jetant donc exactement l'information qui compte pour autrui.
+        <br><br>
+        <strong>Non intégré au jeu</strong>, par choix : lire les feuilles adverses
+        complique nettement le bot, et rendre l'adversaire plus fort n'était pas l'objectif.
       </p>
     </section>
 
+    <!-- ─── Méthode ────────────────────────────────────────────────────── -->
     <section class="card">
       <h2>Méthode</h2>
       <ul class="method">
-        <li><strong>Moteur headless</strong> — les règles vivent dans <code>engine/</code>, en données pures, sans Vue ni Pinia. L'interface et les agents partagent la même implémentation, donc un agent ne peut pas s'entraîner sur des règles différentes de celles du jeu.</li>
+        <li><strong>Moteur headless</strong> — les règles vivent dans <code>engine/</code>, en données pures, sans Vue ni Pinia. L'interface et les agents partagent la même implémentation, donc un agent ne peut pas être optimisé sur des règles différentes de celles auxquelles on joue.</li>
         <li><strong>Énumération des coups</strong> — ESU (Wernicke) : chaque placement connexe est produit exactement une fois, sans passe de déduplication. La contrainte « un seul bloc de couleur » devient implicite.</li>
-        <li><strong>Comparaisons appariées</strong> — même graine par index de partie pour tous les agents. Le bruit des dés est commun et s'annule dans les écarts.</li>
+        <li><strong>Comparaisons appariées</strong> — à index de partie égal, tous les agents reçoivent la même graine, donc les mêmes dés sur la même grille. Le bruit est commun et s'annule dans les écarts.</li>
+        <li><strong>Incertitude reportée</strong> — chaque écart vient avec son intervalle à 95 %. Une différence de moyennes ne veut rien dire sans savoir de combien elle fluctue.</li>
         <li><strong>Validation hors échantillon</strong> — les poids sont optimisés sur un jeu de graines et reportés sur un autre, disjoint.</li>
-        <li><strong>Résultat négatif conservé</strong> — l'expectimax profondeur 2 n'apporte rien de mesurable pour 120× le coût. C'est une mesure, pas une omission.</li>
+        <li><strong>Résultats négatifs conservés</strong> — l'expectimax profondeur 2 n'apporte rien de mesurable pour 140× le coût, et une heuristique à 21 paramètres à compteurs plats fait moins bien qu'à 6. Ce sont des mesures, pas des omissions. Elles ont été faites en solitaire, donc dans le cadrage dont on sait maintenant qu'il classe mal : ce sont des constats sur ce cadrage, pas des verdicts sur le jeu.</li>
       </ul>
     </section>
   </div>
@@ -220,330 +213,150 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
-interface EvalResult {
-  bot: string
-  mean: number
-  median: number
-  stdev: number
-  p10: number
-  p90: number
-  naturalEndRate: number
-  meanPasses: number
-  msPerGame: number
-  histogram: { bin: number; count: number }[]
-  paired: Paired | null
-}
-
-interface Paired {
-  vs: string
-  delta: number
-  stderr: number
-  ci95: [number, number]
-  significant: boolean
-}
-
-interface EvalData {
-  mode: string
+interface DuelAgent {
+  name: string
   games: number
-  seed: number
-  maxTurns: number
-  baseline: string
-  results: EvalResult[]
+  meanScore: number
+  winRate: number
+  endRate: number
+  meanPasses: number
+  meanJokers: number
 }
-
-interface TunedData {
-  tuned: Record<string, number>
-  default: Record<string, number>
-  history: { iter: number; best: number; eliteMean: number }[]
-  holdout: { games: number; seed: number; base: number; tuned: number }
+interface DuelData {
+  games: number
+  seats: number
+  meanTurns: number
+  naturalEndRate: number
+  agents: DuelAgent[]
 }
-
-const { data: evalData } = await useFetch<EvalData>('/data/eval.json', { server: false })
-const { data: tuned } = await useFetch<TunedData>('/data/tuned-weights.json', { server: false })
-const { data: teacherData } = await useFetch<EvalData>('/data/eval-teacher.json', { server: false })
-const { data: ceilingData } = await useFetch<EvalData>('/data/eval-ceiling.json', { server: false })
-
 interface DifficultyData {
   policy: string
-  games: number
-  levels: { id: string; temperature: number; mean: number; stdev: number }[]
+  levels: { id: string; temperature: number; winRate: number; meanScore: number }[]
 }
+interface MultiData { tuned: Record<string, number>; from: Record<string, number> }
+
+const { data: duel } = await useFetch<DuelData>('/data/duel.json', { server: false })
 const { data: difficulty } = await useFetch<DifficultyData>('/data/difficulty.json', { server: false })
+const { data: multi } = await useFetch<MultiData>('/data/tuned-weights-multi.json', { server: false })
 
-interface Probe { name: string; delta: number; ci: [number, number]; significant: boolean; note: string }
+const maxWin = computed(() => Math.max(1, ...(duel.value?.agents.map(a => a.winRate) ?? [1])))
 
-const PROBE_NOTES: Record<string, string> = {
-  expectimax: "Un tour d'anticipation, moyenne sur 20 lancers échantillonnés, heuristique aux feuilles. Les dés sont entièrement relancés chaque tour : anticiper un lancer n'apprend presque rien que l'évaluation de position ne capture déjà.",
-  'mc-cem': "192 déroulements complets par décision, joués par la politique optimisée. C'est une itération de politique — la seule chose qui batte vraiment greedy-cem, et pour environ 3 700 fois son coût.",
-  'greedy-v2': "Heuristique à 21 paramètres : taille de frontière, couleurs encore accessibles, tables de valeur libres par niveau d'avancement. Rien que la forme à 6 paramètres ne captait déjà.",
-  'greedy-v3': "Features dictées par un joueur : pénaliser les petits groupes qu'on ne pourra plus remplir, ouvrir des possibilités tôt, finir tôt les colonnes extrêmes, garder ses jokers, jouer les couleurs tard. Contrairement à la v2, les termes sont datés par le tour — c'est ce qui les rend utilisables.",
+const STORIES: Record<string, string> = {
+  colorExponent: "le solitaire disait « étale-toi », le multijoueur dit « finis tes couleurs » — parce que finir met fin à la partie",
+  lateHorizon: "la phase couleurs démarre bien plus tôt",
+  colorValueLate: "et elle compte beaucoup plus",
+  jokerValue: "thésauriser est puni",
+  orphan1: "les cases isolées redeviennent chères",
+  extremeColumnEarly: "finir tôt les colonnes A et O : le signal le plus robuste du projet",
+  cellValue: "couvrir du terrain vaut plus — c'est du tempo",
 }
 
-function probeFrom(data: EvalData | null, name: string): Probe | null {
-  const r = data?.results.find(x => x.bot === name)
-  if (!r?.paired) return null
-  return {
-    name,
-    delta: r.paired.delta,
-    ci: r.paired.ci95,
-    significant: r.paired.significant,
-    note: PROBE_NOTES[name] ?? '',
-  }
-}
-
-const probes = computed((): Probe[] => {
-  const out: Probe[] = []
-  const mc = probeFrom(ceilingData.value, 'mc-cem')
-  const ex = probeFrom(teacherData.value, 'expectimax')
-  const v2 = probeFrom(evalData.value, 'greedy-v2')
-  const v3 = probeFrom(evalData.value, 'greedy-v3')
-  for (const p of [v3, mc, ex, v2]) if (p) out.push(p)
-  return out
+const weightStories = computed(() => {
+  const m = multi.value
+  if (!m) return []
+  return Object.keys(STORIES)
+    .filter(k => m.tuned[k] !== undefined)
+    .map(k => ({
+      key: k,
+      solo: m.from[k] !== undefined ? m.from[k].toFixed(2) : '—',
+      multi: m.tuned[k].toFixed(2),
+      story: STORIES[k],
+    }))
 })
 
-const weightKeys = [
-  'columnExponent', 'colorExponent', 'colorValue', 'starValue', 'jokerValue', 'cellValue',
+/** Mesure isolée : mêmes poids partout, seul le prix du déni change, 1600 parties. */
+const denialRows = [
+  { w: '0 (base)', score: '16,73', win: '19,7 %', delta: '—', best: false },
+  { w: '0,6', score: '17,85', win: '23,8 %', delta: '+1,12 [0,67, 1,56]', best: false },
+  { w: '0,8', score: '18,42', win: '26,9 %', delta: '+1,69 [1,24, 2,13]', best: true },
+  { w: '1,1', score: '18,43', win: '29,6 %', delta: '+1,70 [1,23, 2,16]', best: true },
+  { w: '1,6', score: '18,32', win: '27,1 %', delta: '+1,27 [0,81, 1,73]', best: false },
 ]
-
-const bestBot = computed(() => {
-  if (!evalData.value) return ''
-  return [...evalData.value.results].sort((a, b) => b.mean - a.mean)[0]?.bot ?? ''
-})
-
-// Échelle commune à tous les histogrammes, sinon les formes ne sont pas comparables.
-const histoMin = computed(() => {
-  if (!evalData.value) return -25
-  return Math.min(...evalData.value.results.flatMap(r => r.histogram.map(b => b.bin)))
-})
-const histoSpan = computed(() => {
-  if (!evalData.value) return 75
-  const max = Math.max(...evalData.value.results.flatMap(r => r.histogram.map(b => b.bin + 5)))
-  return Math.max(5, max - histoMin.value)
-})
-
-function maxBinCount(r: EvalResult): number {
-  return Math.max(1, ...r.histogram.map(b => b.count))
-}
-
-const curveW = 600
-const curveH = 140
-
-function curvePoints(history: TunedData['history'], key: 'best' | 'eliteMean'): string {
-  if (!history.length) return ''
-  const values = history.flatMap(h => [h.best, h.eliteMean])
-  const lo = Math.min(...values)
-  const hi = Math.max(...values)
-  const span = Math.max(0.001, hi - lo)
-  return history
-    .map((h, i) => {
-      const x = (i / Math.max(1, history.length - 1)) * curveW
-      const y = curveH - ((h[key] - lo) / span) * (curveH - 12) - 6
-      return `${x.toFixed(1)},${y.toFixed(1)}`
-    })
-    .join(' ')
-}
 </script>
 
 <style scoped>
 .ia-page {
   @apply mx-auto px-4 py-8 flex flex-col gap-6;
-  max-width: 960px;
+  max-width: 980px;
   color: #e8e8f0;
 }
 
-.ia-header h1 {
-  @apply text-3xl font-black mt-2;
-  font-family: 'Space Mono', monospace;
-}
-
-.back {
-  @apply text-xs;
-  color: #6e6e88;
-}
+.ia-header h1 { @apply text-3xl font-black mt-2; font-family: 'Space Mono', monospace; }
+.back { @apply text-xs; color: #6e6e88; }
 .back:hover { color: #5cc96e; }
-
-.lede {
-  @apply text-sm mt-2 leading-relaxed;
-  color: #a0a0b8;
-  max-width: 70ch;
-}
+.link { color: #5b9ff5; }
+.link:hover { text-decoration: underline; }
+.lede { @apply text-sm mt-2 leading-relaxed; color: #a0a0b8; max-width: 72ch; }
 
 .card {
   @apply rounded-2xl p-5 flex flex-col gap-4;
   background: #17171f;
   border: 1px solid #2e2e3e;
 }
+.card--lesson { border-color: #4a3a2e; }
+.card h2 { @apply text-lg font-black; font-family: 'Space Mono', monospace; }
 
-.card h2 {
-  @apply text-lg font-black;
-  font-family: 'Space Mono', monospace;
-}
+.meta { @apply text-xs leading-relaxed; color: #6e6e88; max-width: 78ch; }
 
-.card h3 {
-  @apply text-sm font-bold mt-2;
-  color: #a0a0b8;
-}
-
-.meta {
-  @apply text-xs leading-relaxed;
-  color: #6e6e88;
-  max-width: 75ch;
-}
-
-code {
-  @apply px-1 rounded;
-  background: #23232f;
-  color: #f5d742;
-  font-family: 'Space Mono', monospace;
-}
+code { @apply px-1 rounded; background: #23232f; color: #f5d742; font-family: 'Space Mono', monospace; }
 
 .table-wrap { @apply overflow-x-auto; }
-
-table {
-  @apply w-full text-xs;
-  border-collapse: collapse;
-  font-family: 'Space Mono', monospace;
-}
-
+table { @apply w-full text-xs; border-collapse: collapse; font-family: 'Space Mono', monospace; }
 th {
   @apply text-left py-2 px-2 font-bold;
   color: #6e6e88;
   border-bottom: 1px solid #2e2e3e;
   white-space: nowrap;
 }
-
-td {
-  @apply py-2 px-2;
-  border-bottom: 1px solid #23232f;
-  white-space: nowrap;
-}
-
+td { @apply py-2 px-2; border-bottom: 1px solid #23232f; white-space: nowrap; }
 .num { @apply text-right; }
 .strong { @apply font-black; color: #5cc96e; }
 .dim { color: #6e6e88; }
+.good { color: #5cc96e; }
 .bot { color: #e8e8f0; }
-
+.story { @apply text-xs; color: #a0a0b8; white-space: normal; min-width: 22ch; font-family: inherit; }
 .row--best { background: rgba(92, 201, 110, 0.07); }
 
-.histograms { @apply grid gap-4 mt-2; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+.bars { @apply flex flex-col gap-2 mt-2; }
+.bar { @apply flex items-center gap-3 text-xs; font-family: 'Space Mono', monospace; }
+.bar__label { @apply shrink-0; width: 15ch; color: #a0a0b8; }
+.bar__track { @apply flex-1 rounded; height: 10px; background: #12121a; }
+.bar__fill { @apply rounded; height: 10px; background: #5cc96e; }
+.bar__value { @apply shrink-0 text-right; width: 6ch; color: #6e6e88; }
 
-.histo {
-  @apply rounded-xl p-3;
+.flip { @apply flex items-stretch gap-3 flex-wrap; }
+.flip__col {
+  @apply flex-1 rounded-xl p-3 flex flex-col gap-2;
+  min-width: 240px;
   background: #12121a;
   border: 1px solid #23232f;
 }
-
-.histo__title {
-  @apply text-xs font-bold flex justify-between items-baseline mb-2;
-  font-family: 'Space Mono', monospace;
-}
-.histo__mean { color: #6e6e88; font-weight: 400; }
-
-.histo__bars {
-  @apply relative w-full;
-  height: 70px;
-}
-
-.histo__bar {
-  @apply absolute bottom-0 rounded-t-sm;
-  background: #5b9ff5;
-  min-height: 1px;
-}
-
-.histo__axis {
-  @apply flex justify-between text-xs mt-1;
-  color: #4a4a5e;
-  font-family: 'Space Mono', monospace;
-}
-
-.holdout {
-  @apply flex items-center gap-4 flex-wrap rounded-xl p-4;
-  background: #12121a;
-  border: 1px solid #23232f;
-}
-
-.holdout__item { @apply flex flex-col; }
-.holdout__label { @apply text-xs; color: #6e6e88; }
-.holdout__value {
-  @apply text-2xl font-black;
-  font-family: 'Space Mono', monospace;
-}
-.holdout__item--win .holdout__value { color: #5cc96e; }
-.holdout__arrow { color: #4a4a5e; }
-.holdout__delta {
-  @apply text-sm font-bold ml-auto flex flex-col items-end;
-  color: #5cc96e;
-}
-.holdout__delta .dim { @apply text-xs font-normal; }
-
-.curve {
-  @apply w-full rounded-xl;
-  height: 140px;
-  background: #12121a;
-  border: 1px solid #23232f;
-}
-
-.curve__line {
-  fill: none;
-  stroke-width: 2;
-  vector-effect: non-scaling-stroke;
-}
-.curve__line--best { stroke: #5cc96e; }
-.curve__line--elite { stroke: #5b9ff5; }
-
-.legend { @apply flex items-center gap-4 text-xs flex-wrap; color: #6e6e88; }
-.legend__item { @apply flex items-center gap-1.5; }
-.swatch { @apply inline-block rounded-sm; width: 10px; height: 10px; }
-.swatch--best { background: #5cc96e; }
-.swatch--elite { background: #5b9ff5; }
-
-.note {
-  @apply text-xs leading-relaxed rounded-xl p-3;
-  background: #12121a;
-  border: 1px solid #23232f;
-  color: #a0a0b8;
-  max-width: 80ch;
-}
-
-.method {
-  @apply flex flex-col gap-2 text-xs leading-relaxed;
-  color: #a0a0b8;
-  max-width: 80ch;
-}
-.method strong { color: #e8e8f0; }
+.flip__title { @apply text-xs font-bold uppercase; color: #6e6e88; letter-spacing: 0.05em; }
+.flip__row { @apply flex items-baseline justify-between gap-3 text-xs; color: #a0a0b8; }
+.flip__row strong { @apply text-lg; font-family: 'Space Mono', monospace; color: #e8e8f0; }
+.flip__row--win strong { color: #5cc96e; }
+.flip__row--lose strong { color: #e85a82; }
+.flip__arrow { @apply self-center; color: #4a4a5e; }
 
 .levels { @apply grid gap-3; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
-
 .level {
   @apply rounded-xl p-3 flex flex-col gap-1;
   background: #12121a;
   border: 1px solid #2e2e3e;
 }
 .level__id { @apply text-xs font-bold uppercase; color: #6e6e88; letter-spacing: 0.05em; }
-.level__score {
-  @apply text-2xl font-black;
-  color: #5cc96e;
-  font-family: 'Space Mono', monospace;
-}
+.level__score { @apply text-2xl font-black; color: #5cc96e; font-family: 'Space Mono', monospace; }
 .level__meta { @apply text-xs; color: #6e6e88; font-family: 'Space Mono', monospace; }
 
-.good { color: #5cc96e; font-weight: 700; }
-.bad { color: #e85a82; font-weight: 700; }
-.ci { @apply block text-xs; color: #4a4a5e; }
-
-.probes { @apply grid gap-3; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
-
-.probe {
-  @apply rounded-xl p-3 flex flex-col gap-1.5;
+.note {
+  @apply text-xs leading-relaxed rounded-xl p-3;
   background: #12121a;
-  border: 1px solid #2e2e3e;
+  border: 1px solid #23232f;
+  color: #a0a0b8;
+  max-width: 82ch;
 }
-.probe--null { border-color: #3a2a33; }
+.note strong { color: #e8e8f0; }
 
-.probe__head { @apply flex items-baseline justify-between gap-2; }
-.probe__name { @apply text-sm font-bold; font-family: 'Space Mono', monospace; }
-.probe__delta { @apply text-lg; font-family: 'Space Mono', monospace; }
-.probe__ci { @apply text-xs; color: #6e6e88; font-family: 'Space Mono', monospace; }
-.probe__ci strong { color: #e85a82; }
-.probe__note { @apply text-xs leading-relaxed; color: #a0a0b8; }
+.method { @apply flex flex-col gap-2 text-xs leading-relaxed; color: #a0a0b8; max-width: 82ch; }
+.method strong { color: #e8e8f0; }
 </style>
