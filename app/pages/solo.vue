@@ -5,7 +5,7 @@
       <NuxtLink to="/" class="back">← Retour</NuxtLink>
       <h1>Partie solo</h1>
       <p class="lede">
-        Affronte <strong>greedy-cem</strong>, l'agent dont les poids d'évaluation ont été
+        Affronte <strong>greedy-v3</strong>, l'agent dont les poids d'évaluation ont été
         optimisés par entropie croisée. Aucune connexion : tout tourne dans ton navigateur.
         <NuxtLink to="/ia" class="link">Voir le benchmark →</NuxtLink>
       </p>
@@ -26,6 +26,24 @@
             @click="botCount = n"
           >{{ n }} bot{{ n > 1 ? 's' : '' }}</button>
         </div>
+      </div>
+
+      <div class="field">
+        <span>Difficulté</span>
+        <div class="chips">
+          <button
+            v-for="(d, id) in DIFFICULTIES"
+            :key="id"
+            class="chip"
+            :class="{ 'chip--on': difficulty === id }"
+            @click="difficulty = id as DifficultyId"
+          >{{ d.label }}</button>
+        </div>
+        <p class="hint">
+          Même politique pour les trois niveaux, dégradée par température et
+          <strong>calibrée par mesure</strong> : {{ DIFFICULTIES[difficulty].meanScore }} points
+          de moyenne sur 800 parties.
+        </p>
       </div>
 
       <div class="field">
@@ -138,12 +156,15 @@ import { useGameStore, rollAllDices } from '~/stores/gameStore'
 import type { DicesRoll } from '~/stores/gameStore'
 import { COLOR_MAP } from '~/data/grids/grid-01'
 import type { ColorKey } from '~/data/grids/grid-01'
-import { useBotPlayer } from '~/composables/useBotPlayer'
+import { DIFFICULTIES, useBotPlayer } from '~/composables/useBotPlayer'
+import type { DifficultyId } from '~/composables/useBotPlayer'
 
 const GRID_IDS = ['01', '02', '03', '04', '05', '06', '07', '08']
 
 const store = useGameStore()
-const botPlayer = useBotPlayer()
+const difficulty = ref<DifficultyId>('medium')
+// Recree le bot quand le niveau change : la temperature est fixee a la construction.
+const botPlayer = computed(() => useBotPlayer(difficulty.value))
 
 const started = ref(false)
 const playerName = ref('')
@@ -167,7 +188,9 @@ function start() {
     { id: humanId, name: playerName.value.trim() || 'Toi' },
     ...Array.from({ length: botCount.value }, (_, i) => ({
       id: `bot-${i + 1}`,
-      name: botCount.value === 1 ? 'greedy-cem' : `greedy-cem #${i + 1}`,
+      name: botCount.value === 1
+        ? DIFFICULTIES[difficulty.value].label
+        : `${DIFFICULTIES[difficulty.value].label} #${i + 1}`,
     })),
   ]
   store.initPlayers(players)
@@ -190,7 +213,7 @@ function onRoll(roll: DicesRoll) {
 
 /** Joue un coup complet pour un bot : combo, placement, validation. */
 function playBot(id: string): void {
-  const decision = botPlayer.decide(store, id)
+  const decision = botPlayer.value.decide(store, id)
   const isActive = id === store.activePlayerId && store.phase === 'active_selecting'
 
   if (!decision) {
@@ -329,6 +352,9 @@ watch(() => store.players.map(p => `${p.hasPlaced}${p.hasPassed}`).join(), () =>
 .field input:focus { outline: none; border-color: #5cc96e; }
 
 .chips { @apply flex gap-2 flex-wrap; }
+
+.hint { @apply text-xs leading-relaxed mt-1; color: #6e6e88; }
+.hint strong { color: #a0a0b8; }
 
 .chip {
   @apply px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-all;

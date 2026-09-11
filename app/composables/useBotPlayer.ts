@@ -1,6 +1,6 @@
-import { makeGreedyBot } from '~~/bots/basic'
-import type { HeuristicWeights } from '~~/bots/heuristic'
-import { DEFAULT_WEIGHTS } from '~~/bots/heuristic'
+import { makeTemperedBot } from '~~/bots/difficulty'
+import type { WeightsV3 } from '~~/bots/heuristicV3'
+import { makeV3MoveScorer } from '~~/bots/scorers'
 import type { Bot } from '~~/bots/types'
 import type { ColorFace, NumberFace, Roll } from '~~/engine/dice'
 import { makeRng } from '~~/engine/dice'
@@ -12,14 +12,40 @@ import type { ColorKey } from '~/data/grids/grid-01'
 
 type GameStore = ReturnType<typeof useGameStore>
 
-/** Poids appris par CEM (scripts/tune.ts), copies ici pour eviter un fetch au runtime. */
-export const CEM_WEIGHTS: HeuristicWeights = {
-    columnExponent: 2.777,
-    colorExponent: 0.529,
-    colorValue: 1.075,
-    starValue: 2.033,
-    jokerValue: 3.678,
-    cellValue: 0.034,
+/**
+ * Poids de l'heuristique v3, appris par CEM (scripts/tune-v3.ts) et recopies ici
+ * pour eviter un fetch au runtime. Voir public/data/tuned-weights-v3.json.
+ */
+export const V3_WEIGHTS: WeightsV3 = {
+    columnExponent: 2.7615,
+    extremeColumnEarly: 4.5099,
+    colorExponent: 0.51,
+    colorValueEarly: 0.2709,
+    colorValueLate: 1.3273,
+    orphan1: 0.2506,
+    orphan2: 0.7549,
+    frontierEarly: 0.1803,
+    jokerValue: 4.9948,
+    starValue: 3.0055,
+    cellValue: 0.0397,
+    earlyHorizon: 16.088,
+    lateHorizon: 31.674,
+}
+
+export type DifficultyId = 'easy' | 'medium' | 'hard'
+
+/**
+ * Temperatures calibrees par dichotomie sur un score cible (scripts/calibrate.ts).
+ * Les moyennes sont mesurees sur 800 parties, 8 grilles en rotation.
+ */
+export const DIFFICULTIES: Record<DifficultyId, {
+    label: string
+    temperature: number
+    meanScore: number
+}> = {
+    easy: { label: 'Facile', temperature: 0.912, meanScore: 20.1 },
+    medium: { label: 'Moyen', temperature: 0.459, meanScore: 30.1 },
+    hard: { label: 'Difficile', temperature: 0, meanScore: 36.1 },
 }
 
 export interface BotDecision {
@@ -38,8 +64,10 @@ export interface BotDecision {
  * passif, cette liste est `availableForPassive`, deja amputee du choix du joueur
  * actif — c'est bien cette indexation qu'attendent `confirmPassiveCombo` et compagnie.
  */
-export function useBotPlayer(weights: HeuristicWeights = CEM_WEIGHTS) {
-    const bot: Bot = makeGreedyBot(weights, 'greedy-cem')
+export function useBotPlayer(difficulty: DifficultyId = 'hard') {
+    const scorer = makeV3MoveScorer(V3_WEIGHTS)
+    const { temperature, label } = DIFFICULTIES[difficulty]
+    const bot: Bot = makeTemperedBot(scorer, temperature, `v3-${difficulty}`)
     const rng = makeRng(Date.now() >>> 0)
 
     function decide(store: GameStore, playerId: string): BotDecision | null {
@@ -82,5 +110,5 @@ export function useBotPlayer(weights: HeuristicWeights = CEM_WEIGHTS) {
         }
     }
 
-    return { decide, name: bot.name }
+    return { decide, name: bot.name, label }
 }

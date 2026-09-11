@@ -15,6 +15,8 @@ pnpm bench        # Time the placement enumerator
 pnpm eval         # Agent benchmark -> public/data/eval.json
 pnpm tune         # CEM weight optimisation -> public/data/tuned-weights.json
 pnpm tune:v2      # CEM on the 21-parameter heuristic -> public/data/tuned-weights-v2.json
+pnpm tune:v3      # CEM on the v3 heuristic -> public/data/tuned-weights-v3.json
+pnpm calibrate    # difficulty calibration -> public/data/difficulty.json
 ```
 
 `eval` and `tune` accept flags after `--`, e.g. `pnpm eval -- --games 500 --mode first`.
@@ -102,6 +104,8 @@ Remote clients bypass store guards that check `phase` (e.g. `PASS_ACTIVE` is app
 Plain TypeScript on top of `engine/`, no Nuxt runtime. Run via `tsx`.
 
 - `heuristic.ts` — 6-parameter position evaluation. Scores **progress**, not raw score: the real score is 0 for most of a game, so a greedy choice on raw score is degenerate.
+- `heuristicV3.ts` — **the current best policy.** Features come from an experienced player, and crucially each term is **gated by turn number**: isolated-component penalties (shape), early frontier and early bonus on the extreme columns, colour value rising with the turn, joker reluctance. The two phase horizons are themselves tuned parameters, so a wrong phase intuition collapses to zero rather than being baked in. `V3Scorer` evaluates candidates by local delta; the delta is property-tested against a full recompute.
+- `difficulty.ts` / `scorers.ts` — one policy degraded by a softmax temperature over per-decision z-scored values. Levels are calibrated by bisection on a target score (`scripts/calibrate.ts`), not hand-set. Softmax rather than epsilon-greedy: epsilon-greedy produces blunders, softmax produces merely sub-optimal moves, which is what a weaker human does.
 - `heuristicV2.ts` — 21-parameter version (frontier size, live colours, free value tables). `V2Scorer` aggregates the sheet once per turn and evaluates each candidate by **local delta** — a full rescan per candidate was ~25x too slow. The delta is property-tested against a full recompute.
 - `cem.ts` — cross-entropy method, shared by both tuners.
 - `basic.ts` (random, greedy), `expectimax.ts`, `montecarlo.ts` — the last two are offline probes, far too slow for the browser.
@@ -115,7 +119,8 @@ Numbers come from `pnpm eval` (2000 paired games, 8 grids). Comparisons are pair
 
 - CEM tuning is worth **+4.39 [+4.15, +4.63]** over hand-set weights, validated on disjoint holdout seeds.
 - 2-ply expectimax: **+0.28 [-0.26, +0.82]** — not significant, for ~140x the cost. Dice are fully rerolled each turn, so one turn of lookahead adds nothing the position evaluation does not already capture.
-- The 21-parameter heuristic is **-0.56 [-0.78, -0.33]** — the richer representation does not help.
+- The 21-parameter heuristic (v2) is **-0.56 [-0.78, -0.33]** — a richer representation with *flat* counters does not help.
+- The v3 heuristic is **+0.42 [+0.19, +0.65]** on the tuning seeds and **+0.72 [+0.50, +0.95]** on disjoint holdout seeds, for ~2x the cost. The difference from v2 is that its terms are gated by turn number. Passes per game fall 2.68 -> 1.98.
 - Monte-Carlo rollouts with the tuned policy are the only thing that genuinely beats it: **+1.60 [+0.30, +2.90]** over 64 paired games, for ~3500x the cost.
 
 Keep the negative results. They are measurements, not gaps.

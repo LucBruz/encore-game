@@ -140,6 +140,37 @@
       </p>
     </section>
 
+    <section v-if="difficulty" class="card">
+      <h2>Les trois niveaux</h2>
+      <p class="meta">
+        Une seule politique (<code>{{ difficulty.policy }}</code>), un seul bouton : une
+        température softmax sur les valeurs z-scorées à chaque décision. À température
+        nulle c'est la politique brute ; plus elle monte, plus l'agent pioche dans le haut
+        du classement au lieu de prendre systématiquement le meilleur coup.
+      </p>
+
+      <div class="levels">
+        <div v-for="l in difficulty.levels" :key="l.id" class="level">
+          <span class="level__id">{{ l.id }}</span>
+          <span class="level__score">{{ l.mean.toFixed(1) }}</span>
+          <span class="level__meta">T = {{ l.temperature.toFixed(3) }} · écart-type {{ l.stdev.toFixed(1) }}</span>
+        </div>
+      </div>
+
+      <p class="note">
+        Les températures sont trouvées par <strong>dichotomie sur un score cible</strong>,
+        pas réglées à la main. L'échelle obtenue est espacée de 1,8 puis 1,4 écart-type — un
+        joueur sent la différence.
+        <br><br>
+        L'alternative naïve aurait été de prendre <code>random</code>, <code>greedy</code> et
+        <code>greedy-cem</code> comme les trois niveaux. Elle ne marche pas : <code>random</code>
+        est à <strong>7 écarts-types</strong> sous <code>greedy</code>, ce qui ne donne pas un
+        adversaire facile mais un adversaire absurde ; et <code>greedy</code> n'est qu'à
+        <strong>1 écart-type</strong> de <code>greedy-cem</code>, indistinguable sur une partie.
+        Une échelle faite d'artefacts historiques est mal espacée par accident.
+      </p>
+    </section>
+
     <section class="card">
       <h2>Où est le plafond ?</h2>
       <p class="meta">
@@ -232,12 +263,20 @@ const { data: tuned } = await useFetch<TunedData>('/data/tuned-weights.json', { 
 const { data: teacherData } = await useFetch<EvalData>('/data/eval-teacher.json', { server: false })
 const { data: ceilingData } = await useFetch<EvalData>('/data/eval-ceiling.json', { server: false })
 
+interface DifficultyData {
+  policy: string
+  games: number
+  levels: { id: string; temperature: number; mean: number; stdev: number }[]
+}
+const { data: difficulty } = await useFetch<DifficultyData>('/data/difficulty.json', { server: false })
+
 interface Probe { name: string; delta: number; ci: [number, number]; significant: boolean; note: string }
 
 const PROBE_NOTES: Record<string, string> = {
   expectimax: "Un tour d'anticipation, moyenne sur 20 lancers échantillonnés, heuristique aux feuilles. Les dés sont entièrement relancés chaque tour : anticiper un lancer n'apprend presque rien que l'évaluation de position ne capture déjà.",
   'mc-cem': "192 déroulements complets par décision, joués par la politique optimisée. C'est une itération de politique — la seule chose qui batte vraiment greedy-cem, et pour environ 3 700 fois son coût.",
   'greedy-v2': "Heuristique à 21 paramètres : taille de frontière, couleurs encore accessibles, tables de valeur libres par niveau d'avancement. Rien que la forme à 6 paramètres ne captait déjà.",
+  'greedy-v3': "Features dictées par un joueur : pénaliser les petits groupes qu'on ne pourra plus remplir, ouvrir des possibilités tôt, finir tôt les colonnes extrêmes, garder ses jokers, jouer les couleurs tard. Contrairement à la v2, les termes sont datés par le tour — c'est ce qui les rend utilisables.",
 }
 
 function probeFrom(data: EvalData | null, name: string): Probe | null {
@@ -257,7 +296,8 @@ const probes = computed((): Probe[] => {
   const mc = probeFrom(ceilingData.value, 'mc-cem')
   const ex = probeFrom(teacherData.value, 'expectimax')
   const v2 = probeFrom(evalData.value, 'greedy-v2')
-  for (const p of [mc, ex, v2]) if (p) out.push(p)
+  const v3 = probeFrom(evalData.value, 'greedy-v3')
+  for (const p of [v3, mc, ex, v2]) if (p) out.push(p)
   return out
 })
 
@@ -471,6 +511,21 @@ td {
   max-width: 80ch;
 }
 .method strong { color: #e8e8f0; }
+
+.levels { @apply grid gap-3; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+
+.level {
+  @apply rounded-xl p-3 flex flex-col gap-1;
+  background: #12121a;
+  border: 1px solid #2e2e3e;
+}
+.level__id { @apply text-xs font-bold uppercase; color: #6e6e88; letter-spacing: 0.05em; }
+.level__score {
+  @apply text-2xl font-black;
+  color: #5cc96e;
+  font-family: 'Space Mono', monospace;
+}
+.level__meta { @apply text-xs; color: #6e6e88; font-family: 'Space Mono', monospace; }
 
 .good { color: #5cc96e; font-weight: 700; }
 .bad { color: #e85a82; font-weight: 700; }

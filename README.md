@@ -34,6 +34,8 @@ pnpm dev          # http://localhost:3000
 pnpm test         # suite vitest (moteur, store, agents, intégration bot/store)
 pnpm eval         # benchmark des agents      -> public/data/eval.json
 pnpm tune         # optimisation CEM des poids -> public/data/tuned-weights.json
+pnpm tune:v3      # optimisation de l'heuristique v3 -> public/data/tuned-weights-v3.json
+pnpm calibrate    # calibration des 3 niveaux -> public/data/difficulty.json
 pnpm bench        # chronométrage de l'énumérateur de placements
 ```
 
@@ -92,8 +94,9 @@ sans savoir de combien elle fluctue.
 |---|---|---|
 | `random` | 0,86 | −35,05 [−35,39, −34,71] |
 | `greedy` (poids à la main) | 31,52 | −4,39 [−4,63, −4,15] |
-| **`greedy-cem`** (poids optimisés) | **35,91** | référence |
+| `greedy-cem` (poids optimisés) | 35,91 | référence |
 | `greedy-v2` (21 paramètres) | 35,36 | −0,56 [−0,78, −0,33] |
+| **`greedy-v3`** (forme + timing) | **36,33** | **+0,42 [+0,19, +0,65]** |
 
 L'optimisation par **entropie croisée** vaut +4,39 points, validés sur un jeu de graines
 disjoint de celui d'optimisation. Deux poids appris sont instructifs : un joker vaut
@@ -102,6 +105,49 @@ des couleurs devient **sous-linéaire** — mieux vaut étaler ses croix que fin
 couleur. C'est exactement le conseil du livret (« Plus vous dispersez vos croix, plus vos
 possibilités de choix augmentent »), retrouvé seul par l'optimiseur. L'effet se lit dans
 les passes par partie, qui tombent de 5,77 à 2,68.
+
+### Ce qui a fini par marcher : des features dictées par un joueur
+
+La v2 avait ajouté des compteurs **plats** (taille de frontière, couleurs encore
+accessibles) et avait échoué. La v3 part de ce que dit un joueur expérimenté, et surtout
+**date chaque terme par le numéro de tour** — c'est la différence qui compte :
+
+| conseil du joueur | poids appris | verdict |
+|---|---|---|
+| finir tôt les colonnes extrêmes | 1 → **4,51**, phase « tôt » jusqu'au tour 16 | largement confirmé, j'avais sous-estimé ×4,5 |
+| garder ses jokers | 3,68 → **5,00** | confirmé, la réticence doit être plus forte encore |
+| jouer les couleurs après développement | bascule au tour 25 → **31,7** | direction confirmée, ampleur plus faible |
+| ouvrir des possibilités tôt | 0,3 → **0,18** | confirmé mais modeste — et ne survit **que** daté par le tour |
+| éviter de laisser des cases isolées | isolées 1,5 → **0,25**, mais paires 0,4 → **0,76** | **inversé** |
+
+Le dernier point est le plus intéressant : l'optimiseur a presque annulé la pénalité sur
+les cases isolées et triplé celle sur les **paires**. Lecture plausible, à prendre comme
+hypothèse : une case seule se coche avec un « 1 », face courante ; une paire est un piège
+double, parce que la casser avec un « 1 » *fabrique* une case isolée.
+
+Validation appariée sur 2000 parties de graines disjointes : **+0,72 [+0,50, +0,95]** contre
+`greedy-cem`, pour ×2 le coût. À comparer aux +1,60 du Monte-Carlo pour ×3 500. L'effet se
+lit aussi dans le jeu : passes par partie 2,68 → 1,98, parties terminées 95,4 % → 97,9 %.
+
+### Trois niveaux de difficulté, calibrés
+
+Une seule politique, un seul bouton : température softmax sur les valeurs z-scorées à
+chaque décision, puis **dichotomie sur un score cible**.
+
+| niveau | température | score moyen | écart |
+|---|---|---|---|
+| facile | 0,912 | 20,1 | — |
+| moyen | 0,459 | 30,1 | +1,8 écart-type |
+| difficile | 0 | 36,1 | +1,4 écart-type |
+
+L'alternative naïve — prendre `random`, `greedy` et `greedy-cem` comme les trois niveaux —
+ne marche pas : `random` est à **7 écarts-types** sous `greedy` (absurde, pas facile), et
+`greedy` n'est qu'à **1 écart-type** de `greedy-cem` (indistinguable sur une partie). Une
+échelle faite d'artefacts historiques est mal espacée par accident.
+
+Le softmax est préféré à l'ε-greedy parce que ce dernier produit des **bourdes** : jouer
+parfaitement puis poser cinq croix n'importe où. Un joueur faible joue un coup correct mais
+pas le meilleur, ce que le softmax reproduit.
 
 ### Résultats négatifs, conservés
 
@@ -118,8 +164,10 @@ Ces deux premières sondes testent au fond la même hypothèse — « modéliser
 flexibilité future aide-t-il ? ». Ce sont donc deux résultats négatifs *corrélés*, pas deux
 confirmations indépendantes.
 
-La conclusion tenable est que ce jeu est saturé par une heuristique de position à quelques
-paramètres, et que la recherche n'y achète qu'une marge étroite à un coût disproportionné.
+La conclusion tenable : la marge restante n'est pas dans la recherche ni dans une
+représentation plus riche « en général », mais dans des features **spécifiques au jeu** et
+**datées par la phase de partie**. La v3 récupère environ la moitié du gain du Monte-Carlo
+pour 1 750 fois moins cher.
 
 ## Licence
 

@@ -13,7 +13,9 @@
     "bench": "tsx scripts/bench-placement.ts",
     "eval": "tsx scripts/eval.ts",
     "tune": "tsx scripts/tune.ts",
-    "tune:v2": "tsx scripts/tune-v2.ts"
+    "tune:v2": "tsx scripts/tune-v2.ts",
+    "tune:v3": "tsx scripts/tune-v3.ts",
+    "calibrate": "tsx scripts/calibrate.ts"
   },
   "dependencies": {
     "@nuxtjs/supabase": "2.0.4",

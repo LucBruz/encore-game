@@ -25,6 +25,7 @@ import { greedyBot, makeGreedyBot, randomBot } from '../bots/basic'
 import { makeExpectimaxBot } from '../bots/expectimax'
 import { makeMonteCarloBot } from '../bots/montecarlo'
 import { DEFAULT_WEIGHTS_V2, makeGreedyV2Bot } from '../bots/heuristicV2'
+import { DEFAULT_WEIGHTS_V3, makeGreedyV3Bot } from '../bots/heuristicV3'
 import { playGame } from '../bots/play'
 import type { Bot } from '../bots/types'
 
@@ -49,6 +50,7 @@ function loadTuned(path: string): Record<string, any> | null {
 
 const tunedV1 = loadTuned('public/data/tuned-weights.json')
 const tunedV2 = loadTuned('public/data/tuned-weights-v2.json')
+const tunedV3 = loadTuned('public/data/tuned-weights-v3.json')
 
 const ALL_BOTS: Bot[] = [randomBot, greedyBot]
 if (tunedV1) {
@@ -57,10 +59,11 @@ if (tunedV1) {
     ALL_BOTS.push(makeMonteCarloBot({ weights: tunedV1 as any, topK: 8, rollouts: 24, name: 'mc-cem' }))
 }
 ALL_BOTS.push(makeGreedyV2Bot((tunedV2 as any) ?? DEFAULT_WEIGHTS_V2, 'greedy-v2'))
+ALL_BOTS.push(makeGreedyV3Bot((tunedV3 as any) ?? DEFAULT_WEIGHTS_V3, 'greedy-v3'))
 
 // Les agents a deroulements coutent plusieurs secondes par partie : hors du jeu
 // par defaut, on ne les sort que pour une sonde ciblee via --only.
-const DEFAULT_SET = ['random', 'greedy', 'greedy-cem', 'greedy-v2']
+const DEFAULT_SET = ['random', 'greedy', 'greedy-cem', 'greedy-v2', 'greedy-v3']
 const bots = ONLY
     ? ALL_BOTS.filter(b => ONLY.split(',').includes(b.name))
     : ALL_BOTS.filter(b => DEFAULT_SET.includes(b.name))

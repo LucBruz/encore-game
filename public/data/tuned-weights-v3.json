@@ -1,0 +1,149 @@
+{
+  "tuned": {
+    "columnExponent": 2.7615020167001174,
+    "extremeColumnEarly": 4.509893709599331,
+    "colorExponent": 0.5099737908957619,
+    "colorValueEarly": 0.27092458956900045,
+    "colorValueLate": 1.3273291160933205,
+    "orphan1": 0.2506314918721294,
+    "orphan2": 0.7549424085801447,
+    "frontierEarly": 0.18033258260156976,
+    "jokerValue": 4.9948339719347326,
+    "starValue": 3.005466816651642,
+    "cellValue": 0.03966405146601559,
+    "earlyHorizon": 16.087959843212854,
+    "lateHorizon": 31.67351408814245
+  },
+  "default": {
+    "columnExponent": 2.777,
+    "extremeColumnEarly": 1,
+    "colorExponent": 0.529,
+    "colorValueEarly": 0.5,
+    "colorValueLate": 3,
+    "orphan1": 1.5,
+    "orphan2": 0.4,
+    "frontierEarly": 0.3,
+    "jokerValue": 3.678,
+    "starValue": 2.033,
+    "cellValue": 0.034,
+    "earlyHorizon": 12,
+    "lateHorizon": 25
+  },
+  "history": [
+    {
+      "iter": 0,
+      "best": 35.63,
+      "eliteMean": 34.67
+    },
+    {
+      "iter": 1,
+      "best": 36.19,
+      "eliteMean": 35.78
+    },
+    {
+      "iter": 2,
+      "best": 36.18,
+      "eliteMean": 35.86
+    },
+    {
+      "iter": 3,
+      "best": 36.72,
+      "eliteMean": 36.39
+    },
+    {
+      "iter": 4,
+      "best": 36.45,
+      "eliteMean": 36.31
+    },
+    {
+      "iter": 5,
+      "best": 36.29,
+      "eliteMean": 36.2
+    },
+    {
+      "iter": 6,
+      "best": 36.69,
+      "eliteMean": 36.45
+    },
+    {
+      "iter": 7,
+      "best": 36.5,
+      "eliteMean": 36.23
+    },
+    {
+      "iter": 8,
+      "best": 36.87,
+      "eliteMean": 36.54
+    },
+    {
+      "iter": 9,
+      "best": 36.98,
+      "eliteMean": 36.46
+    },
+    {
+      "iter": 10,
+      "best": 36.76,
+      "eliteMean": 36.37
+    },
+    {
+      "iter": 11,
+      "best": 36.57,
+      "eliteMean": 36.5
+    },
+    {
+      "iter": 12,
+      "best": 37,
+      "eliteMean": 36.61
+    },
+    {
+      "iter": 13,
+      "best": 36.96,
+      "eliteMean": 36.62
+    },
+    {
+      "iter": 14,
+      "best": 36.9,
+      "eliteMean": 36.67
+    },
+    {
+      "iter": 15,
+      "best": 36.84,
+      "eliteMean": 36.61
+    },
+    {
+      "iter": 16,
+      "best": 36.7,
+      "eliteMean": 36.59
+    },
+    {
+      "iter": 17,
+      "best": 36.74,
+      "eliteMean": 36.52
+    },
+    {
+      "iter": 18,
+      "best": 36.74,
+      "eliteMean": 36.49
+    },
+    {
+      "iter": 19,
+      "best": 36.56,
+      "eliteMean": 36.44
+    }
+  ],
+  "holdout": {
+    "games": 2000,
+    "seed": 999331,
+    "v1": 35.797,
+    "v3": 36.52025,
+    "paired": {
+      "delta": 0.72325,
+      "stderr": 0.11357824271730015,
+      "ci95": [
+        0.5006366442740917,
+        0.9458633557259082
+      ]
+    },
+    "significant": true
+  }
+}

@@ -1,7 +1,8 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { useGameStore, rollAllDices } from '~/stores/gameStore'
-import { useBotPlayer } from '../useBotPlayer'
+import { DIFFICULTIES, useBotPlayer } from '../useBotPlayer'
+import type { DifficultyId } from '../useBotPlayer'
 import { validatePlacement } from '~~/engine/placement'
 import { maskFromSet } from '~~/engine/mask'
 
@@ -14,9 +15,9 @@ import { maskFromSet } from '~~/engine/mask'
 describe('useBotPlayer — pilotage du store', () => {
     beforeEach(() => setActivePinia(createPinia()))
 
-    function playSoloGame(gridId: string, maxTurns = 60) {
+    function playSoloGame(gridId: string, maxTurns = 60, difficulty: DifficultyId = 'hard') {
         const store = useGameStore()
-        const bot = useBotPlayer()
+        const bot = useBotPlayer(difficulty)
         store.initPlayers([{ id: 'bot-1', name: 'A' }, { id: 'bot-2', name: 'B' }])
         store.initGrid(gridId)
 
@@ -113,5 +114,13 @@ describe('useBotPlayer — pilotage du store', () => {
         const { store } = playSoloGame('01', 80)
         const scores = store.players.map(p => store.scoreForPlayer(p.id))
         for (const s of scores) expect(s).toBeGreaterThan(10)
+    })
+
+    it('joue legalement aux trois niveaux de difficulte', () => {
+        for (const level of Object.keys(DIFFICULTIES) as DifficultyId[]) {
+            const { illegal, placements } = playSoloGame('01', 60, level)
+            expect(illegal, level).toBe(0)
+            expect(placements, level).toBeGreaterThan(8)
+        }
     })
 })
