@@ -6,14 +6,14 @@
       <h1 class="page-title">ENCORE!</h1>
       <p class="page-subtitle">Jeu de société multijoueur en temps réel</p>
       <nav v-if="!lobby.gameId" class="page-nav">
-        <NuxtLink to="/solo" class="nav-link nav-link--solo">🤖 Jouer contre un bot</NuxtLink>
-        <NuxtLink to="/ia" class="nav-link">📊 Benchmark des agents</NuxtLink>
+        <NuxtLink to="/solo" class="nav-link nav-link--solo">Jouer contre un bot</NuxtLink>
+        <NuxtLink to="/ia" class="nav-link">Benchmark des agents</NuxtLink>
       </nav>
     </header>
 
     <!-- Erreur globale -->
     <div v-if="lobby.error" class="error-banner">
-      ⚠️ {{ lobby.error }}
+      {{ lobby.error }}
     </div>
 
     <!-- ── SALLE D'ATTENTE ─────────────────────────────────────── -->
@@ -25,7 +25,7 @@
           <p class="lobby-code">{{ lobby.gameCode }}</p>
         </div>
         <button class="btn btn--ghost btn--sm" @click="copyCode">
-          {{ copied ? '✓ Copié !' : '📋 Copier' }}
+          {{ copied ? '✓ Copié !' : 'Copier' }}
         </button>
       </div>
 
@@ -60,7 +60,7 @@
       </div>
 
       <p v-else class="lobby-waiting-msg">
-        ⏳ En attente des autres joueurs...
+        En attente des autres joueurs...
       </p>
 
     </div>
@@ -142,7 +142,7 @@
           <p class="code-display__label">Partage ce code !</p>
           <p class="code-display__code">{{ generatedCode }}</p>
           <button class="btn btn--ghost btn--sm btn--full" @click="copyCode">
-            {{ copied ? '✓ Copié !' : '📋 Copier le code' }}
+            {{ copied ? '✓ Copié !' : 'Copier le code' }}
           </button>
         </div>
       </div>

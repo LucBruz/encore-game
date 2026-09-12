@@ -249,7 +249,7 @@ onMounted(async () => {
 
             <!-- Jokers + étoiles -->
             <div class="pc-extras">
-              <span class="pc-extra">⬟ {{ player.jokers }} joker{{ player.jokers !== 1 ? 's' : '' }} +{{ player.jokers }}</span>
+              <span class="pc-extra">{{ player.jokers }} joker{{ player.jokers !== 1 ? 's' : '' }} +{{ player.jokers }}</span>
               <span class="pc-extra" :class="{ 'pc-extra--neg': player.starMalus < 0 }">
                 ★ {{ player.starMalus < 0 ? player.starMalus : '—' }}
               </span>

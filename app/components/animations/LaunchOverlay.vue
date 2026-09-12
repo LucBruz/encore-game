@@ -146,7 +146,6 @@ onMounted(async () => {
 
       <!-- Chip joueur -->
       <div ref="playerChipRef" class="launch-chip">
-        <span class="lc-ico">🎲</span>
         <span class="lc-name">{{ playerName }}</span>
         <span class="lc-you">toi</span>
       </div>
@@ -276,7 +275,6 @@ onMounted(async () => {
   font-size: 13px;
   color: #e8e8f0;
 }
-.lc-ico { font-size: 15px; }
 .lc-name { font-weight: 800; font-family: 'Space Mono', monospace; }
 .lc-you {
   font-size: 10px;

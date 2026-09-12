@@ -65,7 +65,7 @@
          l'écran une fois que le joueur est reparti sur autre chose. -->
     <Transition name="err">
       <div v-if="visibleError" class="placement-error">
-        ⚠️ {{ visibleError }}
+        {{ visibleError }}
       </div>
     </Transition>
 

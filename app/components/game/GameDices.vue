@@ -10,7 +10,6 @@
         :disabled="readonly"
         @click="handleRoll"
       >
-        <span class="btn-roll__icon">🎲</span>
         <span>Lancer les dés</span>
       </button>
     </div>
@@ -170,9 +169,9 @@ const currentPlayer = computed(() =>
 const hasConfirmed = computed(() => currentPlayer.value?.hasConfirmed ?? false)
 
 const PASS_LABELS: Record<string, string> = {
-  timer: '⏱ Temps écoulé — tour passé',
-  'no-placement': '🚫 Aucun placement possible — tour passé',
-  manual: '➡️ Tour passé',
+  timer: 'Temps écoulé — tour passé',
+  'no-placement': 'Aucun placement possible — tour passé',
+  manual: 'Tour passé',
 }
 
 const passMessage = computed(() => {
@@ -412,12 +411,6 @@ function handlePass() {
 
 .btn-roll--rolling {
   animation: shake 0.6s ease-in-out;
-}
-
-.btn-roll__icon { @apply text-xl; }
-
-.btn-roll--rolling .btn-roll__icon {
-  animation: spin 0.6s ease-in-out;
 }
 
 @keyframes shake {

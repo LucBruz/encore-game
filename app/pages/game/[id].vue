@@ -19,7 +19,6 @@
           }"
           @click="currentViewPlayer = player.id"
         >
-          <span v-if="store.activePlayerId === player.id" class="player-chip__dice">🎲</span>
           {{ player.name }}
           <span v-if="player.id === sync.localPlayerId.value" class="player-chip__you">toi</span>
           <span class="player-chip__score">{{ store.scoreForPlayer(player.id) }} pts</span>
@@ -32,7 +31,7 @@
         <span
           v-if="isLocalActivePlayer && store.phase === 'active_selecting'"
           class="badge-active-player"
-        >🎲 Joueur actif</span>
+        >Joueur actif</span>
         <!-- Nom + action de l'autre joueur actif -->
         <div v-else-if="activePlayer && !isLocalActivePlayer" class="active-phase-info">
           <span class="active-phase-info__name">{{ activePlayer.name }}</span>
@@ -46,7 +45,7 @@
             />
             <span class="timer__label">{{ timer.secondsLeft.value }}s</span>
           </div>
-          <span v-if="store.isFirstThreeTurns" class="badge-early-turns">⚡ Tours 1–3</span>
+          <span v-if="store.isFirstThreeTurns" class="badge-early-turns">Tours 1–3</span>
         </div>
         <div class="connection-dot" :class="sync.isReady.value ? 'connection-dot--online' : 'connection-dot--offline'" />
       </div>
@@ -150,7 +149,7 @@
 
     <!-- Game Over (fallback texte) -->
     <div v-if="store.gameOver && store.phase !== 'turn_end'" class="game-over">
-      <h2>🎉 Partie terminée !</h2>
+      <h2>Partie terminée !</h2>
       <div
         v-for="player in store.players"
         :key="player.id"
@@ -558,7 +557,6 @@ onUnmounted(async () => {
 .player-chip--active { border-color: #f5d742; color: #f5d742; }
 .player-chip--is-active-player { border-color: #5cc96e; }
 .player-chip--active.player-chip--is-active-player { border-color: #f5d742; }
-.player-chip__dice { @apply text-sm; }
 .player-chip__you {
   @apply text-xs px-1 py-0.5 rounded-full font-normal;
   background: rgba(245, 215, 66, 0.15);

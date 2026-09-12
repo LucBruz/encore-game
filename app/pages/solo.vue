@@ -80,7 +80,6 @@
             }"
             @click="viewed = p.id"
           >
-            <span v-if="store.activePlayerId === p.id">🎲</span>
             {{ p.name }}
             <span class="pchip__score">{{ store.scoreForPlayer(p.id) }}</span>
           </button>
