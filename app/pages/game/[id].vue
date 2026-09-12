@@ -157,6 +157,9 @@
       >
         {{ player.name }} : <strong>{{ store.scoreForPlayer(player.id) }} pts</strong>
       </div>
+      <NuxtLink :to="`/review/${route.params.id}`" class="game-over__review">
+        Analyser la partie
+      </NuxtLink>
     </div>
 
     <!-- Loader reconnexion : se termine dès que sync est prêt -->
@@ -857,6 +860,13 @@ onUnmounted(async () => {
 
 .game-over h2 { @apply text-2xl font-black mb-4; }
 .game-over__player { @apply text-lg py-1; }
+
+.game-over__review {
+  @apply inline-block mt-4 rounded-xl px-5 py-2.5 text-sm font-black transition-transform;
+  background: linear-gradient(135deg, #f5d742, #f58a35);
+  color: #0f0f13;
+}
+.game-over__review:hover { transform: translateY(-1px); }
 
 /* ── Dernier coup banner ──────────────────────────────────────────────────── */
 .last-turn-banner {

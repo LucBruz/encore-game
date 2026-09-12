@@ -53,36 +53,69 @@ export interface ReviewOptions {
  * Le store passe ici doit etre NEUF — joueurs et grille initialises, aucun
  * evenement applique. Il sera consomme par le rejeu.
  */
-export function reviewGame(
+export function startReview(store: any, events: GameEvent[], opts: ReviewOptions) {
+    const decisions = replayDecisions(store, events)
+    const mine = decisions.filter((d: ReplayedDecision) => d.playerId === opts.playerId)
+    const moves: ReviewedMove[] = []
+
+    return {
+        total: mine.length,
+        /** Analyse la decision `i`. Un pas dure environ 3,4 secondes. */
+        step(i: number) {
+            const d = mine[i]
+            const verdict = analyseDecision(d, {
+                rolloutBot: opts.rolloutBot,
+                rollouts: opts.rollouts ?? 32,
+                screenRollouts: opts.screenRollouts ?? 8,
+                shortlist: opts.shortlist ?? 8,
+                horizon: opts.horizon ?? DEFAULT_HORIZON,
+                bands: opts.bands ?? DEFAULT_BANDS,
+                seed: opts.seed,
+            })
+            moves.push({ ...verdict, playerId: d.playerId, playerName: d.playerName })
+            opts.onProgress?.(i + 1, mine.length)
+        },
+        finish: () => summarise(mine[0]?.playerName ?? '', opts.playerId, moves),
+    }
+}
+
+/** Version bloquante, pour les scripts Node. */
+export function reviewGame(store: any, events: GameEvent[], opts: ReviewOptions): GameReview {
+    const run = startReview(store, events, opts)
+    for (let i = 0; i < run.total; i++) run.step(i)
+    return run.finish()
+}
+
+/**
+ * Version pour le navigateur : rend la main entre chaque decision.
+ *
+ * Sans cette respiration, une analyse d'une a deux minutes monopolise le fil
+ * principal — la barre de progression ne se redessine jamais et Chrome finit par
+ * proposer de tuer la page. Ce n'est pas un worker, la page reste donc
+ * inutilisable pendant le calcul ; mais elle reste vivante et affiche ou elle en
+ * est.
+ */
+export async function reviewGameAsync(
     store: any,
     events: GameEvent[],
     opts: ReviewOptions,
-): GameReview {
-    const decisions = replayDecisions(store, events)
-    const mine = decisions.filter((d: ReplayedDecision) => d.playerId === opts.playerId)
+): Promise<GameReview> {
+    const run = startReview(store, events, opts)
+    for (let i = 0; i < run.total; i++) {
+        run.step(i)
+        await new Promise(resolve => setTimeout(resolve, 0))
+    }
+    return run.finish()
+}
 
-    const moves: ReviewedMove[] = []
-    mine.forEach((d, i) => {
-        const verdict = analyseDecision(d, {
-            rolloutBot: opts.rolloutBot,
-            rollouts: opts.rollouts ?? 32,
-            screenRollouts: opts.screenRollouts ?? 8,
-            shortlist: opts.shortlist ?? 8,
-            horizon: opts.horizon ?? DEFAULT_HORIZON,
-            bands: opts.bands ?? DEFAULT_BANDS,
-            seed: opts.seed,
-        })
-        moves.push({ ...verdict, playerId: d.playerId, playerName: d.playerName })
-        opts.onProgress?.(i + 1, mine.length)
-    })
-
+function summarise(playerName: string, playerId: string, moves: ReviewedMove[]): GameReview {
     const erreurs = moves.filter(m => m.verdict === 'erreur').length
     const fautes = moves.filter(m => m.verdict === 'faute').length
     const good = moves.filter(m => m.playedWasGood).length
 
     return {
-        playerId: opts.playerId,
-        playerName: mine[0]?.playerName ?? '',
+        playerId,
+        playerName,
         moves,
         summary: {
             decisions: moves.length,
