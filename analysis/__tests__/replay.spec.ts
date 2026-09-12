@@ -96,6 +96,34 @@ describe('rejeu du journal vers des positions de decision', () => {
         for (const d of decisions) expect(d.candidates).toContain(null)
     })
 
+    /**
+     * Le store garde une entree par couleur et par colonne, a `null` tant
+     * qu'elle n'est pas acquise, et indexe les colonnes par LETTRE. Le moteur
+     * n'attend que les acquises, indexees par numero.
+     *
+     * Laisser passer les `null` ne plante pas : `scorePlayer` compte
+     * `v === 'first' ? 5 : 3`, donc chaque couleur NON acquise aurait rapporte
+     * 3 points a tous les joueurs, dans toutes les analyses, sans rien casser.
+     * Les lettres de colonnes, elles, plantaient. C'est la moitie silencieuse
+     * que ce test protege.
+     */
+    it('ne convertit que les bonus reellement acquis', () => {
+        const decisions = replayDecisions(freshStore(), EVENTS)
+        for (const d of decisions) {
+            for (const p of d.players) {
+                expect(Object.values(p.colorBonus)).not.toContain(null)
+                expect(Object.values(p.columnBonus)).not.toContain(null)
+                for (const key of Object.keys(p.columnBonus)) {
+                    expect(Number.isInteger(Number(key)), `colonne « ${key} »`).toBe(true)
+                }
+            }
+        }
+        // Personne n'a complete quoi que ce soit en deux tours : tout doit etre vide.
+        const first = decisions[0]
+        expect(Object.keys(first.players[0].colorBonus)).toHaveLength(0)
+        expect(Object.keys(first.players[0].columnBonus)).toHaveLength(0)
+    })
+
     it('photographie la position AVANT le coup, pas apres', () => {
         const decisions = replayDecisions(freshStore(), EVENTS)
         const first = decisions.find(d => d.playerId === BOT)!

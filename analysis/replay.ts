@@ -1,3 +1,4 @@
+import { COLS } from '../app/data/grids/grid-01'
 import { maskFromSet } from '../engine/mask'
 import { legalMoves } from '../engine/state'
 import type { Move, Sheet } from '../engine/state'
@@ -71,6 +72,38 @@ export function replayDecisions(
         jokersUsed: player.jokersUsed,
     })
 
+    /*
+     * Conversion des bonus, store -> moteur. Les deux representations different
+     * sur deux points, et les ignorer coute cher :
+     *
+     *   - le store garde une entree par couleur et par colonne, a `null` tant
+     *     qu'elle n'est pas acquise ; le moteur n'attend que les acquises. Or
+     *     `scorePlayer` compte `v === 'first' ? 5 : 3`, si bien qu'un `null`
+     *     rapporterait 3 points. Silencieux, et faux dans toutes les analyses.
+     *   - le store indexe les colonnes par LETTRE, le moteur par index. Passer
+     *     une lettre donne `COLUMN_POINTS[undefined]` et fait tout planter.
+     *
+     * Le plantage a ete vu tout de suite ; les 3 points fantomes ne se seraient
+     * jamais vus.
+     */
+    const colorBonusOf = (player: any): Partial<Record<ColorKey, 'first' | 'others'>> => {
+        const out: Partial<Record<ColorKey, 'first' | 'others'>> = {}
+        for (const [key, value] of Object.entries(player.colorBonus ?? {})) {
+            if (value === 'first' || value === 'others') out[key as ColorKey] = value
+        }
+        return out
+    }
+
+    const columnBonusOf = (player: any): Record<number, 'first' | 'others'> => {
+        const out: Record<number, 'first' | 'others'> = {}
+        for (const [letter, value] of Object.entries(player.columnBonus ?? {})) {
+            if (value !== 'first' && value !== 'others') continue
+            const index = COLS.indexOf(letter as typeof COLS[number])
+            if (index !== -1) out[index] = value
+        }
+        return out
+    }
+
     /** Photographie de la table, telle que le joueur la voyait. */
     function snapshot(playerId: string) {
         const seat = seatOf(playerId)
@@ -78,8 +111,8 @@ export function replayDecisions(
         const players = store.players.map((p: any) => ({
             name: p.name,
             sheet: sheetOf(p),
-            colorBonus: { ...p.colorBonus },
-            columnBonus: { ...p.columnBonus },
+            colorBonus: colorBonusOf(p),
+            columnBonus: columnBonusOf(p),
         }))
 
         // Des disponibles pour CE joueur : les six pendant les trois premiers

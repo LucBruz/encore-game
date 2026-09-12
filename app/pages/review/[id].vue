@@ -171,7 +171,15 @@ const review = ref<GameReview | null>(null)
 const done = ref(0)
 const total = ref(0)
 const selected = ref<number | null>(null)
-const decisionCount = ref(0)
+/**
+ * Auteur de chaque decision de la partie, releve une fois par un rejeu a vide.
+ * Le compte par joueur en decoule, donc changer de joueur met l'estimation a
+ * jour sans rejouer quoi que ce soit.
+ */
+const decisionOwners = ref<string[]>([])
+const decisionCount = computed(
+    () => decisionOwners.value.filter(id => id === target.value).length,
+)
 
 const pct = computed(() => (total.value ? Math.round(100 * done.value / total.value) : 0))
 const current = computed(() => (selected.value === null ? null : review.value?.moves[selected.value] ?? null))
@@ -227,8 +235,7 @@ onMounted(async () => {
     // Un rejeu a vide donne le nombre de decisions, donc une estimation d'attente
     // honnete avant de lancer quoi que ce soit.
     primeStore()
-    const all = replayDecisions(store, events.value)
-    decisionCount.value = all.filter(d => d.playerId === target.value).length
+    decisionOwners.value = replayDecisions(store, events.value).map(d => d.playerId)
 })
 
 async function run() {
