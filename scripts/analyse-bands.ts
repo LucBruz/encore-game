@@ -39,14 +39,20 @@ const SHORTLIST = Number(arg('shortlist', '8'))
 /**
  * `full` = deroulement jusqu'a la fin, un nombre = troncature.
  *
- * L'horizon est un arbitrage biais / variance, et les deux cotes se mesurent.
- * Court, il reduit le bruit mais rend l'evaluation myope : il penalise les
- * coups qui investissent, donc precisement ce que fait la politique reglee sur
- * la partie entiere. Mesure a horizon 3, le bot le plus FORT recoltait plus de
- * fautes que le moyen — un classement inverse, qui disqualifie le reglage.
+ * CE SCRIPT NE SERT PLUS A CHOISIR L'HORIZON. Un premier resultat a horizon 3
+ * montrait le bot le plus fort recoltant plus de fautes que le moyen, et je l'ai
+ * lu comme un biais de myopie. Le balayage d'horizons ne l'a pas confirme : le
+ * classement des trois niveaux se retourne d'un horizon a l'autre, ce qui est la
+ * signature du bruit et non d'un biais. Les niveaux softmax produisent beaucoup
+ * de petits ecarts plutot que quelques bevues, donc ils sont probablement
+ * indistinguables coup par coup — voir CLAUDE.md.
  *
- * Critere d'acceptation : l'ordre fort < moyen < faible < hasard doit sortir de
- * la mesure. C'est lui qui choisit l'horizon, pas une intuition.
+ * Ce qui tient : le jeu au hasard se detache systematiquement. Le script garde
+ * donc son interet comme controle de sante — si le hasard cessait de se
+ * detacher, l'analyse serait cassee.
+ *
+ * L'horizon et les seuils se choisissent avec scripts/analyse-horizon.ts, qui
+ * compare a une reference a gros budget.
  */
 const HORIZONS = arg('horizons', '3').split(',')
 const SEED = Number(arg('seed', '515151'))
@@ -82,7 +88,7 @@ console.log(`  ${ROLLOUTS} deroulements, criblage ${SCREEN}, pretendants ${SHORT
 console.log(`  grille ${grid.id}, table de 4, ${PER_SEAT} decisions visees par siege`)
 console.log(`  horizons compares : ${HORIZONS.join(', ')}\n`)
 
-const VERDICTS: Verdict[] = ['excellent', 'bon', 'imprecision', 'erreur', 'faute']
+const VERDICTS: Verdict[] = ['excellent', 'bon', 'erreur', 'faute']
 const allLosses: number[] = []
 
 for (const horizonArg of HORIZONS) {
@@ -145,9 +151,11 @@ for (const [seat, { label }] of SEATS.map((s, i) => [i, s] as const)) {
 const elapsed = Date.now() - started
 console.log('  ' + '-'.repeat(100))
 console.log(`  ${analysed} decisions en ${(elapsed / 1000).toFixed(0)} s, soit ${(elapsed / Math.max(1, analysed)).toFixed(0)} ms par decision`)
-const ordered = meansByLevel.every((v, i) => i === 0 || v >= meansByLevel[i - 1])
-console.log(`  ordre attendu (fort < moyen < faible < hasard) : ${ordered ? 'RESPECTE' : 'VIOLE'}`
-  + `   [${meansByLevel.map(v => v.toFixed(2)).join(' < ')}]`)
+// L'ordre complet n'est pas un critere : mesure, il ne sort pas, et le tenir
+// pour un echec serait une sur-interpretation. Seul le dernier rang compte.
+const randomWorst = meansByLevel[meansByLevel.length - 1] === Math.max(...meansByLevel)
+console.log(`  controle de sante (le hasard doit finir dernier) : ${randomWorst ? 'OK' : 'ECHEC'}`
+  + `   [${meansByLevel.map(v => v.toFixed(2)).join('  ')}]`)
 console.log('')
 }
 
@@ -157,4 +165,4 @@ const q = (p: number) => s[Math.min(s.length - 1, Math.floor(s.length * p))]
 console.log(`\n  Distribution des ecarts (n=${s.length}) :`)
 console.log(`    p50 ${q(0.5).toFixed(2)}   p75 ${q(0.75).toFixed(2)}   p90 ${q(0.9).toFixed(2)}   p95 ${q(0.95).toFixed(2)}   max ${s[s.length - 1].toFixed(2)}`)
 console.log(`\n  Seuils suggeres : erreur a p75 = ${q(0.75).toFixed(2)}, faute a p90 = ${q(0.9).toFixed(2)}`)
-console.log('  (V = verdicts : Excellent, Bon, Imprecision, Erreur, Faute)')
+console.log('  (V = verdicts : Excellent, Bon, Erreur, Faute)')

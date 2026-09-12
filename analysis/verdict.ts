@@ -19,17 +19,43 @@ import type { DecisionPosition, MoveValue } from './evaluate'
  * groupe de coups defendables, puis des ecarts qui deviennent affirmables a
  * mesure qu'on descend.
  */
-export type Verdict = 'excellent' | 'bon' | 'imprecision' | 'erreur' | 'faute'
+export type Verdict = 'excellent' | 'bon' | 'erreur' | 'faute'
 
 export interface VerdictBands {
-    /** Perte au-dela de laquelle un coup cesse d'etre une simple imprecision. */
-    erreur: number
-    /** Perte au-dela de laquelle on parle de faute. */
+    /**
+     * Ecart minimal pour formuler le moindre reproche. En dessous, le coup est
+     * dit bon quoi qu'en dise le test de signification.
+     */
+    accuse: number
+    /** Ecart au-dela duquel on parle de faute plutot que d'erreur. */
     faute: number
 }
 
-/** Provisoire : a remplacer par la distribution mesuree (scripts/analyse-bands.ts). */
-export const DEFAULT_BANDS: VerdictBands = { erreur: 1.5, faute: 3 }
+/**
+ * Seuils mesures, pas choisis (scripts/analyse-horizon.ts).
+ *
+ * Le reglage se lit contre une reference a gros budget en deroulement complet,
+ * qui definit ce qu'est un coup reellement mauvais. Deux asymetries le
+ * commandent : se taire a tort ne coute rien, alors qu'accuser a tort
+ * discredite toute la page.
+ *
+ * A horizon 6, un seuil de 1,5 semblait parfait sur l'echantillon de reglage —
+ * les cinq mauvais coups attrapes, aucune accusation a tort. Il a produit TROIS
+ * accusations a tort sur quinze en validation a graines disjointes. Le seuil
+ * avait ete choisi sur l'echantillon qui le notait.
+ *
+ * A 2,0 : aucune accusation a tort sur 26 occasions cumulees (0/11 au reglage,
+ * 0/15 en validation), pour environ la moitie des mauvais coups attrapes. La
+ * borne haute a 95 % sur un taux 0/26 vaut encore ~13 %, donc la formulation
+ * honnete est « aucune erreur observee », pas « aucune erreur possible ».
+ *
+ * Le prix est le rappel : l'outil laisse passer des coups discutables. C'est le
+ * sens dans lequel on veut se tromper.
+ */
+export const DEFAULT_BANDS: VerdictBands = { accuse: 2, faute: 3 }
+
+/** Horizon de troncature retenu, mesure avec les seuils ci-dessus. */
+export const DEFAULT_HORIZON = 6
 
 export interface DecisionVerdict {
     turn: number
@@ -144,11 +170,15 @@ export function analyseDecision(
     const scores = finals.map(v => over(v, scoreIdx))
     const spread = Math.max(...scores) - Math.min(...scores)
 
+    // Deux conditions pour reprocher quoi que ce soit : l'ecart doit sortir du
+    // bruit ET depasser le seuil mesure. La signification seule ne suffit pas —
+    // a horizon court elle est atteinte par des ecarts que la reference juge
+    // sans importance, et c'est ainsi qu'on accuse un coup correct.
     let verdict: Verdict
-    if (!significant) verdict = sameMove(played.move, best.move) ? 'excellent' : 'bon'
-    else if (loss >= bands.faute) verdict = 'faute'
-    else if (loss >= bands.erreur) verdict = 'erreur'
-    else verdict = 'imprecision'
+    if (!significant || loss < bands.accuse) {
+        verdict = sameMove(played.move, best.move) ? 'excellent' : 'bon'
+    } else if (loss >= bands.faute) verdict = 'faute'
+    else verdict = 'erreur'
 
     return {
         turn: position.turn,

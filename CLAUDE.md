@@ -258,3 +258,30 @@ move. Judge moves, not players.
 
 Cost, measured: 2.3 s per decision at horizon 3 with the two-stage budget,
 4.0 s at horizon 6, 7.1 s at horizon 12, 17.8 s rolling to the end.
+
+**Shipping setting: horizon 6, accusation threshold 2.0 points** (`DEFAULT_HORIZON`
+and `DEFAULT_BANDS` in `analysis/verdict.ts`), chosen against a high-budget
+full-rollout reference (`pnpm analyse:horizon`).
+
+Two conditions must both hold before the tool reproaches anything: the gap must
+clear the noise *and* exceed the threshold. Significance alone is not enough — at
+a short horizon it is reached by gaps the reference considers unimportant, and
+that is exactly how a correct move gets called a mistake.
+
+The threshold is measured, and the first attempt to set it failed in an
+instructive way. At horizon 6 a threshold of 1.5 looked perfect on the tuning
+sample: all five bad moves caught, nothing falsely accused. On a disjoint seed it
+produced **three false accusations out of fifteen**. It had been chosen on the
+sample that scored it. At 2.0: no false accusation in 26 opportunities across
+both samples, catching roughly half the genuinely bad moves. The 95% upper bound
+on a 0/26 rate is still about 13%, so the honest claim is "none observed", not
+"none possible".
+
+Recall is the price, deliberately. The tool stays silent on moves it cannot
+settle. Staying silent wrongly costs nothing; accusing wrongly discredits every
+other verdict on the page.
+
+Counter-intuitive and worth keeping: horizon 12 agreed with the reference more
+often overall (81% against 69%) yet performed worse under a threshold, catching
+two bad moves out of five where horizon 6 caught all five. Overall agreement is
+the wrong indicator — what matters is the ordering near the accusation boundary.
