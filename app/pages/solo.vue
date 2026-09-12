@@ -1,5 +1,5 @@
 <template>
-  <div class="page">
+  <div class="page" :class="{ 'page--playing': started }">
     <!-- Écran de configuration -->
     <div v-if="!started" class="setup">
       <NuxtLink to="/" class="back">← Retour</NuxtLink>
@@ -218,8 +218,8 @@ function playBot(id: string): void {
   const isActive = id === store.activePlayerId && store.phase === 'active_selecting'
 
   if (!decision) {
-    if (isActive) store.passActiveTurn()
-    else store.passPassiveTurn(id)
+    if (isActive) store.passActiveTurn('no-placement')
+    else store.passPassiveTurn(id, 'no-placement')
     return
   }
 
@@ -325,6 +325,13 @@ watch(() => store.players.map(p => `${p.hasPlaced}${p.hasPassed}`).join(), () =>
   background: #0f0f13;
   color: #e8e8f0;
   font-family: 'Nunito', sans-serif;
+}
+
+/* En jeu, la page s'etale : l'ecran de configuration, lui, n'a rien a gagner
+   a s'etirer sur 1920 px. */
+.page--playing {
+  @apply py-6;
+  max-width: min(1760px, 100%);
 }
 
 .back {

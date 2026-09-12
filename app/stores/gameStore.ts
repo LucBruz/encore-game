@@ -59,6 +59,8 @@ export interface PlayerState {
     colorBonus: Record<ColorKey, 'first' | 'others' | null>
     columnBonus: Record<string, 'first' | 'others' | null>
     hasPassed: boolean
+    /** Pourquoi ce joueur a passe ce tour-ci. */
+    passReason: PassReason | null
     hasConfirmed: boolean
     hasPlaced: boolean
     confirmedCombo: { color: ColorKey; count: number } | null
@@ -80,6 +82,7 @@ function createPlayer(id: string, name: string): PlayerState {
             ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O'].map(c => [c, null])
         ),
         hasPassed: false,
+        passReason: null,
         hasConfirmed: false,
         hasPlaced: false,
         confirmedCombo: null,
@@ -115,6 +118,8 @@ function resolveCount(face: NumberFace, jokerCount?: number): number | null {
 
 // ─── STORE ────────────────────────────────────────────────────────────────────
 
+export type PassReason = 'timer' | 'no-placement' | 'manual'
+
 export const useGameStore = defineStore('game', {
     state: () => ({
         grid: { ...GRID_01, cells: [...GRID_01.cells] },
@@ -141,6 +146,10 @@ export const useGameStore = defineStore('game', {
         passiveSelections: {} as Record<string, SelectedCombo | null>,
 
         placementError: null as string | null,
+
+        // Pourquoi le dernier tour a saute. Sans ca, un tour passe par le minuteur
+        // et un tour passe faute de placement sont indiscernables a l'ecran.
+        passReason: null as PassReason | null,
     }),
 
     getters: {
@@ -314,6 +323,7 @@ export const useGameStore = defineStore('game', {
             this.activeSelection = null
             this.passiveSelections = {}
             this.placementError = null
+            this.passReason = null
             this.completionQueue = []
             this.pendingColorAnimations = []
             this.turnStartColorCompleted = {}
@@ -350,6 +360,7 @@ export const useGameStore = defineStore('game', {
             this.phase = this.turnNumber < 3 ? 'passive_selecting' : 'active_selecting'
             this.players.forEach(p => {
                 p.hasPassed = false
+                p.passReason = null
                 p.hasConfirmed = false
                 p.hasPlaced = false
                 p.pendingCells = []
@@ -427,17 +438,21 @@ export const useGameStore = defineStore('game', {
                 player.confirmedCombo = null
                 player.hasConfirmed = false
                 player.hasPassed = true
+                player.passReason = 'no-placement'
                 player.hasPlaced = true
                 this.activeSelection = null
+                this.passReason = 'no-placement'
                 this.placementError = 'Aucun placement possible avec cette combinaison — tour passé'
             }
         },
 
-        passActiveTurn() {
+        passActiveTurn(reason: PassReason = 'manual') {
             if (this.phase !== 'active_selecting') return
+            this.passReason = reason
             const player = this.players.find(p => p.id === this.activePlayerId)
             if (player) {
                 player.hasPassed = true
+                player.passReason = reason
                 player.hasPlaced = true
                 // Passer libère les jokers engagés : rien n'a été coché.
                 player.pendingJokers = 0
@@ -499,14 +514,16 @@ export const useGameStore = defineStore('game', {
                 player.hasConfirmed = false
                 this.passiveSelections[playerId] = null
                 this.placementError = 'Aucun placement possible avec cette combinaison — tour passé'
-                this.passPassiveTurn(playerId)
+                this.passPassiveTurn(playerId, 'no-placement')
             }
         },
 
-        passPassiveTurn(playerId: string) {
+        passPassiveTurn(playerId: string, reason: PassReason = 'manual') {
+            this.passReason = reason
             const player = this.players.find(p => p.id === playerId)
             if (player) {
                 player.hasPassed = true
+                player.passReason = reason
                 player.hasPlaced = true
                 // Passer libère les jokers engagés : rien n'a été coché.
                 player.pendingJokers = 0
@@ -697,6 +714,7 @@ export const useGameStore = defineStore('game', {
             this.activeSelection = null
             this.passiveSelections = {}
             this.placementError = null
+            this.passReason = null
         },
 
         popCompletionQueue() {
@@ -714,6 +732,7 @@ export const useGameStore = defineStore('game', {
             this.activeSelection = null
             this.passiveSelections = {}
             this.placementError = null
+            this.passReason = null
             this.completionQueue = []
             this.pendingColorAnimations = []
             this.turnStartColorCompleted = {}

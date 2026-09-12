@@ -24,6 +24,7 @@
         :pending="pendingCells.includes(idx)"
         :is-valid="validCells.has(idx)"
         :is-blocked="isBlockedMode && !validCells.has(idx) && !checkedCells.has(idx) && !pendingCells.includes(idx)"
+        :rejected="rejectedCell === idx"
         :is-start-col="idx % 15 === 7"
         @click="handleCellClick(idx)"
       />
@@ -60,9 +61,21 @@
       </div>
     </div>
 
-    <!-- Message d'erreur placement -->
-    <div v-if="placementError" class="placement-error">
-      ⚠️ {{ placementError }}
+    <!-- Message d'erreur placement — s'efface seul, pour ne pas rester en travers de
+         l'écran une fois que le joueur est reparti sur autre chose. -->
+    <Transition name="err">
+      <div v-if="visibleError" class="placement-error">
+        ⚠️ {{ visibleError }}
+      </div>
+    </Transition>
+
+    <!-- Sélection commencée dont aucune suite n'est jouable : le joueur reste coincé
+         tant qu'il n'annule pas, donc le bouton vient à lui. -->
+    <div v-if="isStuck" class="placement-stuck">
+      <span class="placement-stuck__text">Aucune suite possible à partir de ces cases.</span>
+      <button class="btn-restart-placement" :disabled="readonly" @click="$emit('cancel-placement')">
+        ↺ Recommencer la sélection
+      </button>
     </div>
 
     <!-- Bouton confirmer placement -->
@@ -86,7 +99,9 @@
 </template>
 
 <script setup lang="ts">
+import { ref, computed, watch, onBeforeUnmount } from 'vue'
 import { COLS, COLUMN_POINTS, COLOR_MAP } from '~/data/grids/grid-01'
+import type { ColorKey } from '~/data/grids/grid-01'
 import type { PlayerState } from '~/stores/gameStore'
 
 const props = defineProps<{
@@ -108,10 +123,76 @@ const emit = defineEmits<{
   'cancel-placement': []
 }>()
 
+const rejectedCell = ref<number | null>(null)
+const visibleError = ref<string | null>(null)
+let rejectTimer: ReturnType<typeof setTimeout> | null = null
+let errorTimer: ReturnType<typeof setTimeout> | null = null
+
+function showError(message: string) {
+  visibleError.value = message
+  if (errorTimer) clearTimeout(errorTimer)
+  errorTimer = setTimeout(() => { visibleError.value = null }, 3500)
+}
+
+// Les erreurs venues du store (placement invalide, jokers épuisés) passent par le même
+// bandeau que les refus locaux, sinon deux messages se disputent la même place.
+watch(() => props.placementError, (err) => { if (err) showError(err) })
+
+onBeforeUnmount(() => {
+  if (rejectTimer) clearTimeout(rejectTimer)
+  if (errorTimer) clearTimeout(errorTimer)
+})
+
+const isStuck = computed(() =>
+  !!props.confirmedCombo
+  && props.pendingCells.length > 0
+  && props.pendingCells.length < props.confirmedCombo.count
+  && props.validCells.size === 0
+)
+
+/** null si la case est jouable, sinon la raison à montrer au joueur. */
+function rejectionReason(idx: number): string | null {
+  if (!props.confirmedCombo) return "Choisis d'abord ta combinaison de dés"
+  if (props.checkedCells.has(idx)) return 'Cette case est déjà cochée'
+  if (props.validCells.has(idx)) return null
+
+  const combo = props.confirmedCombo
+  const cellColor = props.grid.cells[idx]?.[0]
+  if (cellColor && cellColor !== combo.color) {
+    const label = COLOR_MAP[combo.color as ColorKey]?.label?.toLowerCase() ?? combo.color
+    return `Mauvaise couleur — il te faut du ${label}`
+  }
+  if (props.pendingCells.length >= combo.count) {
+    return `Tu ne peux cocher que ${combo.count} case(s) ce tour-ci`
+  }
+  if (props.pendingCells.length > 0) {
+    return 'Pas reliée aux cases que tu viens de choisir'
+  }
+  if (props.checkedCells.size === 0) {
+    return 'Ton premier coup doit partir de la colonne H'
+  }
+  return 'Elle doit toucher une de tes cases déjà cochées'
+}
+
 function handleCellClick(idx: number) {
   if (props.readonly) return
-  if (props.checkedCells.has(idx)) return
-  if (props.isBlockedMode && !props.validCells.has(idx) && !props.pendingCells.includes(idx)) return
+
+  // Désélection d'une case provisoire : toujours autorisée.
+  if (props.pendingCells.includes(idx)) {
+    emit('cell-click', idx)
+    return
+  }
+
+  const reason = rejectionReason(idx)
+  if (reason) {
+    // Un clic refusé ne disparaît plus dans le vide : secousse sur la case + raison.
+    rejectedCell.value = idx
+    if (rejectTimer) clearTimeout(rejectTimer)
+    rejectTimer = setTimeout(() => { rejectedCell.value = null }, 400)
+    showError(reason)
+    return
+  }
+
   emit('cell-click', idx)
 }
 </script>
@@ -119,7 +200,9 @@ function handleCellClick(idx: number) {
 <style scoped>
 .game-grid {
   @apply w-full flex flex-col gap-2;
-  max-width: 1000px;
+  /* La grille prend la largeur disponible, bornée par la hauteur restante pour qu'elle
+     tienne toujours à l'écran sans scroll (7 rangées de cases carrées). */
+  max-width: min(100%, calc((100vh - 15rem) / 7 * 15));
 }
 
 .game-grid--readonly :deep(.game-cell) {
@@ -237,11 +320,35 @@ function handleCellClick(idx: number) {
 }
 
 .placement-error {
-  @apply text-xs px-3 py-2 rounded-lg;
-  background: rgba(232, 90, 130, 0.15);
-  color: #e85a82;
-  border: 1px solid rgba(232, 90, 130, 0.3);
+  @apply text-sm font-bold px-4 py-2.5 rounded-lg;
+  background: rgba(232, 90, 130, 0.18);
+  color: #ff8fab;
+  border: 1px solid rgba(232, 90, 130, 0.5);
 }
+
+.err-enter-active, .err-leave-active { transition: opacity 0.2s ease, transform 0.2s ease; }
+.err-enter-from, .err-leave-to { opacity: 0; transform: translateY(-4px); }
+
+.placement-stuck {
+  @apply flex items-center gap-3 flex-wrap px-3 py-2 rounded-xl;
+  background: rgba(245, 138, 53, 0.12);
+  border: 1px solid rgba(245, 138, 53, 0.45);
+}
+
+.placement-stuck__text {
+  @apply text-xs font-bold;
+  color: #f5a35a;
+}
+
+.btn-restart-placement {
+  @apply px-3 py-1.5 rounded-lg font-black text-xs cursor-pointer transition-all;
+  background: #f58a35;
+  color: #0f0f13;
+  border: none;
+}
+
+.btn-restart-placement:hover:not(:disabled) { filter: brightness(1.1); }
+.btn-restart-placement:disabled { @apply opacity-40 cursor-not-allowed; }
 
 .placement-confirm {
   @apply flex items-center gap-3 flex-wrap px-3 py-2 rounded-xl;

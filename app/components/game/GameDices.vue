@@ -112,6 +112,10 @@
         Aucune combinaison jouable sur ta grille — tu dois passer
       </div>
 
+      <!-- Tour passe : dire pourquoi. Sans ce message, un tour saute par le
+           minuteur et le joueur croit que c'est son clic qui l'a fait sauter. -->
+      <div v-if="passMessage" class="pass-notice">{{ passMessage }}</div>
+
       <!-- Badge phase bas-droite -->
       <div class="dices-badge">
         <span v-if="store.phase === 'turn_end'" class="badge badge--done">✓ Tour suivant...</span>
@@ -164,6 +168,18 @@ const currentPlayer = computed(() =>
 )
 
 const hasConfirmed = computed(() => currentPlayer.value?.hasConfirmed ?? false)
+
+const PASS_LABELS: Record<string, string> = {
+  timer: '⏱ Temps écoulé — tour passé',
+  'no-placement': '🚫 Aucun placement possible — tour passé',
+  manual: '➡️ Tour passé',
+}
+
+const passMessage = computed(() => {
+  const p = currentPlayer.value
+  if (!p?.hasPassed || !p.passReason) return null
+  return PASS_LABELS[p.passReason] ?? PASS_LABELS.manual
+})
 
 function resetSelection() {
   selectedColor.value = null
@@ -463,6 +479,13 @@ function handlePass() {
 }
 
 /* ─── Badge phase (bas-droite absolu) ───────────────────────────────────────── */
+.pass-notice {
+  @apply text-xs font-bold px-3 py-2 rounded-lg mt-1;
+  background: rgba(245, 138, 53, 0.14);
+  border: 1px solid rgba(245, 138, 53, 0.4);
+  color: #f5a35a;
+}
+
 .dices-badge {
   position: absolute;
   bottom: 10px;

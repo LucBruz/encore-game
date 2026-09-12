@@ -344,23 +344,25 @@ function startTimer() {
   timer.start(lobby.turnDuration, () => {
     if (sync.localPlayerId.value !== store.activePlayerId) return
 
+    // La raison voyage avec l'action : c'est elle qui permet d'afficher
+    // "temps ecoule" plutot que de laisser croire a un bug.
     if (store.isFirstThreeTurns) {
       // Tours 1–3 : passer tous ceux qui n'ont pas joué
       store.players
         .filter(p => !p.hasPlaced && !p.hasPassed)
-        .forEach(p => sync.dispatch('PASS_PASSIVE', { playerId: p.id }))
+        .forEach(p => sync.dispatch('PASS_PASSIVE', { playerId: p.id, reason: 'timer' }))
     } else if ((store.phase as string) === 'active_selecting') {
       // Seulement passer le joueur actif — les passifs jouent ensuite
       const ap = store.players.find(p => p.id === store.activePlayerId)
       if (ap && !ap.hasConfirmed) {
-        sync.dispatch('PASS_ACTIVE', {})
+        sync.dispatch('PASS_ACTIVE', { reason: 'timer' })
       }
       // NE PAS passer les joueurs passifs ici — ils auront leur propre timer
     } else if ((store.phase as string) === 'passive_selecting') {
       // Timer passif expiré : passer tous ceux qui n'ont pas encore joué
       store.players
         .filter(p => p.id !== store.activePlayerId && !p.hasPlaced && !p.hasPassed)
-        .forEach(p => sync.dispatch('PASS_PASSIVE', { playerId: p.id }))
+        .forEach(p => sync.dispatch('PASS_PASSIVE', { playerId: p.id, reason: 'timer' }))
     }
   })
 }
@@ -528,7 +530,9 @@ onUnmounted(async () => {
 /* ── Header ──────────────────────────────────────────────────────────────────── */
 
 .page-header {
-  @apply w-full max-w-5xl flex items-center justify-between gap-4;
+  @apply w-full flex items-center justify-between gap-4;
+  /* Alignee sur .main-layout : un header plus etroit que le plateau se voyait. */
+  max-width: min(1760px, 100%);
 }
 
 .page-title {
@@ -660,7 +664,7 @@ onUnmounted(async () => {
   flex-direction: row;
   gap: 16px;
   width: 100%;
-  max-width: 1400px;
+  max-width: min(1760px, 100%);
   align-items: flex-start;
 }
 
@@ -668,7 +672,7 @@ onUnmounted(async () => {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  width: 300px;
+  width: 340px;
   flex-shrink: 0;
 }
 

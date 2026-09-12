@@ -53,7 +53,9 @@ export function useGameSync() {
                 if (activePlayer) {
                     activePlayer.hasPassed = true
                     activePlayer.hasPlaced = true
+                    activePlayer.passReason = (payload.reason as any) ?? 'manual'
                 }
+                store.passReason = (payload.reason as any) ?? 'manual'
                 store.activeSelection = null
                 if ((store.phase as string) === 'active_selecting') {
                     store.phase = 'passive_selecting'
@@ -62,7 +64,7 @@ export function useGameSync() {
             }
             case 'PASS_PASSIVE':
             case 'TIMER_EXPIRED':
-                store.passPassiveTurn(payload.playerId as string)
+                store.passPassiveTurn(payload.playerId as string, (payload.reason as any) ?? 'manual')
                 break
             case 'TOGGLE_CELL':
                 store.togglePendingCell(payload.playerId as string, payload.cellIdx as number)

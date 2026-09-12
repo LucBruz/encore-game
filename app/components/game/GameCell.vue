@@ -7,6 +7,7 @@
       { 'cell--pending': pending },
       { 'cell--valid': isValid && !checked && !pending },
       { 'cell--blocked': isBlocked },
+      { 'cell--rejected': rejected },
       { 'cell--start-col': isStartCol },
     ]"
     @click="$emit('click')"
@@ -30,6 +31,8 @@ defineProps<{
   pending?: boolean
   isValid?: boolean
   isBlocked?: boolean
+  /** Clic refusé : secousse courte pour dire non sans vider l'écran. */
+  rejected?: boolean
   isStartCol: boolean
 }>()
 
@@ -50,37 +53,62 @@ defineEmits<{
 .cell--pink   { background: #e85a82; border-color: #b83a5f; }
 .cell--orange { background: #f58a35; border-color: #c4641a; }
 
-/* Case cochable */
+/* Case cochable — c'est elle qui doit attirer l'œil, pas le reste qui doit s'éteindre. */
 .cell--valid {
   @apply cursor-pointer;
   filter: brightness(1.15);
-  box-shadow: 0 0 0 2px rgba(255,255,255,0.4);
+  box-shadow: 0 0 0 3px rgba(255,255,255,0.85), 0 0 14px rgba(255,255,255,0.35);
+  animation: cell-breathe 1.6s ease-in-out infinite;
 }
 
 .cell--valid:hover {
   transform: scale(1.08);
   filter: brightness(1.3);
-  box-shadow: 0 0 0 2px white;
+  box-shadow: 0 0 0 3px white, 0 0 18px rgba(255,255,255,0.6);
+  animation: none;
+}
+
+@keyframes cell-breathe {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(255,255,255,0.85), 0 0 14px rgba(255,255,255,0.35); }
+  50%      { box-shadow: 0 0 0 3px rgba(255,255,255,0.55), 0 0 6px rgba(255,255,255,0.15); }
 }
 
 /* Case pending */
 .cell--pending {
   @apply cursor-pointer;
-  filter: brightness(0.75);
-  box-shadow: 0 0 0 2px white, 0 0 12px rgba(255,255,255,0.4);
+  filter: brightness(0.85);
+  box-shadow: 0 0 0 3px white, 0 0 12px rgba(255,255,255,0.4);
 }
 
-/* Case bloquée */
+/* Case bloquée — atténuée, jamais éteinte : la couleur et les croix restent lisibles
+   pour qu'on puisse continuer à lire sa grille pendant le placement. */
 .cell--blocked {
   @apply cursor-not-allowed;
-  filter: brightness(0.45) saturate(0.3);
-  opacity: 0.6;
+  filter: brightness(0.82) saturate(0.9);
 }
 
 /* Case cochée */
 .cell--checked {
   @apply cursor-default;
-  filter: brightness(0.65) saturate(0.4);
+  filter: brightness(0.85) saturate(0.95);
+}
+
+/* Clic refusé */
+.cell--rejected {
+  animation: cell-shake 0.35s ease-in-out;
+}
+
+@keyframes cell-shake {
+  0%, 100% { transform: translateX(0); }
+  20%      { transform: translateX(-3px); }
+  40%      { transform: translateX(3px); }
+  60%      { transform: translateX(-2px); }
+  80%      { transform: translateX(2px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cell--valid { animation: none; }
+  .cell--rejected { animation: none; outline: 2px solid #e85a82; }
 }
 
 /* Colonne H */
@@ -93,17 +121,20 @@ defineEmits<{
   filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5));
 }
 
-.cell__star--dim { opacity: 0.5; }
+.cell__star--dim { opacity: 0.75; }
 
+/* Croix en blanc cerné de noir : lisible sur les cinq couleurs, y compris le jaune. */
 .cell__check {
   @apply absolute inset-0 flex items-center justify-center font-black text-lg rounded-md pointer-events-none;
-  color: rgba(0, 0, 0, 0.7);
+  color: #ffffff;
+  text-shadow: 0 0 3px rgba(0,0,0,0.9), 0 1px 2px rgba(0,0,0,0.8);
   font-family: 'Space Mono', monospace;
 }
 
 .cell__pending {
   @apply absolute inset-0 flex items-center justify-center font-black text-lg rounded-md pointer-events-none;
-  color: rgba(255, 255, 255, 0.9);
+  color: #ffffff;
+  text-shadow: 0 0 3px rgba(0,0,0,0.9), 0 1px 2px rgba(0,0,0,0.8);
   font-family: 'Space Mono', monospace;
 }
 </style>
