@@ -15,6 +15,6 @@ export default defineConfig({
     },
     test: {
         environment: 'node',
-        include: ['engine/**/*.spec.ts', 'bots/**/*.spec.ts', 'app/**/*.spec.ts'],
+        include: ['engine/**/*.spec.ts', 'bots/**/*.spec.ts', 'app/**/*.spec.ts', 'analysis/**/*.spec.ts'],
     },
 })

@@ -7,6 +7,7 @@ import {
     leaveGameChannel,
 } from '~/services/realtimeService'
 import type { GameActionType, GameAction } from '~/services/realtimeService'
+import { applyGameAction } from '~/utils/applyGameAction'
 
 /**
  * File d'attente des ecritures dans `game_events`.
@@ -44,70 +45,8 @@ export function useGameSync() {
      * Applique une action directement au store local.
      * Utilisé par dispatch() ET applyRemoteAction() — jamais de broadcast ici.
      */
-    function applyToStore(type: GameActionType, payload: Record<string, unknown>) {
-        switch (type) {
-            case 'ROLL_DICES':
-                store.rollDicesWithResult(payload.roll as any)
-                break
-            case 'CONFIRM_ACTIVE':
-                store.confirmActiveCombo(
-                    payload.colorDiceIndex as number,
-                    payload.numberDiceIndex as number,
-                    payload.jokerColor as any,
-                    payload.jokerCount as number | undefined,
-                )
-                break
-            case 'CONFIRM_PASSIVE':
-                store.confirmPassiveCombo(
-                    payload.playerId as string,
-                    payload.colorDiceIndex as number,
-                    payload.numberDiceIndex as number,
-                    payload.jokerColor as any,
-                    payload.jokerCount as number | undefined,
-                )
-                break
-            case 'PASS_ACTIVE': {
-                // passActiveTurn() a un guard phase === 'active_selecting'
-                // qui bloque les clients distants. On force manuellement.
-                const activePlayer = store.players.find(p => p.id === store.activePlayerId)
-                if (activePlayer) {
-                    activePlayer.hasPassed = true
-                    activePlayer.hasPlaced = true
-                    activePlayer.passReason = (payload.reason as any) ?? 'manual'
-                }
-                store.passReason = (payload.reason as any) ?? 'manual'
-                store.activeSelection = null
-                if ((store.phase as string) === 'active_selecting') {
-                    store.phase = 'passive_selecting'
-                }
-                break
-            }
-            case 'PASS_PASSIVE':
-            case 'TIMER_EXPIRED':
-                store.passPassiveTurn(payload.playerId as string, (payload.reason as any) ?? 'manual')
-                break
-            case 'TOGGLE_CELL':
-                store.togglePendingCell(payload.playerId as string, payload.cellIdx as number)
-                break
-            case 'CONFIRM_PLACEMENT':
-                store.confirmPendingCells(payload.playerId as string)
-                break
-            case 'CANCEL_PLACEMENT':
-                store.cancelPendingCells(payload.playerId as string)
-                break
-            case 'USE_JOKER':
-                // Obsolète : les jokers sont désormais débités par CONFIRM_PLACEMENT,
-                // à partir de la combo confirmée. Aucun client n'émet cet event ;
-                // le cas reste ici pour ne pas casser le rejeu d'anciennes parties.
-                break
-            case 'NEXT_TURN':
-                store.nextTurn()
-                break
-            case 'GAME_OVER':
-                store.setGameOver()
-                break
-        }
-    }
+    const applyToStore = (type: GameActionType, payload: Record<string, unknown>) =>
+        applyGameAction(store, type, payload)
 
     // ── DISPATCH ────────────────────────────────────────────────────────────────
 
