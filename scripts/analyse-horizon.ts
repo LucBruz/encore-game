@@ -24,7 +24,7 @@
  * soit. Comparer a un etalon aveugle fabrique des « accusations a tort » qui
  * n'en sont pas. D'ou `--refRollouts`, nettement plus eleve que `--rollouts`.
  */
-import { readFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { ALL_GRIDS } from '../app/data/grids/index'
 import { makeRng } from '../engine/dice'
 import { makeGreedyV3Bot } from '../bots/heuristicV3'
@@ -99,9 +99,20 @@ console.log('Accord entre horizon tronque et deroulement complet')
 console.log(`  ${pool.length} decisions, ${ROLLOUTS} deroulements pour les horizons courts,`)
 console.log(`  ${REF_ROLLOUTS} pour la reference, table de forces melangees\n`)
 
-// Reference : deroulement complet. C'est la partie couteuse, faite une fois.
+// Reference : deroulement complet. C'est de loin la partie couteuse — environ
+// une minute par decision — donc on la met en cache : les rejouages qui ne
+// changent que les horizons ou les seuils ne la repaient pas.
+const cachePath = `.analysis-cache/ref-${DECISIONS}-${SEED}-${REF_ROLLOUTS}.json`
 const refStart = Date.now()
-const reference = pool.map(o => analyseDecision(toPosition(o), { ...common, rollouts: REF_ROLLOUTS }))
+let reference: ReturnType<typeof analyseDecision>[]
+if (existsSync(cachePath)) {
+    reference = JSON.parse(readFileSync(cachePath, 'utf8'))
+    console.log(`  reference relue depuis ${cachePath}`)
+} else {
+    reference = pool.map(o => analyseDecision(toPosition(o), { ...common, rollouts: REF_ROLLOUTS }))
+    mkdirSync('.analysis-cache', { recursive: true })
+    writeFileSync(cachePath, JSON.stringify(reference))
+}
 const refMs = (Date.now() - refStart) / pool.length
 const refBad = reference.filter(r => !r.playedWasGood).length
 console.log(`  reference (complet) : ${refMs.toFixed(0)} ms/decision, `
@@ -145,3 +156,41 @@ for (const horizon of HORIZONS) {
 console.log('\n  Une accusation a tort est le desaccord grave : la review reproche un coup')
 console.log('  que la reference juge defendable. Choisir l horizon le plus court dont le')
 console.log('  nombre d accusations a tort reste nul ou negligeable.')
+
+/*
+ * Courbe precision / rappel par seuil d'accusation.
+ *
+ * Juger CHAQUE coup demande un horizon fidele, donc cher. Mais la review n'est
+ * pas obligee de trancher partout : elle peut n'accuser que lorsque la marge
+ * est large, et se taire le reste du temps.
+ *
+ * L'asymetrie commande le reglage. Se taire a tort ne coute rien. Accuser a
+ * tort discredite l'outil entier : un joueur a qui on reproche un coup correct
+ * cesse de croire aussi les verdicts justes.
+ */
+const THRESHOLDS = [0, 0.5, 1, 1.5, 2, 2.5, 3, 4]
+const isBad = reference.map(r => !r.playedWasGood)
+const totalBad = isBad.filter(Boolean).length
+
+console.log('\n  Seuil d accusation : n accuser que si l ecart depasse le seuil')
+console.log(`  (« mauvais » = hors du bon groupe de la reference : ${totalBad} sur ${pool.length})\n`)
+console.log('  horizon   seuil   accuses   dont a tort   vrais mauvais attrapes   manques')
+console.log('  ' + '-'.repeat(84))
+
+for (const horizon of HORIZONS) {
+    const got = pool.map(o => analyseDecision(toPosition(o), { ...common, horizon }))
+    for (const t of THRESHOLDS) {
+        let accused = 0, wrong = 0, caught = 0
+        for (let i = 0; i < pool.length; i++) {
+            if (!(got[i].significant && got[i].loss >= t)) continue
+            accused++
+            if (isBad[i]) caught++; else wrong++
+        }
+        console.log(
+            `  ${String(horizon).padStart(7)}   ${t.toFixed(1).padStart(5)}   `
+            + `${String(accused).padStart(7)}   ${String(wrong).padStart(11)}   `
+            + `${String(caught).padStart(22)}   ${String(totalBad - caught).padStart(7)}`,
+        )
+    }
+    console.log('  ' + '-'.repeat(84))
+}

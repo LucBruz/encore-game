@@ -24,3 +24,4 @@ logs
 !.env.example
 .gstack/
 encore-game high/
+.analysis-cache/
