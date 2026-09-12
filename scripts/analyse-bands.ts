@@ -36,7 +36,19 @@ const PER_SEAT = Number(arg('decisions', '20'))
 const ROLLOUTS = Number(arg('rollouts', '32'))
 const SCREEN = Number(arg('screen', '8'))
 const SHORTLIST = Number(arg('shortlist', '8'))
-const HORIZON = Number(arg('horizon', '3'))
+/**
+ * `full` = deroulement jusqu'a la fin, un nombre = troncature.
+ *
+ * L'horizon est un arbitrage biais / variance, et les deux cotes se mesurent.
+ * Court, il reduit le bruit mais rend l'evaluation myope : il penalise les
+ * coups qui investissent, donc precisement ce que fait la politique reglee sur
+ * la partie entiere. Mesure a horizon 3, le bot le plus FORT recoltait plus de
+ * fautes que le moyen — un classement inverse, qui disqualifie le reglage.
+ *
+ * Critere d'acceptation : l'ordre fort < moyen < faible < hasard doit sortir de
+ * la mesure. C'est lui qui choisit l'horizon, pas une intuition.
+ */
+const HORIZONS = arg('horizons', '3').split(',')
 const SEED = Number(arg('seed', '515151'))
 
 const W: WeightsV3 = JSON.parse(readFileSync('public/data/tuned-weights-multi.json', 'utf8')).tuned
@@ -66,17 +78,22 @@ for (let g = 0; g < 6; g++) {
 }
 
 console.log("Pouvoir de discrimination de l'analyse")
-console.log(`  ${ROLLOUTS} deroulements, criblage ${SCREEN}, pretendants ${SHORTLIST}, horizon ${HORIZON}`)
-console.log(`  grille ${grid.id}, table de 4, ${PER_SEAT} decisions visees par siege\n`)
+console.log(`  ${ROLLOUTS} deroulements, criblage ${SCREEN}, pretendants ${SHORTLIST}`)
+console.log(`  grille ${grid.id}, table de 4, ${PER_SEAT} decisions visees par siege`)
+console.log(`  horizons compares : ${HORIZONS.join(', ')}\n`)
 
 const VERDICTS: Verdict[] = ['excellent', 'bon', 'imprecision', 'erreur', 'faute']
 const allLosses: number[] = []
 
+for (const horizonArg of HORIZONS) {
+const HORIZON = horizonArg === 'full' ? undefined : Number(horizonArg)
+console.log(`  --- horizon ${horizonArg} ---`)
 console.log('  niveau        n   ecart moyen   median   p90     bon groupe   repartition des verdicts')
 console.log('  ' + '-'.repeat(100))
 
 const started = Date.now()
 let analysed = 0
+const meansByLevel: number[] = []
 
 for (const [seat, { label }] of SEATS.map((s, i) => [i, s] as const)) {
     const obs = bySeat.get(seat)!
@@ -111,6 +128,7 @@ for (const [seat, { label }] of SEATS.map((s, i) => [i, s] as const)) {
 
     if (!losses.length) continue
     allLosses.push(...losses)
+    meansByLevel.push(losses.reduce((a, b) => a + b, 0) / losses.length)
     const sorted = [...losses].sort((a, b) => a - b)
     const avg = losses.reduce((a, b) => a + b, 0) / losses.length
     const median = sorted[Math.floor(sorted.length / 2)]
@@ -126,7 +144,12 @@ for (const [seat, { label }] of SEATS.map((s, i) => [i, s] as const)) {
 
 const elapsed = Date.now() - started
 console.log('  ' + '-'.repeat(100))
-console.log(`  ${analysed} decisions analysees en ${(elapsed / 1000).toFixed(0)} s, soit ${(elapsed / Math.max(1, analysed)).toFixed(0)} ms par decision`)
+console.log(`  ${analysed} decisions en ${(elapsed / 1000).toFixed(0)} s, soit ${(elapsed / Math.max(1, analysed)).toFixed(0)} ms par decision`)
+const ordered = meansByLevel.every((v, i) => i === 0 || v >= meansByLevel[i - 1])
+console.log(`  ordre attendu (fort < moyen < faible < hasard) : ${ordered ? 'RESPECTE' : 'VIOLE'}`
+  + `   [${meansByLevel.map(v => v.toFixed(2)).join(' < ')}]`)
+console.log('')
+}
 
 // Seuils deduits de la distribution observee, tous niveaux confondus.
 const s = [...allLosses].sort((a, b) => a - b)
