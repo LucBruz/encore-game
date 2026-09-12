@@ -212,3 +212,49 @@ Keep the negative results. They are measurements, not gaps.
 ### Timer logic
 - Roll timer: 15s auto-roll if active player doesn't roll
 - Turn timer: duration from `lobby.turnDuration` (default 60s); only the active player dispatches expiry actions to avoid duplicate events
+
+### Post-game analysis (`analysis/`)
+
+Judges a played move by putting the strongest policy in the player's seat with
+exactly the player's information — their sheet, the opponents' sheets (public
+by the rules), the current roll — and rolling the rest of the game out. Future
+dice are drawn fresh, so the analysis never sees what the player could not.
+
+Rollouts run through `continueMultiGame`, the real multiplayer loop resumed
+from an arbitrary position. Single-agent rollouts would be wrong here for the
+reason recorded above: that framing does not punish stalling, so it would
+penalise a player for finishing fast.
+
+Two estimator corrections, both measured, both of which would have shipped
+wrong verdicts:
+
+- **Selection bias.** Picking the best of several noisy means and scoring it
+  against the played move on those same rollouts overstates the gap. It showed
+  as a "loss" that shrank with the budget (3.52 at 4 rollouts, 1.34 at 16),
+  which a real loss does not do. Selection and estimation now use disjoint
+  halves of the seeds.
+- **Variance.** Rolling to the end accumulates twenty turns of dice noise; the
+  standard error per decision (1.4 to 4.6 points) dwarfed the whole-game
+  advantage Monte-Carlo has over the heuristic. Truncating the rollout cuts it
+  from 1.42 to 0.23 at a fifth of the cost.
+
+**What the analysis can and cannot say.** Measured over all legal moves of real
+decisions: the spread between best and worst is 3.49 points against 0.35 of
+noise, a ratio of 10. So a clearly bad move is separable from a reasonable one.
+But about **four moves per decision are statistically indistinguishable from the
+best**, so there is no single best move to crown, and `analyseDecision` returns
+the whole group of defensible moves instead.
+
+**Negative result — the analysis does not rank near-equal players.** Four
+strengths at one table (v3, two softmax temperatures, random), 20 to 45
+decisions each, at horizons 3, 6 and 12: random separates every time (42-65% of
+its moves fall outside the good group, against 5-40% for the rest), but the
+three calibrated levels never order consistently, and the ordering flips between
+horizons. That is noise, not bias — an earlier reading of a single horizon as
+evidence of a myopia bias did not survive the sweep. The likely reason is
+structural: softmax produces many small deviations rather than a few blunders,
+so levels whose win rates differ fourfold are nearly indistinguishable move by
+move. Judge moves, not players.
+
+Cost, measured: 2.3 s per decision at horizon 3 with the two-stage budget,
+4.0 s at horizon 6, 7.1 s at horizon 12, 17.8 s rolling to the end.
