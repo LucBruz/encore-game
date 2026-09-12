@@ -39,14 +39,48 @@
           <span class="lobby-player__name">
             {{ player.playerName }}
             <span v-if="player.playerId === lobby.localPlayerId" class="lobby-player__you">(toi)</span>
+            <span v-else-if="isBotId(player.playerId)" class="lobby-player__bot">bot</span>
           </span>
-          <span
-            class="lobby-player__status"
-            :class="player.isReady ? 'lobby-player__status--ready' : 'lobby-player__status--waiting'"
-          >
-            {{ player.isReady ? '✓ Prêt' : 'En attente...' }}
+          <span class="lobby-player__right">
+            <span
+              class="lobby-player__status"
+              :class="player.isReady ? 'lobby-player__status--ready' : 'lobby-player__status--waiting'"
+            >
+              {{ player.isReady ? '✓ Prêt' : 'En attente...' }}
+            </span>
+            <button
+              v-if="lobby.isHost && isBotId(player.playerId)"
+              class="lobby-player__remove"
+              type="button"
+              @click="lobby.removeBot(player.playerId)"
+            >
+              Retirer
+            </button>
           </span>
         </div>
+      </div>
+
+      <!-- Ajout de bots : hote uniquement, avant le demarrage -->
+      <div v-if="lobby.isHost && lobby.players.length < MAX_PLAYERS" class="lobby-bots">
+        <p class="lobby-label">Ajouter un bot</p>
+        <div class="duration-selector">
+          <button
+            v-for="id in DIFFICULTY_OPTIONS"
+            :key="id"
+            class="duration-btn"
+            :class="{ 'duration-btn--selected': botDifficulty === id }"
+            type="button"
+            @click="botDifficulty = id"
+          >
+            {{ BOT_LABELS[id] }}
+          </button>
+        </div>
+        <button class="btn btn--ghost btn--full btn--sm" type="button" @click="lobby.addBot(botDifficulty)">
+          Ajouter ce bot
+        </button>
+        <p class="lobby-bots__hint">
+          Un bot est prêt d'emblée. La partie démarre dès que tous les joueurs le sont.
+        </p>
       </div>
 
       <div v-if="!lobby.localPlayer?.isReady">
@@ -195,6 +229,8 @@ import LoaderScreen from '~/components/animations/LoaderScreen.vue'
 import { useLobbyStore } from '~/stores/lobbyStore'
 import { ALL_GRIDS, GRID_MAP } from '~/data/grids/index'
 import type { GridId } from '~/data/grids/index'
+import { BOT_LABELS, isBotId } from '~/utils/botIdentity'
+import type { DifficultyId } from '~/composables/useBotPlayer'
 
 const GRID_THEMES: Record<string, string> = {
   '01': '#c0392b',
@@ -210,6 +246,12 @@ const GRID_THEMES: Record<string, string> = {
 const lobby = useLobbyStore()
 
 const DURATION_OPTIONS = [15, 30, 60, 90, 120] as const
+
+// Valeur par defaut de `games.max_players`. Le controle qui fait foi est fait
+// cote serveur dans `addBot` ; celui-ci ne sert qu'a masquer le formulaire.
+const MAX_PLAYERS = 6
+const DIFFICULTY_OPTIONS = Object.keys(BOT_LABELS) as DifficultyId[]
+const botDifficulty = ref<DifficultyId>('medium')
 
 const showLoader = ref(true)
 const createName = ref('')
@@ -407,6 +449,36 @@ onMounted(() => {
 
 .lobby-player__you {
   @apply text-xs font-normal ml-1;
+  color: #8f8fa3;
+}
+
+.lobby-player__bot {
+  @apply text-xs font-bold uppercase tracking-wider ml-2 px-1.5 py-0.5 rounded-full;
+  background: rgba(91, 159, 245, 0.15);
+  color: #5b9ff5;
+}
+
+.lobby-player__right { @apply flex items-center gap-2; }
+
+.lobby-player__remove {
+  @apply text-xs font-bold px-2 py-0.5 rounded-full cursor-pointer transition-all;
+  background: transparent;
+  border: 1px solid #3e3e52;
+  color: #8f8fa3;
+}
+
+.lobby-player__remove:hover {
+  border-color: #e85a82;
+  color: #e85a82;
+}
+
+.lobby-bots {
+  @apply flex flex-col gap-2 pt-3;
+  border-top: 1px solid #2e2e3e;
+}
+
+.lobby-bots__hint {
+  @apply text-xs leading-relaxed;
   color: #8f8fa3;
 }
 

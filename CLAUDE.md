@@ -93,8 +93,24 @@ Remote clients bypass store guards that check `phase` (e.g. `PASS_ACTIVE` is app
 - `game_players`: game_id, player_id, player_name, seat, is_ready
 - `game_events`: game_id, turn_number, player_id, event_type, payload — append-only log used for replay on reconnection
 
+RLS is enabled on all three, with permissive policies (`using true`). Two changes
+were applied for multiplayer bots and are **not** reflected in any file in this
+repo — the schema lives only in the remote project:
+
+- policy `gp_delete` on `game_players`, so a row can be removed. There was no
+  DELETE policy before, and the app deleted nothing anywhere.
+- `game_players` set to `replica identity full`. Without it a DELETE event
+  carries only the primary key, so the Realtime subscription's
+  `game_id=eq.<id>` filter cannot match and other clients never see a player
+  disappear.
+
+**Known pre-existing bug, not fixed:** a player who joins a lobby and closes the
+tab without readying up leaves a row at `is_ready = false`. The start condition
+requires *every* row ready, so the lobby can never start again. `gp_delete` is
+the prerequisite for fixing it.
+
 ### Pages
-- `/` (`app/pages/index.vue`) — home: create or join a game
+- `/` (`app/pages/index.vue`) — home: create or join a game, and the lobby. The host can add bots there (see "Bots in multiplayer")
 - `/game/[id]` (`app/pages/game/[id].vue`) — main game view; handles page-refresh reconnection by re-fetching from Supabase if lobby state is empty
 - `/solo` (`app/pages/solo.vue`) — local game against bots. **No Supabase, no Realtime**: drives `gameStore` directly, so it works offline and needs no schema change
 - `/ia` (`app/pages/ia.vue`) — agent benchmark, read from `public/data/*.json`
@@ -112,6 +128,34 @@ Plain TypeScript on top of `engine/`, no Nuxt runtime. Run via `tsx`.
 - `play.ts` — headless single-agent game loop.
 
 **`app/composables/useBotPlayer.ts`** bridges engine and store: converts `checkedCells` to a mask, calls `legalMoves`, and maps the chosen move back to dice indices. Those indices are **relative to the dice list passed in** — for a passive player that is `availableForPassive`, which is what the store actions expect.
+
+### Bots in multiplayer
+
+A bot is an ordinary `game_players` row; its `player_id` is what marks it, not a
+column. `app/utils/botIdentity.ts` owns that convention (`bot:<difficulty>:<n>`)
+and is the only place that parses it — nothing else compares id strings. It
+imports `DifficultyId` as a **type only** and re-declares the three labels, so
+the lobby on the home page does not pull the bot engine into its bundle; the
+duplication is guarded by a test.
+
+`lobbyStore.addBot()` inserts with `is_ready: true` (a bot has nobody to click
+"ready", and the start condition still requires everyone ready). Seats come from
+`max(seat) + 1`, not from a row count, because a count reuses an occupied seat
+after a removal.
+
+**`app/composables/useBotDriver.ts`** plays the bots' turns, and only on the
+host's client (`seat === 0`) — two clients driving the same bot would emit and
+apply every move twice. It goes through `sync.dispatch`, never through store
+actions directly: dispatch applies locally, broadcasts and persists to
+`game_events`, so a direct call would desync every other client and break replay.
+
+Two transitions need it that the UI does not cover, because the UI only emits
+them from the active player's own client, which a bot does not have: the roll in
+`waiting_roll`, and `NEXT_TURN` in `turn_end`. Without those the game never
+starts and then freezes at the end of a turn.
+
+If the host closes the tab, the bots stop. The turn timer already auto-passes
+players who have not acted, so the game keeps moving rather than blocking.
 
 ### Measurement protocol — read this before trusting any number
 

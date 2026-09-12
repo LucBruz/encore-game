@@ -216,6 +216,7 @@ import { useGameStore, rollAllDices } from '~/stores/gameStore'
 import { useLobbyStore } from '~/stores/lobbyStore'
 import { useGameSync } from '~/composables/Usegamesync'
 import { useTurnTimer } from '~/composables/Useturntimer'
+import { useBotDriver } from '~/composables/useBotDriver'
 import { COLOR_MAP, COLUMN_POINTS } from '~/data/grids/grid-01'
 import type { ColorKey } from '~/data/grids/grid-01'
 
@@ -224,6 +225,10 @@ const store = useGameStore()
 const lobby = useLobbyStore()
 const sync = useGameSync()
 const timer = useTurnTimer()
+
+// Les bots ne sont pilotes que par l'hote : si deux clients jouaient le meme
+// bot, le coup serait emis et applique deux fois.
+const botDriver = useBotDriver(sync.dispatch, computed(() => lobby.isHost))
 
 const currentViewPlayer = ref('')
 const isReconnecting = ref(true)
@@ -490,6 +495,10 @@ onMounted(async () => {
   loaderReady.value = false
   await sync.setup(gameId, lobby.localPlayerId, lobby.players)
   loaderReady.value = true
+
+  // Amorce : le watch du pilote ne se declenche que sur un changement d'etat,
+  // or la partie peut s'ouvrir avec un bot deja joueur actif.
+  void botDriver.drive()
 
   // Premier lancement : animation de lancement uniquement (pas le loader)
   if (isFirstStart) {

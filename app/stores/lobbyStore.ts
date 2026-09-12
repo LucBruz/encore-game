@@ -1,4 +1,6 @@
 import { defineStore } from 'pinia'
+import { botDisplayName, isBotId, makeBotId, nextBotIndex } from '~/utils/botIdentity'
+import type { DifficultyId } from '~/composables/useBotPlayer'
 
 // ─── TYPES ────────────────────────────────────────────────────────────────────
 
@@ -243,6 +245,107 @@ export const useLobbyStore = defineStore('lobby', {
                 this.status = 'playing'
                 await navigateTo(`/game/${this.gameId}`)
             }
+        },
+
+        // ── BOTS ──────────────────────────────────────────────────────────────────
+
+        /**
+         * Ajoute un bot au salon. C'est une ligne `game_players` comme une autre,
+         * reconnaissable a son `player_id` (voir `~/utils/botIdentity`).
+         *
+         * `is_ready: true` des l'insertion : un bot n'a personne pour cliquer
+         * « Je suis pret ». La condition de demarrage, qui exige que tous les
+         * joueurs soient prets, reste donc inchangee.
+         *
+         * L'occupation est relue juste avant l'insertion plutot que deduite de
+         * `this.players` : seul l'etat serveur fait foi si deux clients agissent
+         * en meme temps.
+         */
+        async addBot(difficulty: DifficultyId): Promise<void> {
+            if (!this.gameId || !this.isHost) return
+
+            const supabase = useSupabaseClient()
+
+            const { data: game, error: gameError } = await supabase
+                .from('games')
+                .select('max_players, status')
+                .eq('id', this.gameId)
+                .single()
+
+            if (gameError || !game) {
+                this.error = gameError?.message ?? 'Partie introuvable.'
+                return
+            }
+
+            if (game.status !== 'waiting') {
+                this.error = 'La partie a déjà commencé.'
+                return
+            }
+
+            const { data: rows, error: rowsError } = await supabase
+                .from('game_players')
+                .select('player_id, seat')
+                .eq('game_id', this.gameId)
+
+            if (rowsError || !rows) {
+                this.error = rowsError?.message ?? 'Impossible de lire les joueurs.'
+                return
+            }
+
+            if (rows.length >= (game.max_players ?? 6)) {
+                this.error = 'La partie est complète.'
+                return
+            }
+
+            const index = nextBotIndex(rows.map(r => r.player_id), difficulty)
+            // Le siege suit le maximum et non le nombre de lignes : apres un
+            // retrait, un comptage produirait un siege deja occupe.
+            const seat = rows.reduce((max, r) => Math.max(max, r.seat), -1) + 1
+
+            const { error } = await supabase
+                .from('game_players')
+                .insert({
+                    game_id: this.gameId,
+                    player_id: makeBotId(difficulty, index),
+                    player_name: botDisplayName(difficulty, index),
+                    seat,
+                    is_ready: true,
+                })
+
+            if (error) {
+                this.error = error.message
+                return
+            }
+
+            this.error = null
+        },
+
+        /**
+         * Retire un bot du salon. Refuse tout identifiant humain : la politique
+         * RLS `gp_delete` est permissive, c'est donc ici que se trouve le garde-fou.
+         */
+        async removeBot(playerId: string): Promise<void> {
+            if (!this.gameId || !this.isHost) return
+
+            if (!isBotId(playerId)) {
+                this.error = 'Seuls les bots peuvent être retirés.'
+                return
+            }
+
+            const supabase = useSupabaseClient()
+
+            const { error } = await supabase
+                .from('game_players')
+                .delete()
+                .eq('game_id', this.gameId)
+                .eq('player_id', playerId)
+
+            if (error) {
+                this.error = error.message
+                return
+            }
+
+            this.error = null
         },
 
         // ── WATCH LOBBY ───────────────────────────────────────────────────────────
