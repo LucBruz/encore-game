@@ -8,6 +8,26 @@ import {
 } from '~/services/realtimeService'
 import type { GameActionType, GameAction } from '~/services/realtimeService'
 
+/**
+ * File d'attente des ecritures dans `game_events`.
+ *
+ * Les inserts etaient emis sans etre attendus ni serialises. Or `replayEvents`
+ * rejoue les evenements dans l'ordre de `created_at`, c'est-a-dire dans l'ordre
+ * ou les inserts se terminent : deux inserts concurrents qui se doublent
+ * suffisent a reconstruire un plateau different a la reconnexion.
+ *
+ * Mesure faite sur une vraie partie : le tour 0 d'un bot a ete persiste dans
+ * l'ordre TOGGLE, TOGGLE, CONFIRM_PASSIVE, CONFIRM_PLACEMENT, TOGGLE — alors
+ * que la combo est confirmee avant les cases. Rejoue, ce tour donnait 5 cases
+ * cochees au lieu de 7.
+ *
+ * Un humain clique trop lentement pour declencher la course ; un bot place cinq
+ * cases en une dizaine de millisecondes. Le chainage garantit qu'un insert n'est
+ * emis qu'une fois le precedent termine. Il est au niveau du module, donc
+ * partage par toutes les instances du composable.
+ */
+let persistQueue: Promise<unknown> = Promise.resolve()
+
 // ─── COMPOSABLE ───────────────────────────────────────────────────────────────
 
 export function useGameSync() {
@@ -109,19 +129,28 @@ export function useGameSync() {
             })
         }
 
-        // 3. Persister dans game_events (fire-and-forget)
+        // 3. Persister dans game_events, en arriere-plan mais DANS L'ORDRE.
+        //    Le numero de tour est fige maintenant : au moment ou l'insert
+        //    partira, le store aura pu changer de tour.
         if (store.gameId) {
-            supabase
-                .from('game_events')
-                .insert({
-                    game_id: store.gameId as string,
-                    turn_number: store.turnNumber,
-                    player_id: localPlayerId.value,
-                    event_type: type,
-                    payload: payload as any,
+            const row = {
+                game_id: store.gameId as string,
+                turn_number: store.turnNumber,
+                player_id: localPlayerId.value,
+                event_type: type,
+                payload: payload as any,
+            }
+            persistQueue = persistQueue
+                .then(() => supabase.from('game_events').insert(row))
+                .then((result: any) => {
+                    if (result?.error) {
+                        console.warn('[GameSync] Erreur persistance event:', result.error.message)
+                    }
                 })
-                .then(({ error }) => {
-                    if (error) console.warn('[GameSync] Erreur persistance event:', error.message)
+                // Une ecriture qui echoue ne doit pas rompre la file : les
+                // evenements suivants doivent continuer a partir, dans l'ordre.
+                .catch(err => {
+                    console.warn('[GameSync] Erreur persistance event:', err?.message ?? err)
                 })
         }
     }
