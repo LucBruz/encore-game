@@ -14,7 +14,20 @@ import { maskFromSet } from '~~/engine/mask'
  * placement case par case. Une partie complete pilotee par le bot verifie que
  * chaque coup passe la validation des regles et qu'aucun joueur ne se bloque.
  */
-describe('useBotPlayer — pilotage du store', () => {
+/*
+ * Delai releve pour ce fichier.
+ *
+ * Ces tests jouent de vraies parties completes — huit grilles, trois niveaux —
+ * et le plus lourd tient 3,8 s contre les 5 s du delai par defaut. Une marge de
+ * 1,2x ne survit pas a une machine occupee : la suite a echoue une fois, juste
+ * apres un build de production, sans jamais se reproduire en sept executions
+ * suivantes. Rien d'aleatoire dans ces tests, tout y est ensemence ; c'etait le
+ * delai.
+ *
+ * Le test n'est pas en cause, il travaille beaucoup. C'est le plafond arbitraire
+ * qui l'etait.
+ */
+describe('useBotPlayer — pilotage du store', { timeout: 30_000 }, () => {
     beforeEach(() => setActivePinia(createPinia()))
 
     /**
