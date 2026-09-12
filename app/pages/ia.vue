@@ -309,7 +309,7 @@ const denialRows = [
 
 .back {
   @apply text-xs font-bold uppercase tracking-wider transition-colors;
-  color: #6e6e88;
+  color: #8f8fa3;
 }
 .back:hover { color: #f5d742; }
 
@@ -331,7 +331,7 @@ const denialRows = [
   color: #f5d742;
 }
 
-.meta { @apply text-xs leading-relaxed; color: #6e6e88; max-width: 78ch; }
+.meta { @apply text-xs leading-relaxed; color: #8f8fa3; max-width: 78ch; }
 
 code {
   @apply px-1.5 py-0.5 rounded;
@@ -353,7 +353,7 @@ table {
 
 th {
   @apply text-left py-2.5 px-3 font-bold uppercase tracking-wider;
-  color: #6e6e88;
+  color: #8f8fa3;
   background: #23232f;
   white-space: nowrap;
   font-size: 0.68rem;
@@ -372,7 +372,7 @@ tbody tr:last-child td { border-bottom: none; }
 
 .num { @apply text-right; }
 .strong { @apply font-black; color: #5cc96e; }
-.dim { color: #6e6e88; }
+.dim { color: #8f8fa3; }
 .good { color: #5cc96e; }
 .bot { color: #e8e8f0; font-weight: 700; }
 
@@ -442,7 +442,7 @@ tbody tr:last-child td { border-bottom: none; }
 
 .flip__title {
   @apply text-xs font-bold uppercase tracking-wider;
-  color: #6e6e88;
+  color: #8f8fa3;
 }
 
 .flip__row {
@@ -485,7 +485,7 @@ tbody tr:last-child td { border-bottom: none; }
 
 .level__id {
   @apply text-xs font-black uppercase tracking-wider;
-  color: #6e6e88;
+  color: #8f8fa3;
 }
 
 .level:last-child .level__id { color: #f5d742; }
@@ -499,7 +499,7 @@ tbody tr:last-child td { border-bottom: none; }
 
 .level__meta {
   @apply text-xs;
-  color: #6e6e88;
+  color: #8f8fa3;
   font-family: 'Space Mono', monospace;
 }
 

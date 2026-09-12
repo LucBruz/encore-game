@@ -349,7 +349,7 @@ onMounted(async () => {
   font-size: 10px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #6e6e88;
+  color: #8f8fa3;
 }
 
 .dot-pulse {

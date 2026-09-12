@@ -552,7 +552,7 @@ onUnmounted(async () => {
   @apply flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer;
   background: #1a1a24;
   border: 1px solid #2e2e3e;
-  color: #6e6e88;
+  color: #8f8fa3;
 }
 .player-chip:hover { color: #e8e8f0; }
 .player-chip--active { border-color: #f5d742; color: #f5d742; }
@@ -599,7 +599,7 @@ onUnmounted(async () => {
 
 .active-phase-info__label {
   font-size: 10px;
-  color: #6e6e88;
+  color: #8f8fa3;
   white-space: nowrap;
 }
 
@@ -725,7 +725,7 @@ onUnmounted(async () => {
 .color-chip__dot { @apply w-3 h-3 rounded-full; }
 .color-chip__val { @apply font-black; font-family: 'Space Mono', monospace; }
 .color-chip__val--first { color: #5cc96e; }
-.color-chip__val--others { color: #6e6e88; }
+.color-chip__val--others { color: #8f8fa3; }
 .color-chip__val--done-first {
   position: relative;
   box-shadow: 0 0 0 2px #5cc96e;
@@ -774,7 +774,7 @@ onUnmounted(async () => {
   from { transform: translate(-50%, -50%) rotate(-45deg) scaleX(0); }
   to   { transform: translate(-50%, -50%) rotate(-45deg) scaleX(1); }
 }
-.color-chip__sep { color: #6e6e88; }
+.color-chip__sep { color: #8f8fa3; }
 
 .score-panel {
   @apply flex flex-col gap-1 pt-2;
@@ -812,7 +812,7 @@ onUnmounted(async () => {
 
 .auto-next-msg {
   @apply text-sm text-center py-2 px-4 rounded-xl;
-  color: #6e6e88;
+  color: #8f8fa3;
   background: #1a1a24;
   border: 1px solid #2e2e3e;
   animation: pulse-text 1.5s ease-in-out infinite;

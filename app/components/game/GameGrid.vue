@@ -220,7 +220,7 @@ function handleCellClick(idx: number) {
 .col-label {
   @apply text-center text-xs font-bold py-1 rounded;
   font-family: 'Space Mono', monospace;
-  color: #6e6e88;
+  color: #8f8fa3;
 }
 
 .col-label--start {
@@ -257,7 +257,7 @@ function handleCellClick(idx: number) {
   color: #e8e8f0;
 }
 
-.points-cell--others { color: #6e6e88; }
+.points-cell--others { color: #8f8fa3; }
 .points-cell--start { color: #f5d742; }
 
 /* Colonne prise par un autre (première ligne — points inaccessibles) */
@@ -358,7 +358,7 @@ function handleCellClick(idx: number) {
 
 .placement-confirm__count {
   @apply text-xs font-bold;
-  color: #6e6e88;
+  color: #8f8fa3;
 }
 
 .btn-confirm-placement {
@@ -374,7 +374,7 @@ function handleCellClick(idx: number) {
 .btn-cancel-placement {
   @apply px-3 py-1.5 rounded-lg text-xs cursor-pointer transition-all;
   background: transparent;
-  color: #6e6e88;
+  color: #8f8fa3;
   border: 1px solid #2e2e3e;
 }
 

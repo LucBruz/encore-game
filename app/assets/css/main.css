@@ -22,3 +22,48 @@ html {
        n'etait pas encore appliquee. */
     color-scheme: dark;
 }
+
+/* Anneau de focus clavier.
+ *
+ * Les champs de saisie posaient `outline-none` et ne signalaient le focus que
+ * par un changement de couleur de bordure ; les boutons et les liens, eux,
+ * n'avaient aucun style de focus. Au clavier, rien n'indiquait ou on se
+ * trouvait sur le site.
+ *
+ * `:focus-visible` et non `:focus` : le navigateur ne l'active qu'au clavier,
+ * donc un clic souris ne laisse pas d'anneau derriere lui.
+ *
+ * `!important` parce que la specificite est perdue d'avance : Vue ajoute un
+ * attribut `[data-v-hash]` a chaque regle de style scoped, si bien que
+ * `.form-input` pese (0,2,0) contre (0,1,1) pour `input:focus-visible`. Ce
+ * sont precisement ces regles qui posent `outline-none`. Mesure faite : sans
+ * `!important`, le contour des champs reste transparent au clavier.
+ */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+summary:focus-visible,
+[tabindex]:focus-visible {
+    outline: 2px solid #f5d742 !important;
+    outline-offset: 2px;
+}
+
+/* Mouvement reduit.
+ *
+ * GameCell traitait deja son propre cas ; les 26 autres animations du site
+ * (transitions de page, pulsations, superpositions de fin de partie) ne le
+ * faisaient pas. Duree infime plutot que `none` : les animations arrivent a
+ * leur terme et emettent leurs evenements, au lieu d'etre supprimees.
+ */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}

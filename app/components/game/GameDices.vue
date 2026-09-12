@@ -464,7 +464,7 @@ function handlePass() {
 
 .badge--waiting {
   background: rgba(110, 110, 136, 0.15);
-  color: #6e6e88;
+  color: #8f8fa3;
   border: 1px solid rgba(110, 110, 136, 0.3);
 }
 

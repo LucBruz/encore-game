@@ -47,7 +47,7 @@ const handleBack = () => clearError({ redirect: '/' })
 
 .code {
   @apply text-sm font-bold tracking-widest;
-  color: #6e6e88;
+  color: #8f8fa3;
   font-family: 'Space Mono', monospace;
 }
 
@@ -67,7 +67,7 @@ const handleBack = () => clearError({ redirect: '/' })
 .detail {
   @apply text-xs rounded-lg px-3 py-2 mt-1 w-full text-left;
   background: #23232f;
-  color: #6e6e88;
+  color: #8f8fa3;
   font-family: 'Space Mono', monospace;
   overflow-wrap: anywhere;
 }

@@ -336,7 +336,7 @@ watch(() => store.players.map(p => `${p.hasPlaced}${p.hasPassed}`).join(), () =>
 
 .back {
   @apply text-xs font-bold uppercase tracking-wider transition-colors;
-  color: #6e6e88;
+  color: #8f8fa3;
 }
 .back:hover { color: #f5d742; }
 
@@ -367,7 +367,7 @@ watch(() => store.players.map(p => `${p.hasPlaced}${p.hasPassed}`).join(), () =>
 
 .field > span {
   @apply text-xs font-bold uppercase tracking-wider;
-  color: #6e6e88;
+  color: #8f8fa3;
 }
 
 .field input {
@@ -383,7 +383,7 @@ watch(() => store.players.map(p => `${p.hasPlaced}${p.hasPassed}`).join(), () =>
   @apply text-xs leading-relaxed p-3 rounded-xl;
   background: #23232f;
   border-left: 3px solid #5b9ff5;
-  color: #6e6e88;
+  color: #8f8fa3;
 }
 .hint strong { color: #a0a0b8; }
 
@@ -394,7 +394,7 @@ watch(() => store.players.map(p => `${p.hasPlaced}${p.hasPassed}`).join(), () =>
   font-family: 'Space Mono', monospace;
   background: #23232f;
   border: 2px solid #2e2e3e;
-  color: #6e6e88;
+  color: #8f8fa3;
 }
 
 .chip:hover { border-color: #6e6e88; color: #e8e8f0; }
@@ -455,7 +455,7 @@ watch(() => store.players.map(p => `${p.hasPlaced}${p.hasPassed}`).join(), () =>
 
 .turn {
   @apply ml-auto text-xs font-bold uppercase tracking-wider;
-  color: #6e6e88;
+  color: #8f8fa3;
   font-family: 'Space Mono', monospace;
 }
 
@@ -490,7 +490,7 @@ watch(() => store.players.map(p => `${p.hasPlaced}${p.hasPassed}`).join(), () =>
 .score {
   @apply flex items-center justify-between text-xs font-bold uppercase tracking-wider pt-3;
   border-top: 1px solid #2e2e3e;
-  color: #6e6e88;
+  color: #8f8fa3;
 }
 
 .score strong {

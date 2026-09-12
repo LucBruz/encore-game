@@ -282,7 +282,7 @@ onMounted(() => {
 
 .page-subtitle {
   @apply text-sm mt-2;
-  color: #6e6e88;
+  color: #8f8fa3;
 }
 
 .page-nav {
@@ -332,7 +332,7 @@ onMounted(() => {
 
 .form-label {
   @apply text-xs font-bold uppercase tracking-wider;
-  color: #6e6e88;
+  color: #8f8fa3;
 }
 
 .form-input {
@@ -359,7 +359,7 @@ onMounted(() => {
 
 .code-display__label {
   @apply text-xs font-bold uppercase tracking-wider;
-  color: #6e6e88;
+  color: #8f8fa3;
 }
 
 .code-display__code {
@@ -382,7 +382,7 @@ onMounted(() => {
 
 .lobby-label {
   @apply text-xs font-bold uppercase tracking-wider mb-1;
-  color: #6e6e88;
+  color: #8f8fa3;
 }
 
 .lobby-code {
@@ -407,7 +407,7 @@ onMounted(() => {
 
 .lobby-player__you {
   @apply text-xs font-normal ml-1;
-  color: #6e6e88;
+  color: #8f8fa3;
 }
 
 .lobby-player__status {
@@ -422,13 +422,13 @@ onMounted(() => {
 
 .lobby-player__status--waiting {
   background: #23232f;
-  color: #6e6e88;
+  color: #8f8fa3;
   border: 1px solid #3e3e52;
 }
 
 .lobby-waiting-msg {
   @apply text-sm text-center py-2;
-  color: #6e6e88;
+  color: #8f8fa3;
 }
 
 .btn {
@@ -450,7 +450,7 @@ onMounted(() => {
 
 .btn--ghost {
   background: #23232f;
-  color: #6e6e88;
+  color: #8f8fa3;
   border: 1px solid #2e2e3e;
 }
 
@@ -469,7 +469,7 @@ onMounted(() => {
   font-family: 'Space Mono', monospace;
   background: #23232f;
   border: 2px solid #2e2e3e;
-  color: #6e6e88;
+  color: #8f8fa3;
 }
 
 .duration-btn:hover { border-color: #6e6e88; color: #e8e8f0; }

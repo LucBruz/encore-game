@@ -379,7 +379,7 @@ onMounted(async () => {
   font-size: 12px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: #6e6e88;
+  color: #8f8fa3;
   margin: 0;
 }
 
@@ -421,7 +421,7 @@ onMounted(async () => {
   text-align: center;
 }
 .pc-rank sup { font-size: 12px; -webkit-text-fill-color: #f58a35; vertical-align: super; }
-.pc-rank--dim { background: none; -webkit-text-fill-color: #6e6e88; color: #6e6e88; font-size: 24px; }
+.pc-rank--dim { background: none; -webkit-text-fill-color: #8f8fa3; color: #8f8fa3; font-size: 24px; }
 
 /* ── Corps ── */
 .pc-body {
@@ -493,7 +493,7 @@ onMounted(async () => {
 .pc-score-part {
   font-family: 'Space Mono', monospace;
   font-size: 10px;
-  color: #6e6e88;
+  color: #8f8fa3;
   margin-left: 3px;
 }
 
@@ -550,8 +550,8 @@ onMounted(async () => {
 }
 .pc-num--dim {
   background: none;
-  -webkit-text-fill-color: #6e6e88;
-  color: #6e6e88;
+  -webkit-text-fill-color: #8f8fa3;
+  color: #8f8fa3;
   font-size: 28px;
 }
 .pc-unit {
@@ -560,7 +560,7 @@ onMounted(async () => {
   -webkit-text-fill-color: rgba(245, 215, 66, 0.55);
   font-weight: 400;
 }
-.pc-num--dim .pc-unit { color: #6e6e88; -webkit-text-fill-color: #6e6e88; }
+.pc-num--dim .pc-unit { color: #8f8fa3; -webkit-text-fill-color: #8f8fa3; }
 
 /* ── Bouton voir grilles ── */
 .btn-grids {
@@ -593,7 +593,7 @@ onMounted(async () => {
   border-radius: 99px;
   border: 1px solid #2e2e3e;
   background: transparent;
-  color: #6e6e88;
+  color: #8f8fa3;
   font-family: 'Space Mono', monospace;
   font-size: 11px;
   cursor: pointer;
