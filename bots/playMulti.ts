@@ -4,7 +4,7 @@ import { COLUMN_POINTS, COLS } from '../app/data/grids/grid-01'
 import { CELL_COUNT, GRID_COLS, GRID_ROWS } from '../engine/grid'
 import { completedColors, completedColumns } from '../engine/scoring'
 import type { ColorKey } from '../engine/types'
-import { DEFAULT_TOTAL_JOKERS, applyMove, createSheet, legalMoves } from '../engine/state'
+import { DEFAULT_TOTAL_JOKERS, applyMove, cloneSheet, createSheet, legalMoves } from '../engine/state'
 import type { Move, Sheet } from '../engine/state'
 import type { Cells } from '../engine/types'
 import type { Bot } from './types'
@@ -67,9 +67,34 @@ function removeChosenDice(roll: Roll, move: Move): Roll {
     }
 }
 
+/**
+ * Position complete au moment ou un joueur doit decider, plus le coup qu'il a
+ * choisi. C'est la matiere premiere de l'analyse d'apres-partie : elle a besoin
+ * de la position ET des coups possibles, qu'il serait absurde de recalculer
+ * depuis un journal alors que la boucle de jeu les a deja sous la main.
+ */
+export interface DecisionObservation {
+    turn: number
+    seat: number
+    players: {
+        name: string
+        sheet: Sheet
+        colorBonus: Partial<Record<ColorKey, 'first' | 'others'>>
+        columnBonus: Record<number, 'first' | 'others'>
+    }[]
+    /** Coups legaux, plus `null` pour l'option de passer volontairement. */
+    candidates: (Move | null)[]
+    played: Move | null
+}
+
 export interface MultiOptions {
     maxTurns?: number
     totalJokers?: number
+    /**
+     * Appele avant chaque coup, une fois le choix fait. Coute un clonage des
+     * feuilles par decision, d'ou l'option : une partie normale ne le paie pas.
+     */
+    observe?: (observation: DecisionObservation) => void
 }
 
 export function playMultiGame(
@@ -78,9 +103,6 @@ export function playMultiGame(
     rng: Rng,
     opts: MultiOptions = {},
 ): MultiResult {
-    const maxTurns = opts.maxTurns ?? 60
-    const totalJokers = opts.totalJokers ?? DEFAULT_TOTAL_JOKERS
-
     const players: MultiPlayerState[] = bots.map(bot => ({
         name: bot.name,
         bot,
@@ -90,8 +112,32 @@ export function playMultiGame(
         passes: 0,
         forcedPasses: 0,
     }))
+    return continueMultiGame(cells, players, rng, 0, opts)
+}
 
-    let turn = 0
+/**
+ * Meme partie, reprise depuis un etat quelconque.
+ *
+ * C'est ce dont l'analyse d'apres-partie a besoin : pour estimer ce que vaut un
+ * coup, il faut derouler la suite A PARTIR de la position reelle, adversaires
+ * compris. Un deroulement mono-agent ne conviendrait pas — le protocole du
+ * projet a mesure qu'il ne punit pas la temporisation et classe donc les coups
+ * lents bien trop haut.
+ *
+ * `players` est consomme tel quel : les feuilles sont modifiees. A l'appelant de
+ * cloner ce qu'il veut conserver.
+ */
+export function continueMultiGame(
+    cells: Cells,
+    players: MultiPlayerState[],
+    rng: Rng,
+    startTurn: number,
+    opts: MultiOptions = {},
+): MultiResult {
+    const maxTurns = opts.maxTurns ?? 60
+    const totalJokers = opts.totalJokers ?? DEFAULT_TOTAL_JOKERS
+
+    let turn = startTurn
     let enderIndex = -1
     let endedNaturally = false
 
@@ -133,6 +179,21 @@ export function playMultiGame(
                     fullRoll: pool,
                     opponents: players.filter((_, i) => i !== idx).map(o => o.sheet),
                 })
+
+            if (opts.observe) {
+                opts.observe({
+                    turn,
+                    seat: idx,
+                    players: players.map(other => ({
+                        name: other.name,
+                        sheet: cloneSheet(other.sheet),
+                        colorBonus: { ...other.colorBonus },
+                        columnBonus: { ...other.columnBonus },
+                    })),
+                    candidates: [...moves, null],
+                    played: move,
+                })
+            }
 
             if (!move) {
                 p.passes++

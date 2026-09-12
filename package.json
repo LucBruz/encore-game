@@ -17,7 +17,8 @@
     "tune:v3": "tsx scripts/tune-v3.ts",
     "calibrate": "tsx scripts/calibrate.ts",
     "duel": "tsx scripts/duel.ts",
-    "tune:multi": "tsx scripts/tune-multi.ts"
+    "tune:multi": "tsx scripts/tune-multi.ts",
+    "analyse:cost": "tsx scripts/analyse-cost.ts"
   },
   "dependencies": {
     "@nuxtjs/supabase": "2.0.4",
