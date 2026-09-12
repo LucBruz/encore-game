@@ -19,7 +19,8 @@
     "duel": "tsx scripts/duel.ts",
     "tune:multi": "tsx scripts/tune-multi.ts",
     "analyse:cost": "tsx scripts/analyse-cost.ts",
-    "analyse:spread": "tsx scripts/analyse-spread.ts"
+    "analyse:spread": "tsx scripts/analyse-spread.ts",
+    "analyse:bands": "tsx scripts/analyse-bands.ts"
   },
   "dependencies": {
     "@nuxtjs/supabase": "2.0.4",

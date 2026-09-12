@@ -127,7 +127,48 @@ function rolloutAfter(
     return result.scores[position.seat]
 }
 
-const mean = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length
+export const mean = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length
+
+/** Erreur type de la moyenne d'une serie d'ecarts appaires. */
+export function stderrOf(diffs: number[]): number {
+    if (diffs.length < 2) return 0
+    const m = mean(diffs)
+    const variance = diffs.reduce((a, d) => a + (d - m) ** 2, 0) / (diffs.length - 1)
+    return Math.sqrt(variance / diffs.length)
+}
+
+export interface CandidateRunOptions {
+    rollouts: number
+    rolloutBot: Bot
+    seed: number
+    horizon?: number
+    maxTurns?: number
+    totalJokers?: number
+}
+
+/**
+ * Deroule chaque coup propose le meme nombre de fois, avec LES MEMES graines
+ * d'un coup a l'autre. C'est ce qui rend la comparaison appariee : deux
+ * candidats voient exactement la meme suite de des, le bruit commun s'annule au
+ * lieu de s'additionner.
+ */
+export function evaluateCandidates(
+    position: DecisionPosition,
+    moves: (Move | null)[],
+    opts: CandidateRunOptions,
+): MoveValue[] {
+    const totalJokers = opts.totalJokers ?? 8
+    const maxTurns = opts.horizon !== undefined
+        ? Math.min(opts.maxTurns ?? 60, position.turn + 1 + opts.horizon)
+        : (opts.maxTurns ?? 60)
+    const seeds = Array.from({ length: opts.rollouts }, (_, r) => opts.seed + r * 104729)
+
+    return moves.map(move => {
+        const samples = seeds.map(seed =>
+            rolloutAfter(position, move, opts.rolloutBot, seed, maxTurns, totalJokers))
+        return { move, mean: mean(samples), samples }
+    })
+}
 
 export function evaluateDecision(
     position: DecisionPosition,
