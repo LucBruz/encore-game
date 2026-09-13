@@ -67,7 +67,8 @@
           </div>
         </div>
         <p class="meta">
-          L'outil ne reproche un coup que si l'écart au meilleur dépasse
+          « Sans reproche » : le coup n'est pas parmi les meilleurs, mais l'écart est trop
+          faible pour être affirmé. L'outil ne reproche un coup que si l'écart au meilleur dépasse
           {{ BANDS.accuse }} points <em>et</em> sort du bruit de mesure. En dessous, il se
           tait : plusieurs coups sont presque toujours également défendables, et lui en
           reprocher un serait faux. Il laisse donc passer environ la moitié des coups
@@ -87,7 +88,7 @@
             @click="selected = selected === i ? null : i"
           >
             <span class="move__turn">T{{ m.turn + 1 }}</span>
-            <span class="move__verdict">{{ VERDICT_LABEL[m.verdict] }}</span>
+            <span class="move__verdict">{{ labelOf(m) }}</span>
             <span v-if="m.verdict === 'erreur' || m.verdict === 'faute'" class="move__loss">
               −{{ m.loss.toFixed(1) }}
             </span>
@@ -97,7 +98,7 @@
       </div>
 
       <div v-if="current" class="card">
-        <p class="label">Tour {{ current.turn + 1 }} — {{ VERDICT_LABEL[current.verdict] }}</p>
+        <p class="label">Tour {{ current.turn + 1 }} — {{ labelOf(current) }}</p>
         <p class="meta">
           {{ current.legalMoves - 1 }} coups possibles, dont
           <strong>{{ current.goodMoves.length }}</strong> que l'analyse ne sait pas
@@ -146,11 +147,18 @@ import type { GameReview } from '~~/analysis/game'
 import type { GameEvent } from '~~/analysis/replay'
 import type { Verdict } from '~~/analysis/verdict'
 
-const VERDICT_LABEL: Record<Verdict, string> = {
-    excellent: 'Meilleur coup',
-    bon: 'Coup défendable',
-    erreur: 'Erreur',
-    faute: 'Faute',
+/**
+ * Libelle d'un coup. « bon » recouvre deux cas que la page doit distinguer :
+ * le coup appartient au groupe des coups que l'analyse ne sait pas departager,
+ * ou il n'y appartient pas mais l'ecart reste sous le seuil de reproche.
+ *
+ * Les confondre sous « Coup defendable » faisait mentir la page : sur une vraie
+ * partie, 11 coups portaient ce libelle alors que le compteur en annoncait 8.
+ */
+function labelOf(m: { verdict: Verdict; playedWasGood: boolean }): string {
+    if (m.verdict === 'excellent') return 'Meilleur coup'
+    if (m.verdict === 'bon') return m.playedWasGood ? 'Coup défendable' : 'Sans reproche'
+    return m.verdict === 'faute' ? 'Faute' : 'Erreur'
 }
 
 /** Mesure : environ 3,4 s par decision au reglage par defaut. */
