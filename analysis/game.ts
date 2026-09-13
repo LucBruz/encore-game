@@ -45,10 +45,10 @@ export interface ReviewOptions {
  * s'adresse a quelqu'un en particulier : analyser les trois adversaires
  * triplerait l'attente pour rien.
  *
- * Compter environ 3,4 secondes par decision au reglage par defaut, soit une a
- * deux minutes pour une partie. C'est assez long pour meriter une barre de
- * progression, et assez long pour qu'un appel depuis le navigateur gagne a
- * partir dans un worker plutot que de figer l'interface.
+ * Compter 3 a 5 secondes par decision au reglage par defaut (4,2 s en moyenne,
+ * mesure sur une partie reelle complete), soit une a deux minutes pour une
+ * partie. Assez long pour meriter une barre de progression : dans le navigateur,
+ * passer par `reviewGameAsync`, qui rend la main entre les decisions.
  *
  * Le store passe ici doit etre NEUF — joueurs et grille initialises, aucun
  * evenement applique. Il sera consomme par le rejeu.
@@ -60,7 +60,7 @@ export function startReview(store: any, events: GameEvent[], opts: ReviewOptions
 
     return {
         total: mine.length,
-        /** Analyse la decision `i`. Un pas dure environ 3,4 secondes. */
+        /** Analyse la decision `i`. Un pas dure 3 a 5 secondes selon le nombre de candidats. */
         step(i: number) {
             const d = mine[i]
             const verdict = analyseDecision(d, {

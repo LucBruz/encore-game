@@ -161,8 +161,13 @@ function labelOf(m: { verdict: Verdict; playedWasGood: boolean }): string {
     return m.verdict === 'faute' ? 'Faute' : 'Erreur'
 }
 
-/** Mesure : environ 3,4 s par decision au reglage par defaut. */
-const SECONDS_PER_DECISION = 3.4
+/**
+ * Cout mesure sur une partie reelle complete (0VITRI, 23 decisions, Node) :
+ * 3,1 s pour une passe, 5,1 s pour un coup du bot — un coup en cours de partie
+ * a davantage de candidats. 4,2 s en moyenne. Les scripts d'analyse annoncaient
+ * 3,4 s parce qu'ils echantillonnent surtout des debuts de partie.
+ */
+const SECONDS_PER_DECISION = 4.2
 
 const route = useRoute()
 const store = useGameStore()

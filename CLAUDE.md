@@ -301,3 +301,23 @@ wants bare faces, and store bonus maps carry `null` for unclaimed entries and
 key columns by letter, where the engine expects only claimed entries keyed by
 index — passing the `null`s through would silently add 3 points per unclaimed
 colour in every analysis.
+
+**Verified end to end on a real game** (`0VITRI`, 96 events, 23 decisions), with
+`analysis/__tests__/live-review.spec.ts` — skipped unless `GAME_ID`,
+`SUPABASE_URL` and a public key are set; run it with `--disableConsoleIntercept`,
+since vitest hides the console output of passing tests:
+
+- every one of the 12 played moves is found among its position's legal moves;
+- 98 s in total after detaching the cells from reactivity, against 1289 s before;
+- 3.1 s per pass, 5.1 s per mid-game move, 4.2 s on average — the scripts' 3.4 s
+  was low because they sample mostly early-game decisions, which have fewer
+  candidates;
+- the bot's verdicts are the ones the production page displayed (8 defensible,
+  one mistake at turn 12, −2.06 in Node, −2.1 in the browser);
+- a player who passed every turn was charged 4 mistakes out of 11, which is the
+  right call: passing while good moves exist is a genuine error.
+
+Automated checks of the page itself are unreliable in a hidden browser tab:
+Chrome throttles timers there, so the `setTimeout(0)` yield between decisions
+stalls and the main thread stays too busy to answer injected scripts. Verify in
+Node; use the browser only for what Node cannot see.
