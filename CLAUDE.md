@@ -109,6 +109,26 @@ tab without readying up leaves a row at `is_ready = false`. The start condition
 requires *every* row ready, so the lobby can never start again. `gp_delete` is
 the prerequisite for fixing it.
 
+**Retention: games inactive for 30 days are deleted nightly.** A `pg_cron` job
+`purge-stale-games` runs `public.purge_stale_games()` at 03:17 UTC. The SQL is
+kept in `supabase/purge_stale_games.sql`, with a dry-run query, verification
+queries and how to undo it — like the rest of the schema it is otherwise
+invisible from this repo.
+
+- *Last activity* is a game's latest `game_events.created_at`, or its creation
+  if it has none. Status is not used: the app never sets `finished`, so a
+  completed game stays `playing` forever.
+- Finished games also get the 30 days, so they stay reviewable on `/review`.
+- `game_players` and `game_events` cascade on delete, so removing the game row
+  is enough.
+- **Security:** any function in `public` is callable by every visitor through
+  the API. Execution is revoked from `public`, `anon` and `authenticated`
+  (verified: only `postgres` can run it), and the function takes no parameter,
+  so the delay cannot be lowered even if it were exposed. It is
+  `security definer` with a pinned `search_path`.
+- Do not run it by hand to "test" it: that is a real deletion in production. The
+  selection is exactly the dry-run query in the SQL file.
+
 ### Pages
 - `/` (`app/pages/index.vue`) — home: create or join a game, and the lobby. The host can add bots there (see "Bots in multiplayer")
 - `/game/[id]` (`app/pages/game/[id].vue`) — main game view; handles page-refresh reconnection by re-fetching from Supabase if lobby state is empty
