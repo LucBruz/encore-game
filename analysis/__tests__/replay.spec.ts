@@ -1,5 +1,6 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it } from 'vitest'
+import { isProxy } from 'vue'
 import { useGameStore } from '~/stores/gameStore'
 import { applyGameAction } from '~/utils/applyGameAction'
 import { replayDecisions } from '~~/analysis/replay'
@@ -122,6 +123,19 @@ describe('rejeu du journal vers des positions de decision', () => {
         const first = decisions[0]
         expect(Object.keys(first.players[0].colorBonus)).toHaveLength(0)
         expect(Object.keys(first.players[0].columnBonus)).toHaveLength(0)
+    })
+
+    /**
+     * Mesure faite : une decision analysee avec les cases du store, qui sont un
+     * proxy reactif Pinia, prenait 30,6 s contre 2,0 s avec une copie brute, pour
+     * un verdict identique. Rien ne casse si ce test tombe — tout devient
+     * seulement quinze fois plus lent, ce qui est exactement le genre de
+     * regression qu'aucun autre test ne verrait.
+     */
+    it('rend des positions detachees de la reactivite du store', () => {
+        const decisions = replayDecisions(freshStore(), EVENTS)
+        expect(decisions.length).toBeGreaterThan(0)
+        for (const d of decisions) expect(isProxy(d.cells)).toBe(false)
     })
 
     it('photographie la position AVANT le coup, pas apres', () => {

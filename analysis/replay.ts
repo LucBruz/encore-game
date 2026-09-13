@@ -67,6 +67,19 @@ export function replayDecisions(
 
     const seatOf = (playerId: string) => store.players.findIndex((p: any) => p.id === playerId)
 
+    /*
+     * Cases de la grille, copiees UNE fois hors de la reactivite du store.
+     *
+     * `store.grid.cells` est un proxy reactif Pinia : chaque lecture de case y
+     * passe par le suivi de reactivite de Vue. Les deroulements lisent des cases
+     * des millions de fois. Mesure faite sur une meme decision, memes graines :
+     * 30,6 s avec le proxy, 2,0 s avec une copie brute, verdict identique. C'est
+     * ce qui rendait la page de review quinze fois plus lente que les scripts,
+     * qui lisent `ALL_GRIDS` directement.
+     */
+    let plainCells: [ColorKey, boolean][] | null = null
+    const cellsOf = () => (plainCells ??= store.grid.cells.map((c: any) => [c[0], c[1]] as [ColorKey, boolean]))
+
     const sheetOf = (player: any): Sheet => ({
         mask: maskFromSet(player.checkedCells),
         jokersUsed: player.jokersUsed,
@@ -127,7 +140,7 @@ export function replayDecisions(
         // Le store garde les des comme objets `{ type, value }` ; le moteur veut
         // les faces nues. Sans cette conversion, aucun coup n'est trouve legal.
         const moves = legalMoves(
-            store.grid.cells,
+            cellsOf(),
             players[seat].sheet,
             {
                 colors: pool.colorDices.map((d: any) => d.value),
@@ -139,7 +152,7 @@ export function replayDecisions(
         return {
             seat,
             position: {
-                cells: store.grid.cells,
+                cells: cellsOf(),
                 players,
                 seat,
                 turn: store.turnNumber,

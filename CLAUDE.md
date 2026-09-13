@@ -285,3 +285,19 @@ Counter-intuitive and worth keeping: horizon 12 agreed with the reference more
 often overall (81% against 69%) yet performed worse under a threshold, catching
 two bad moves out of five where horizon 6 caught all five. Overall agreement is
 the wrong indicator — what matters is the ordering near the accusation boundary.
+
+**Never hand store state to the engine's hot loops.** `store.grid.cells` is a
+Pinia reactive proxy, so every cell read goes through Vue's dependency tracking.
+Rollouts read cells millions of times. Measured on one decision with the same
+seeds: 30.6 s through the proxy, 2.0 s on a plain copy, identical verdict. That
+single difference made the review page and the live review fifteen times slower
+than the analysis scripts, which read `ALL_GRIDS` directly and so never showed
+it. `replayDecisions` copies the cells once; a test asserts no replayed position
+is a proxy, because nothing else would catch a regression that only costs time.
+
+Two further boundary conversions the replay performs, both learned the hard way
+on production data: store dice are `{ type, value }` objects where the engine
+wants bare faces, and store bonus maps carry `null` for unclaimed entries and
+key columns by letter, where the engine expects only claimed entries keyed by
+index — passing the `null`s through would silently add 3 points per unclaimed
+colour in every analysis.
