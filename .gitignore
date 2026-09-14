@@ -25,3 +25,9 @@ logs
 .gstack/
 encore-game high/
 .analysis-cache/
+
+# Value network: Python env, generated datasets and checkpoints
+training/.venv/
+training/data/
+training/runs/
+__pycache__/

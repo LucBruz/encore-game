@@ -22,6 +22,7 @@ import type { WeightsV3 } from '../bots/heuristicV3'
 import { gridStats } from '../engine/scoring'
 import { playMultiGame } from '../bots/playMulti'
 import { makeDenialBot } from '../bots/baselines/denial'
+import { loadValueNet, makeValueNetBot } from '../bots/valueNet'
 import type { Bot, TurnContext } from '../bots/types'
 import type { Cells } from '../engine/types'
 
@@ -83,6 +84,26 @@ if (vMulti) for (const w of DENIALS) {
     bots.push(makeDenialBot({ weights: vMulti, denialWeight: w, name: `deni-${w}` }))
 }
 
+// Reseaux de valeur (`training/train.py`), une entree par chemin et par tete.
+//   --valueNet public/data/value-net.json --heads score,margin
+// A mesurer sur des graines jamais vues a l'entrainement : --seed 5250000.
+const VALUE_NETS = arg('valueNet', '').split(',').filter(Boolean)
+const HEADS = arg('heads', 'score').split(',').filter(Boolean) as ('score' | 'margin')[]
+for (const path of VALUE_NETS) {
+    const net = loadValueNet(JSON.parse(readFileSync(path, 'utf8')))
+    const label = VALUE_NETS.length > 1 ? path.replace(/^.*[\\/]/, '').replace(/\.json$/, '') : 'reseau'
+    for (const head of HEADS) bots.push(makeValueNetBot(net, `${label}-${head}`, head))
+}
+
+// Table restreinte, pour que deux agents se croisent a chaque partie et que
+// l'ecart apparie porte sur toutes les parties :  --only v3-multi,reseau-score
+const ONLY = arg('only', '').split(',').filter(Boolean)
+if (ONLY.length) {
+    const missing = ONLY.filter(n => !bots.some(b => b.name === n))
+    if (missing.length) throw new Error(`agents inconnus : ${missing.join(', ')}`)
+    bots.splice(0, bots.length, ...bots.filter(b => ONLY.includes(b.name)))
+}
+
 const SEATS = 4
 const B = bots.length
 
@@ -108,11 +129,17 @@ for (let g = 0; g < GAMES; g++) {
 
     const r = playMultiGame(grid.cells, table, makeRng(SEED + g * 7919), { maxTurns: MAX_TURNS })
 
+    // Avec moins d'agents que de sieges, un agent occupe plusieurs sieges : son
+    // score de la partie est la moyenne de ses sieges, pas le dernier ecrit.
+    const gameSum = new Array(B).fill(0)
+    const gameSeats = new Array(B).fill(0)
     bots.forEach((_, i) => scoreByGame[i].push(null))
     seating.forEach((botIdx, seat) => {
+        gameSum[botIdx] += r.scores[seat]
+        gameSeats[botIdx]++
+        scoreByGame[botIdx][g] = gameSum[botIdx] / gameSeats[botIdx]
         totals[botIdx] += r.scores[seat]
         played[botIdx]++
-        scoreByGame[botIdx][g] = r.scores[seat]
         passes[botIdx] += r.passes[seat]
         jokers[botIdx] += r.jokersUsed[seat]
         if (r.winnerIndex === seat) wins[botIdx]++
