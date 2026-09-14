@@ -189,14 +189,20 @@ export function replayDecisions(
          * donc aussi clos par NEXT_TURN, s'il a effectivement ete coche.
          */
         if (type === 'NEXT_TURN') {
+            const turnBefore = store.turnNumber
             applyGameAction(store, type, payload)
-            for (const p of pending.values()) {
-                const player = store.players[seatOf(p.playerId)]
+            for (const [playerId, p] of pending) {
+                const player = store.players[seatOf(playerId)]
                 if (p.placement.length > 0 && player && p.placement.every(idx => player.checkedCells.has(idx))) {
                     decisions.push(toDecision(p))
+                    pending.delete(playerId)
                 }
             }
-            pending.clear()
+            // Un NEXT_TURN ignore laisse les combos ouvertes : la partie FZFS1D
+            // finit sur GAME_OVER, NEXT_TURN — que `nextTurn` refuse, partie
+            // terminee — puis le CONFIRM_PLACEMENT du dernier coup. Vider ici
+            // perdait ce coup.
+            if (store.turnNumber !== turnBefore) pending.clear()
             opts.onProgress?.(i + 1, events.length)
             return
         }
