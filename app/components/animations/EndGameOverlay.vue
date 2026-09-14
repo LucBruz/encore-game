@@ -2,6 +2,7 @@
 import { onMounted, ref, computed } from 'vue'
 import { COLOR_MAP, COLUMN_POINTS } from '~/data/grids/grid-01'
 import type { ColorKey } from '~/data/grids/grid-01'
+import { useLobbyStore } from '~/stores/lobbyStore'
 
 interface Player {
   name: string
@@ -32,6 +33,13 @@ const maxScore = computed(() => Math.max(...props.players.map(p => p.score), 1))
 
 // Vue grilles
 const showGrids = ref(false)
+
+// Analyse d'apres-partie, directement sur cet ecran. L'overlay n'est monte que
+// sur /game/[id], d'ou l'identifiant lu dans la route.
+const showReview = ref(false)
+const route = useRoute()
+const lobby = useLobbyStore()
+const reviewGameId = computed(() => (route.params.id as string | undefined) ?? '')
 const selectedGridIdx = ref(0)
 
 // Couleurs dans l'ordre d'affichage
@@ -299,6 +307,22 @@ onMounted(async () => {
           />
         </div>
       </div>
+
+      <!-- Analyse de la partie -->
+      <template v-if="reviewGameId">
+        <button class="btn-grids" @click="showReview = !showReview">
+          {{ showReview ? '↑ Masquer l’analyse' : 'Analyser ma partie' }}
+        </button>
+
+        <!-- Chargement a la demande : le moteur d'analyse ne pese sur la page de
+             jeu qu'une fois l'analyse ouverte. -->
+        <div v-if="showReview" class="review-section">
+          <LazyGameReview :game-id="reviewGameId" :default-player-id="lobby.localPlayerId" />
+          <NuxtLink :to="`/review/${reviewGameId}`" class="review-permalink">
+            Ouvrir l’analyse dans sa propre page, pour y revenir plus tard
+          </NuxtLink>
+        </div>
+      </template>
 
       <!-- CTA -->
       <div ref="ctaRef" class="endgame-cta-wrap">
@@ -641,4 +665,22 @@ onMounted(async () => {
   .pc-num--dim { font-size: 22px; }
   .winner-name { font-size: 26px; }
 }
+/* ── Analyse de la partie ── */
+.review-section {
+  width: 100%;
+  max-width: 1080px;
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  text-align: left;
+}
+
+.review-permalink {
+  align-self: flex-start;
+  font-size: 12px;
+  font-weight: 700;
+  color: #5b9ff5;
+}
+.review-permalink:hover { color: #e8e8f0; }
 </style>
