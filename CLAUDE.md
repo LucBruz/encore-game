@@ -57,6 +57,7 @@ waiting_roll → active_selecting → passive_selecting → turn_end → (next t
 - Cell placement uses pre-computed `validCombos` (set on combo confirmation) filtered via `selectableCells()` on each click
 - **Jokers are debited in `confirmPendingCells()`, not on combo confirmation.** A confirmed-then-passed combo must not burn an exclamation point. `pendingJokers` holds the committed-but-unspent amount. Event replay reconstructs `jokersUsed` from the same CONFIRM/PLACE stream, so no payload carries it.
 - Confirming a combo with no legal placement auto-passes the player (safety net); `canPlayCombo()` / `hasAnyPlayableCombo()` let the UI disable it beforehand
+- `canPlayCombo(playerId, color, count, jokersNeeded)` must be given the jokers the selected dice need. Without it, a joker die with no joker left kept "Confirmer" enabled while `confirm*Combo` refused silently — a stuck player, and every click still went out through `dispatch` into `game_events` (found by playing a real game through the UI). A refused confirmation leaves `confirmedCombo` null, so `replayDecisions` records no decision for it
 
 **`app/stores/lobbyStore.ts`** — pre-game lobby: create/join by 6-character code, ready-up flow, Supabase Realtime watching `game_players` table. Player identity persisted in `localStorage` (`encore_player_id`).
 
