@@ -71,6 +71,18 @@ waiting_roll → active_selecting → passive_selecting → turn_end → (next t
 
 Remote clients bypass store guards that check `phase` (e.g. `PASS_ACTIVE` is applied manually in `applyToStore` to avoid the `active_selecting` guard).
 
+After replaying past events, `setup()` calls `store.clearCompletionAnimations()`.
+The replay goes through the same turn actions as live play, which queue one
+colour-completion animation per completed colour, so every celebration of the
+game piled up at once — and the end-of-game screen waits for that queue to be
+empty. The colour overlay in `/game/[id]` is also **keyed per queued colour**:
+without the key, Vue reused the component for a second queued colour, its
+animation never started, `done` was never emitted, and the colour stayed queued
+forever — invisible at opacity 0, yet holding the end screen back. Both were
+found on a finished game reloaded in production. (`lastColorCompleted` is a
+getter over `completionQueue[0]`: read it on the store instance, not on
+`pinia.state`, where getters do not appear.)
+
 ### Grid data
 
 **`app/data/grids/`** — 8 official grids (`grid-01` through `grid-08`). Each grid file exports `GRID_XX_CELLS` as `[ColorKey, boolean][]` (105 entries, row-major). `grid-01.ts` also exports `COLOR_MAP`, `COLUMN_POINTS`, and `COLS` which are used app-wide.
@@ -134,6 +146,7 @@ invisible from this repo.
 - `/game/[id]` (`app/pages/game/[id].vue`) — main game view; handles page-refresh reconnection by re-fetching from Supabase if lobby state is empty
 - `/solo` (`app/pages/solo.vue`) — local game against bots. **No Supabase, no Realtime**: drives `gameStore` directly, so it works offline and needs no schema change
 - `/ia` (`app/pages/ia.vue`) — agent benchmark, read from `public/data/*.json`
+- `/review/[id]` (`app/pages/review/[id].vue`) — thin wrapper around `GameReview`, so an analysis has an address: reopen or share it after closing the game tab. The main entry point is the end-of-game screen (see "Game review UI")
 
 ### Agents (`bots/`)
 
@@ -341,3 +354,36 @@ Automated checks of the page itself are unreliable in a hidden browser tab:
 Chrome throttles timers there, so the `setTimeout(0)` yield between decisions
 stalls and the main thread stays too busy to answer injected scripts. Verify in
 Node; use the browser only for what Node cannot see.
+
+### Game review UI
+
+`app/components/review/GameReview.vue` is the whole review: a board replaying
+the player's sheet at the chosen turn (cells already checked, the move played
+ringed yellow, a defensible alternative ringed green when the move was not
+defensible), a curve of the gap to the best move with the reproach threshold, a
+move list annotated `!` best, `✓` defensible, `·` unreproached, `?` mistake,
+`??` blunder, and navigation (first/previous/next/last, arrow keys,
+previous/next mistake). There is deliberately no single accuracy score: the
+analysis does not rank near-equal players, so one percentage would overclaim.
+
+- **Entry point: "Analyser ma partie" on the end-of-game overlay**, loaded on
+  demand (`LazyGameReview`) so the rollout engine stays out of the game page
+  bundle until it is opened. This was checked on the build output, because Nuxt
+  does not fail a build over an unresolved component.
+- It runs on its **own Pinia instance**. The replay re-initialises the store it
+  is given; on the end-of-game screen the global store is the one displaying
+  scores and grids, and would have been wiped the moment an analysis started.
+- **It analyses a player's own game, never a bot** (`app/utils/reviewTarget.ts`,
+  tested). When the viewer played, there is no picker; from the end screen the
+  analysis starts immediately and opens on the first mistake. `isOwn` (the
+  viewer played) is distinct from `locked` (nothing to choose, e.g. a lone human
+  at a bot table): only `isOwn` reads "Votre partie" and autostarts, otherwise
+  the page reads "Partie de <name>".
+- Each reviewed move carries `checkedBefore`, the cells checked before it — a
+  move cannot be understood without its position.
+- The yield between decisions uses a `MessageChannel` rather than
+  `setTimeout(0)`, which Chrome throttles in background tabs.
+
+Verified on production: the end screen of a finished game after a reload, the
+analysis starting with no picker, player cards intact after a full 34-decision
+analysis, and "Partie de <name>" for a viewer who did not play.
