@@ -10,19 +10,22 @@
 
     <!-- Choix du joueur puis lancement -->
     <div v-if="phase === 'idle'" class="card">
-      <p class="label">Quel joueur analyser ?</p>
-      <div class="chips">
-        <button
-          v-for="p in players"
-          :key="p.id"
-          class="chip"
-          :class="{ 'chip--on': target === p.id }"
-          type="button"
-          @click="target = p.id"
-        >
-          {{ p.name }}
-        </button>
-      </div>
+      <template v-if="!locked">
+        <p class="label">Quel joueur analyser ?</p>
+        <div class="chips">
+          <button
+            v-for="p in choices"
+            :key="p.id"
+            class="chip"
+            :class="{ 'chip--on': target === p.id }"
+            type="button"
+            @click="target = p.id"
+          >
+            {{ p.name }}
+          </button>
+        </div>
+      </template>
+      <p v-else class="label">Votre partie</p>
       <p class="meta">
         {{ decisionCount }} décisions à analyser, environ {{ etaLabel }}.
         L'analyse déroule des centaines de parties par coup ; la page reste affichée mais
@@ -45,8 +48,8 @@
       <!-- Bilan -->
       <div class="card">
         <div class="summary-head">
-          <p class="label">{{ review.playerName }} — {{ moves.length }} décisions</p>
-          <button class="link-btn" type="button" @click="reset">Analyser un autre joueur</button>
+          <p class="label">{{ locked ? 'Votre partie' : review.playerName }} — {{ moves.length }} décisions</p>
+          <button v-if="!locked" class="link-btn" type="button" @click="reset">Analyser un autre joueur</button>
         </div>
         <div class="tally">
           <div v-for="k in CLASS_ORDER" :key="k" class="tally__item">
@@ -191,6 +194,7 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { createPinia } from 'pinia'
 import { useGameStore } from '~/stores/gameStore'
 import { COLOR_MAP } from '~/data/grids/grid-01'
+import { initialMoveIndex, pickReviewTarget } from '~/utils/reviewTarget'
 import { V3_WEIGHTS } from '~/composables/useBotPlayer'
 import { makeGreedyV3Bot } from '~~/bots/heuristicV3'
 import { reviewGameAsync } from '~~/analysis/game'
@@ -206,8 +210,17 @@ import type { Verdict } from '~~/analysis/verdict'
  */
 const props = defineProps<{
     gameId: string
-    /** Joueur preselectionne, en general le joueur local. */
+    /**
+     * Joueur local. S'il a joue cette partie, c'est la sienne qu'on analyse, sans
+     * lui proposer de choix.
+     */
     defaultPlayerId?: string
+    /**
+     * Lancer l'analyse des le chargement. Depuis l'ecran de fin, le bouton
+     * « Analyser ma partie » exprime deja l'intention : un second clic sur
+     * « Lancer l'analyse » n'apporterait rien.
+     */
+    autostart?: boolean
 }>()
 
 /**
@@ -269,6 +282,9 @@ const review = ref<GameReview | null>(null)
 const done = ref(0)
 const total = ref(0)
 const selected = ref(0)
+/** Joueurs proposables — les humains — et vrai quand il n'y a rien a choisir. */
+const choices = ref<{ id: string; name: string }[]>([])
+const locked = ref(false)
 
 /**
  * Auteur de chaque decision de la partie, releve une fois par un rejeu a vide.
@@ -402,15 +418,23 @@ onMounted(async () => {
     events.value = log as GameEvent[]
 
     // Lu apres le chargement : le joueur local peut n'etre connu qu'une fois la
-    // page montee.
-    target.value = players.value.some(p => p.id === props.defaultPlayerId)
-        ? props.defaultPlayerId!
-        : players.value[0].id
+    // page montee. On analyse la partie d'un joueur humain, jamais celle d'un
+    // bot ; et quand c'est la sienne, sans rien lui faire choisir.
+    const pick = pickReviewTarget(players.value, props.defaultPlayerId)
+    choices.value = pick.choices
+    locked.value = pick.locked
+    target.value = pick.target ?? ''
+    if (!pick.choices.length) {
+        error.value = "Aucun joueur humain dans cette partie : il n'y a rien à analyser."
+        return
+    }
 
     // Un rejeu a vide donne le nombre de decisions, donc une estimation d'attente
     // honnete avant de lancer quoi que ce soit.
     primeStore()
     decisionOwners.value = replayDecisions(store, events.value).map(d => d.playerId)
+
+    if (props.autostart && locked.value && target.value) void run()
 })
 
 async function run() {
@@ -426,7 +450,7 @@ async function run() {
             playerId: target.value,
             onProgress: (d, t) => { done.value = d; total.value = t },
         })
-        selected.value = 0
+        selected.value = initialMoveIndex(review.value.moves)
         phase.value = 'done'
     } catch (e: any) {
         error.value = `L'analyse a échoué : ${e?.message ?? e}`

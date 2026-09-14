@@ -317,7 +317,7 @@ onMounted(async () => {
         <!-- Chargement a la demande : le moteur d'analyse ne pese sur la page de
              jeu qu'une fois l'analyse ouverte. -->
         <div v-if="showReview" class="review-section">
-          <LazyGameReview :game-id="reviewGameId" :default-player-id="lobby.localPlayerId" />
+          <LazyGameReview :game-id="reviewGameId" :default-player-id="lobby.localPlayerId" autostart />
           <NuxtLink :to="`/review/${reviewGameId}`" class="review-permalink">
             Ouvrir l’analyse dans sa propre page, pour y revenir plus tard
           </NuxtLink>
