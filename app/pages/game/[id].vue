@@ -411,8 +411,11 @@ function startTimer() {
 
 watch(() => store.gameOver, (isOver) => {
   if (!isOver) return
-  // Broadcast explicite pour éviter la race condition NEXT_TURN vs CONFIRM_PLACEMENT
-  if (sync.localPlayerId.value === store.activePlayerId) {
+  // Broadcast explicite pour éviter la race condition NEXT_TURN vs CONFIRM_PLACEMENT.
+  // Pas pendant le rejeu : la fin de partie est deja dans le journal, et chaque
+  // rechargement d'une partie terminee la reecrivait (constate sur FZFS1D). Ce
+  // watcher passe avant la fin de `setup()`, donc avant `isReady`.
+  if (sync.isReady.value && sync.localPlayerId.value === store.activePlayerId) {
     sync.dispatch('GAME_OVER', {})
   }
   // Afficher "Dernier coup" aux joueurs passifs si la partie n'est pas encore terminée
@@ -447,7 +450,9 @@ watch(() => store.phase, (phase) => {
     // Auto passage au tour suivant après 1.5 secondes (joueur actif seulement)
     if (sync.localPlayerId.value === store.activePlayerId) {
       setTimeout(() => {
-        if ((store.phase as string) === 'turn_end') {
+        // Partie terminee : `nextTurn` refuse, l'evenement ne ferait que
+        // s'ajouter au journal a chaque rechargement.
+        if ((store.phase as string) === 'turn_end' && !store.gameOver) {
           handleNextTurn()
         }
       }, 1500)
