@@ -123,6 +123,33 @@ describe('combo sans placement possible (B2)', () => {
         expect(store.canPlayCombo('p1', 'g', 2)).toBe(false)
     })
 
+    /**
+     * Constate en jouant une vraie partie : jokers epuises, de joker choisi,
+     * « Confirmer » restait actif. Le store refusait, rien ne se passait, et
+     * chaque clic partait quand meme dans `game_events`.
+     */
+    it('declare injouable une combo joker quand il ne reste plus de joker', () => {
+        const { store, p1 } = setupMidGame()
+        store.rollDicesWithResult(roll(['joker', 'y', 'b'], ['joker', 2, 3]))
+        p1.jokersUsed = 8
+
+        expect(store.canPlayCombo('p1', 'g', 1)).toBe(true)
+        expect(store.canPlayCombo('p1', 'g', 1, 1)).toBe(false)
+
+        // Le store refuse bien la meme combo : l'UI et lui disent la meme chose.
+        store.confirmActiveCombo(0, 0, 'g')
+        expect(p1.confirmedCombo).toBeNull()
+    })
+
+    it('autorise un joker mais pas deux quand il en reste un', () => {
+        const { store, p1 } = setupMidGame()
+        store.rollDicesWithResult(roll(['joker', 'y', 'b'], ['joker', 2, 3]))
+        p1.jokersUsed = 7
+
+        expect(store.canPlayCombo('p1', 'g', 1, 1)).toBe(true)
+        expect(store.canPlayCombo('p1', 'g', 1, 2)).toBe(false)
+    })
+
     it('fait passer le joueur au lieu de le bloquer sans case cliquable', () => {
         const { store, p1 } = setupMidGame()
         store.rollDicesWithResult(roll(['g', 'y', 'b'], [2, 3, 4]))

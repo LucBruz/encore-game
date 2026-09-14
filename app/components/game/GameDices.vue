@@ -104,7 +104,10 @@
       </div>
 
       <!-- Pourquoi la confirmation est bloquée -->
-      <div v-if="canSelect && comboIsReady && !comboIsPlayable" class="combo-hint">
+      <div v-if="canSelect && jokersShort" class="combo-hint">
+        Plus de joker disponible : choisis un autre dé
+      </div>
+      <div v-else-if="canSelect && comboIsReady && !comboIsPlayable" class="combo-hint">
         Aucun placement possible avec cette combinaison
       </div>
       <div v-else-if="noPlayableCombo" class="combo-hint">
@@ -284,10 +287,20 @@ const resolvedCombo = computed((): { color: ColorKey; count: number } | null => 
 
 // Confirmer une combo sans placement légal enfermerait le joueur : on l'en empêche
 // en amont plutôt que de compter sur l'auto-pass du store.
+const jokersNeeded = computed(() =>
+  (selectedColorIsJoker.value ? 1 : 0) + (selectedNumberIsJoker.value ? 1 : 0)
+)
+
+// Dit tout de suite qu'un dé joker est hors de portée, sans attendre que le
+// joueur ait choisi sa couleur ou son chiffre.
+const jokersShort = computed(() =>
+  jokersNeeded.value > store.jokersAvailable(props.playerId)
+)
+
 const comboIsPlayable = computed(() => {
   const combo = resolvedCombo.value
   if (!combo) return false
-  return store.canPlayCombo(props.playerId, combo.color, combo.count)
+  return store.canPlayCombo(props.playerId, combo.color, combo.count, jokersNeeded.value)
 })
 
 // Aucune des combinaisons encore disponibles ne donne de placement : il faut passer.

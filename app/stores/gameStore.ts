@@ -225,10 +225,14 @@ export const useGameStore = defineStore('game', {
          * Cette combo donnerait-elle au moins un placement légal ?
          * Appelé AVANT confirmation pour ne pas laisser un joueur s'enfermer.
          */
-        canPlayCombo: (state) => (playerId: string, color: ColorKey, count: number): boolean => {
+        canPlayCombo: (state) => (playerId: string, color: ColorKey, count: number, jokersNeeded = 0): boolean => {
             const player = state.players.find(p => p.id === playerId)
             if (!player) return false
             if (count < 1 || count > 5) return false
+            // Meme garde que confirm*Combo. Sans elle, une combo joker sans joker
+            // restant laissait « Confirmer » actif : le store refusait en silence
+            // et le joueur recliquait sans fin.
+            if (jokersNeeded > state.grid.jokers - player.jokersUsed) return false
             return hasLegalPlacement(state.grid.cells, maskFromSet(player.checkedCells), color, count)
         },
 
