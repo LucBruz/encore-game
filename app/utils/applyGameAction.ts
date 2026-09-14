@@ -73,6 +73,22 @@ export function applyGameAction(
             // le cas reste ici pour ne pas casser le rejeu d'anciennes parties.
             break
         case 'NEXT_TURN':
+            // Journaux anterieurs a la correction de fin de tour : le tour
+            // s'achevait des que les PASSIFS avaient fini, sans attendre le
+            // placement de l'actif, et NEXT_TURN partait dans cet etat. Le store
+            // corrige n'y voit plus une fin de tour et ignorerait l'evenement :
+            // tout le reste de la partie se rejouerait alors de travers, a la
+            // reconnexion comme dans l'analyse. On accepte donc NEXT_TURN dans
+            // l'etat exact ou l'ancienne regle l'emettait. Un client a jour ne
+            // l'emet jamais la, puisqu'il attend `turn_end`.
+            if (
+                store.phase === 'passive_selecting'
+                && !store.isFirstThreeTurns
+                && store.players.every(p => p.id === store.activePlayerId || p.hasPlaced || p.hasPassed)
+            ) {
+                store.flushPendingAnimations()
+                store.phase = 'turn_end'
+            }
             store.nextTurn()
             break
         case 'GAME_OVER':

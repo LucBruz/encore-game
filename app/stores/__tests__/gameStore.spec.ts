@@ -1,6 +1,7 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { useGameStore } from '../gameStore'
+import { applyGameAction } from '~/utils/applyGameAction'
 import type { DiceColor, DiceNumber, DicesRoll } from '../gameStore'
 import { GRID_01 } from '~/data/grids/grid-01'
 import { at, makeCells } from '~~/engine/__tests__/fixtures'
@@ -200,6 +201,94 @@ describe('rejeu des evenements (multijoueur)', () => {
             return { jokersUsed: p1.jokersUsed, checked: [...p1.checkedCells].sort((a, b) => a - b) }
         }
         expect(play()).toEqual(play())
+    })
+})
+
+/**
+ * Constate sur une vraie partie contre un bot (FZFS1D) : aux tours ou l'humain
+ * est actif, le journal montre sa combo, le placement complet du bot, puis ses
+ * clics sur la grille — et NEXT_TURN, sans jamais de CONFIRM_PLACEMENT de sa part.
+ * Le tour se terminait des que le passif avait joue.
+ */
+describe('fin de tour avec un joueur actif qui n a pas encore place', () => {
+    it('ne termine pas le tour tant que le joueur actif n a ni place ni passe', () => {
+        const { store, p1 } = setupMidGame()
+        store.rollDicesWithResult(roll(['g', 'y', 'b'], [1, 2, 3]))
+        store.confirmActiveCombo(0, 0) // p1 actif : vert x1, pas encore place
+        expect(p1.confirmedCombo).not.toBeNull()
+
+        // p2, seul passif, a fini son tour (passer ou placer revient au meme ici).
+        store.passPassiveTurn('p2')
+
+        expect(p1.hasPlaced).toBe(false)
+        expect(store.phase).not.toBe('turn_end')
+    })
+
+    it('garde le coup de l actif qui place apres les passifs, puis termine le tour', () => {
+        const { store, p1 } = setupMidGame()
+        store.rollDicesWithResult(roll(['g', 'y', 'b'], [1, 2, 3]))
+        store.confirmActiveCombo(0, 0)
+        store.passPassiveTurn('p2')
+
+        store.togglePendingCell('p1', at(0, START_COL))
+        store.confirmPendingCells('p1')
+
+        expect(p1.checkedCells.has(at(0, START_COL))).toBe(true)
+        expect(store.phase).toBe('turn_end')
+    })
+
+    it('ne termine pas le tour quand l actif place avant les passifs', () => {
+        const { store } = setupMidGame()
+        store.rollDicesWithResult(roll(['g', 'y', 'b'], [1, 2, 3]))
+        store.confirmActiveCombo(0, 0)
+        store.togglePendingCell('p1', at(0, START_COL))
+        store.confirmPendingCells('p1')
+
+        expect(store.phase).toBe('passive_selecting')
+        store.passPassiveTurn('p2')
+        expect(store.phase).toBe('turn_end')
+    })
+
+    it('termine le tour quand l actif confirme sa combo puis passe', () => {
+        const { store } = setupMidGame()
+        store.rollDicesWithResult(roll(['g', 'y', 'b'], [1, 2, 3]))
+        store.confirmActiveCombo(0, 0)
+        store.passPassiveTurn('p2')
+        store.passPassiveTurn('p1')
+        expect(store.phase).toBe('turn_end')
+    })
+})
+
+/**
+ * Les journaux deja enregistres contiennent des NEXT_TURN emis par l'ancienne
+ * regle, avant le placement de l'actif. Le store corrige doit encore les
+ * rejouer, sinon toute partie anterieure se reconstruit de travers.
+ */
+describe('rejeu d un NEXT_TURN emis par l ancienne regle de fin de tour', () => {
+    it('termine le tour et valide la selection complete de l actif', () => {
+        const { store, p1 } = setupMidGame()
+        store.rollDicesWithResult(roll(['g', 'y', 'b'], [1, 2, 3]))
+        store.confirmActiveCombo(0, 0)
+        store.passPassiveTurn('p2')
+        store.togglePendingCell('p1', at(0, START_COL))
+        expect(store.phase).toBe('passive_selecting')
+
+        applyGameAction(store, 'NEXT_TURN', {})
+
+        expect(store.turnNumber).toBe(6)
+        expect(store.phase).toBe('waiting_roll')
+        expect(p1.checkedCells.has(at(0, START_COL))).toBe(true)
+    })
+
+    it('reste ignore tant qu un passif n a pas fini', () => {
+        const { store } = setupMidGame()
+        store.rollDicesWithResult(roll(['g', 'y', 'b'], [1, 2, 3]))
+        store.confirmActiveCombo(0, 0)
+
+        applyGameAction(store, 'NEXT_TURN', {})
+
+        expect(store.turnNumber).toBe(5)
+        expect(store.phase).toBe('passive_selecting')
     })
 })
 

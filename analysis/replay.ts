@@ -1,7 +1,7 @@
 import { COLS } from '../app/data/grids/grid-01'
 import { maskFromSet } from '../engine/mask'
 import { legalMoves } from '../engine/state'
-import type { Move, Sheet } from '../engine/state'
+import type { Sheet } from '../engine/state'
 import type { ColorKey } from '../engine/types'
 import { applyGameAction } from '../app/utils/applyGameAction'
 import type { GameActionType } from '../app/services/realtimeService'
@@ -162,9 +162,44 @@ export function replayDecisions(
         }
     }
 
+    const toDecision = (p: Pending): ReplayedDecision => ({
+        ...p.position,
+        played: {
+            color: p.color,
+            count: p.count,
+            jokersSpent: p.jokersSpent,
+            placement: [...p.placement],
+            colorDieIndex: p.colorDieIndex,
+            numberDieIndex: p.numberDieIndex,
+        },
+        playerId: p.playerId,
+        playerName: p.playerName,
+    })
+
     events.forEach((event, i) => {
         const type = event.event_type as GameActionType
         const payload = event.payload ?? {}
+
+        /*
+         * `nextTurn` valide une selection complete restee en attente. Les
+         * journaux anterieurs a la correction de fin de tour en sont pleins : le
+         * tour s'achevait avant que le joueur actif ait valide, et son coup n'a
+         * jamais eu de CONFIRM_PLACEMENT. Mesure sur la partie FZFS1D : presque
+         * tous les tours actifs de l'humain manquaient a l'analyse. Un coup est
+         * donc aussi clos par NEXT_TURN, s'il a effectivement ete coche.
+         */
+        if (type === 'NEXT_TURN') {
+            applyGameAction(store, type, payload)
+            for (const p of pending.values()) {
+                const player = store.players[seatOf(p.playerId)]
+                if (p.placement.length > 0 && player && p.placement.every(idx => player.checkedCells.has(idx))) {
+                    decisions.push(toDecision(p))
+                }
+            }
+            pending.clear()
+            opts.onProgress?.(i + 1, events.length)
+            return
+        }
 
         if (DECIDES.has(type)) {
             const playerId = (payload.playerId as string)
@@ -192,7 +227,8 @@ export function replayDecisions(
                 return
             }
 
-            // Un passe est une decision complete a lui seul.
+            // Un passe est une decision complete a lui seul, et clot la combo
+            // qu'il abandonne : elle ne doit pas etre comptee en plus.
             if (snap && playerId) {
                 decisions.push({
                     ...snap.position,
@@ -201,51 +237,40 @@ export function replayDecisions(
                     playerName: store.players[snap.seat].name,
                 })
             }
+            if (playerId) pending.delete(playerId)
             applyGameAction(store, type, payload)
             opts.onProgress?.(i + 1, events.length)
             return
         }
 
-        if (type === 'TOGGLE_CELL') {
+        if (type === 'TOGGLE_CELL' || type === 'CANCEL_PLACEMENT') {
+            applyGameAction(store, type, payload)
+            // La selection est relue dans le store plutot que recalculee a cote :
+            // un clic refuse (mauvaise couleur, case hors placement) n'y entre
+            // pas, et une annulation la vide sans clore le coup — le joueur peut
+            // encore choisir d'autres cases puis valider.
             const playerId = payload.playerId as string
             const p = pending.get(playerId)
-            const idx = payload.cellIdx as number
-            if (p) {
-                // Un second clic sur la meme case la deselectionne.
-                const at = p.placement.indexOf(idx)
-                if (at === -1) p.placement.push(idx); else p.placement.splice(at, 1)
-            }
-            applyGameAction(store, type, payload)
+            const player = store.players[seatOf(playerId)]
+            if (p && player) p.placement = [...player.pendingCells]
             return
         }
 
         if (type === 'CONFIRM_PLACEMENT') {
             const playerId = payload.playerId as string
             const p = pending.get(playerId)
-            if (p && p.placement.length > 0) {
-                const played: Move = {
-                    color: p.color,
-                    count: p.count,
-                    jokersSpent: p.jokersSpent,
-                    placement: [...p.placement],
-                    colorDieIndex: p.colorDieIndex,
-                    numberDieIndex: p.numberDieIndex,
-                }
-                decisions.push({
-                    ...p.position,
-                    played,
-                    playerId: p.playerId,
-                    playerName: p.playerName,
-                })
-            }
-            pending.delete(playerId)
+            // La selection est lue AVANT d'appliquer : la validation la vide.
+            const committed = p ? toDecision(p) : null
             applyGameAction(store, type, payload)
+            // Un placement refuse par le store n'est pas un coup joue.
+            const player = store.players[seatOf(playerId)]
+            if (committed && committed.played!.placement.length > 0 && player?.hasPlaced
+                && committed.played!.placement.every(idx => player.checkedCells.has(idx))) {
+                decisions.push(committed)
+                pending.delete(playerId)
+            }
             opts.onProgress?.(i + 1, events.length)
             return
-        }
-
-        if (type === 'CANCEL_PLACEMENT') {
-            pending.delete(payload.playerId as string)
         }
 
         applyGameAction(store, type, payload)

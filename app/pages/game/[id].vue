@@ -229,6 +229,7 @@ import { useLobbyStore } from '~/stores/lobbyStore'
 import { useGameSync } from '~/composables/Usegamesync'
 import { useTurnTimer } from '~/composables/Useturntimer'
 import { useBotDriver } from '~/composables/useBotDriver'
+import { isBotId } from '~/utils/botIdentity'
 import { COLOR_MAP, COLUMN_POINTS } from '~/data/grids/grid-01'
 import type { ColorKey } from '~/data/grids/grid-01'
 
@@ -356,17 +357,38 @@ function stopRollTimer() {
 
 // ── Turn timer ────────────────────────────────────────────────────────────────
 
+/**
+ * Temps ecoule pour un joueur qui n'a pas fini : une selection complete est
+ * validee plutot que perdue, sinon il passe.
+ */
+function resolveByTimer(playerId: string) {
+  const p = store.players.find(x => x.id === playerId)
+  if (!p || p.hasPlaced || p.hasPassed) return
+  if (p.confirmedCombo && p.pendingCells.length === p.confirmedCombo.count) {
+    sync.dispatch('CONFIRM_PLACEMENT', { playerId })
+    if (p.hasPlaced) return
+  }
+  // La raison voyage avec l'action : c'est elle qui permet d'afficher
+  // "temps ecoule" plutot que de laisser croire a un bug.
+  sync.dispatch('PASS_PASSIVE', { playerId, reason: 'timer' })
+}
+
 function startTimer() {
   timer.start(lobby.turnDuration, () => {
-    if (sync.localPlayerId.value !== store.activePlayerId) return
+    // Un seul client tranche l'expiration, sinon chaque action partirait en
+    // double : celui du joueur actif, ou celui de l'hote quand le joueur actif
+    // est un bot — un bot n'a pas de client, et sans cela un humain passif qui
+    // ne jouait pas figeait la partie.
+    const active = store.activePlayerId
+    const decides = sync.localPlayerId.value === active
+      || (!!active && isBotId(active) && lobby.isHost)
+    if (!decides) return
 
-    // La raison voyage avec l'action : c'est elle qui permet d'afficher
-    // "temps ecoule" plutot que de laisser croire a un bug.
     if (store.isFirstThreeTurns) {
       // Tours 1–3 : passer tous ceux qui n'ont pas joué
       store.players
         .filter(p => !p.hasPlaced && !p.hasPassed)
-        .forEach(p => sync.dispatch('PASS_PASSIVE', { playerId: p.id, reason: 'timer' }))
+        .forEach(p => resolveByTimer(p.id))
     } else if ((store.phase as string) === 'active_selecting') {
       // Seulement passer le joueur actif — les passifs jouent ensuite
       const ap = store.players.find(p => p.id === store.activePlayerId)
@@ -375,10 +397,12 @@ function startTimer() {
       }
       // NE PAS passer les joueurs passifs ici — ils auront leur propre timer
     } else if ((store.phase as string) === 'passive_selecting') {
-      // Timer passif expiré : passer tous ceux qui n'ont pas encore joué
+      // Timer passif expiré : tous ceux qui n'ont pas fini, joueur actif compris.
+      // Il a pu confirmer sa combo sans placer, et le tour l'attend désormais :
+      // l'oublier ici figerait la partie.
       store.players
-        .filter(p => p.id !== store.activePlayerId && !p.hasPlaced && !p.hasPassed)
-        .forEach(p => sync.dispatch('PASS_PASSIVE', { playerId: p.id, reason: 'timer' }))
+        .filter(p => !p.hasPlaced && !p.hasPassed)
+        .forEach(p => resolveByTimer(p.id))
     }
   })
 }

@@ -163,14 +163,18 @@ export const useGameStore = defineStore('game', {
         passivePlayers: (state): PlayerState[] =>
             state.players.filter(p => p.id !== state.activePlayerId),
 
-        allPassiveDone: (state): boolean => {
-            // Tours 1–3 : tous les joueurs jouent en parallèle → tous doivent avoir joué
-            if (state.turnNumber < 3) {
-                return state.players.every(p => p.hasPlaced || p.hasPassed)
-            }
-            const passives = state.players.filter(p => p.id !== state.activePlayerId)
-            return passives.every(p => p.hasPlaced || p.hasPassed)
-        },
+        /**
+         * Le tour se termine quand CHAQUE joueur a placé ou passé, joueur actif compris.
+         *
+         * Aux tours normaux, le joueur actif en était exclu. Or `confirmActiveCombo`
+         * bascule en passive_selecting dès la combo, AVANT son placement : le tour
+         * s'achevait donc dès que les passifs avaient fini, et `nextTurn` ne gardait
+         * les cases de l'actif que si sa sélection était déjà complète. Constaté sur
+         * une vraie partie contre un bot, qui joue en une seconde : l'humain actif
+         * perdait ses coups, et l'analyse ne les voyait pas.
+         */
+        allPlayersDone: (state): boolean =>
+            state.players.every(p => p.hasPlaced || p.hasPassed),
 
         availableForPassive(state): { colorDices: DiceColor[]; numberDices: DiceNumber[] } {
             if (!state.currentRoll) return { colorDices: [], numberDices: [] }
@@ -532,7 +536,7 @@ export const useGameStore = defineStore('game', {
                 // Passer libère les jokers engagés : rien n'a été coché.
                 player.pendingJokers = 0
             }
-            if (this.allPassiveDone) {
+            if (this.allPlayersDone) {
                 this.flushPendingAnimations()
                 this.phase = 'turn_end'
             }
@@ -615,7 +619,9 @@ export const useGameStore = defineStore('game', {
             this.checkGameOver()
 
             const isNormalActiveTurn = this.turnNumber >= 3 && player.id === this.activePlayerId
-            if (!isNormalActiveTurn && this.allPassiveDone) {
+            // Le joueur actif compte comme les autres : s'il place en dernier,
+            // c'est son placement qui clot le tour.
+            if (this.allPlayersDone) {
                 this.flushPendingAnimations()
                 this.phase = 'turn_end'
             } else if (isNormalActiveTurn) {
