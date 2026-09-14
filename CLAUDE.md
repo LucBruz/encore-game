@@ -271,6 +271,16 @@ Three things depend on that rule and changed with it:
   refused click does not count, `CANCEL_PLACEMENT` empties the selection without
   closing the move), and a pass closes the combo it abandons. Tested on the real
   events of `FZFS1D` turns 0–4 (`analysis/__tests__/fixtures-active-turn.ts`).
+  Open moves are dropped only when `NEXT_TURN` actually advanced the turn: that
+  game ends on `GAME_OVER`, `NEXT_TURN` (refused, the game is over), then the last
+  `CONFIRM_PLACEMENT` — a first version cleared them on every `NEXT_TURN` and lost
+  that move.
+
+What an old log cannot give back: under the old rule, an active move whose
+selection was still incomplete when `NEXT_TURN` arrived was **really lost in the
+game** — no cell was checked. In `FZFS1D` that is every active turn with a 3, 4
+or 5 (the automated player had clicked 2 or 3 cells), checked against the log in
+SQL. The review has nothing to judge there, and does not pretend otherwise.
 
 ### Timer logic
 - Roll timer: 15s auto-roll if active player doesn't roll
