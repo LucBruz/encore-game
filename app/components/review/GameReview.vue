@@ -675,6 +675,9 @@ function reset() {
 .mrow--on { background: rgba(245, 215, 66, 0.1); border-color: rgba(245, 215, 66, 0.45); }
 
 .mrow__turn { @apply text-xs font-black; font-family: 'Space Mono', monospace; color: #8f8fa3; }
+/* Sur le fond teinte de la ligne active, #8f8fa3 tombait a 4,34:1 — mesure en
+   production, sous le seuil de 4,5. */
+.mrow--on .mrow__turn { color: #a0a0b8; }
 .mrow__move { @apply flex items-center gap-2 font-bold truncate; }
 .mrow__loss {
   @apply text-xs font-black text-right;
