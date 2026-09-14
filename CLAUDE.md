@@ -240,12 +240,41 @@ Keep the negative results. They are measurements, not gaps.
 
 ### Key composables
 - **`Usegamesync.ts`** — multiplayer sync (see above)
-- **`Useturntimer.ts`** — countdown timer; on expiry the active player auto-passes any players who haven't acted
+- **`Useturntimer.ts`** — countdown timer; on expiry every player who hasn't finished is resolved (see "End of turn")
 - Filename convention: capitalised `Use*.ts` (non-standard; Nuxt auto-import usually expects `useX.ts`). Keep the pattern when adding new ones to match existing imports.
+
+### End of turn — every player, active included
+`confirmActiveCombo` moves to `passive_selecting` as soon as the active player
+confirms a combo, **before** they place. The turn therefore ends on
+`allPlayersDone`: every player, active included, has placed or passed.
+
+It used to exclude the active player. Found by playing a real game against a bot
+(`FZFS1D`): the bot finishes its passive move in about a second, the turn ended
+there, the active client sent `NEXT_TURN` 1.5 s later, and `nextTurn` kept the
+human's selection only if it was already complete — otherwise the move was lost.
+None of those moves had a `CONFIRM_PLACEMENT`, so the review dropped almost every
+active turn (19 decisions over 31 turns).
+
+Three things depend on that rule and changed with it:
+
+- **Timer expiry** resolves every unfinished player, active included: a complete
+  selection is validated, otherwise the player passes. When the active player is a
+  bot, the **host** decides — a bot has no client, and before this a silent passive
+  human froze the game.
+- **Old logs.** Games recorded under the old rule contain `NEXT_TURN` emitted while
+  the active player had not placed. `applyGameAction` still accepts `NEXT_TURN` in
+  exactly that state (normal turn, every *other* player done), so they replay
+  identically on reconnection and in the review. An up-to-date client never emits
+  it there, since it waits for `turn_end`.
+- **Review replay** closes a move on `NEXT_TURN` when its cells were committed,
+  reads the selection from the store rather than re-deriving it from clicks (a
+  refused click does not count, `CANCEL_PLACEMENT` empties the selection without
+  closing the move), and a pass closes the combo it abandons. Tested on the real
+  events of `FZFS1D` turns 0–4 (`analysis/__tests__/fixtures-active-turn.ts`).
 
 ### Timer logic
 - Roll timer: 15s auto-roll if active player doesn't roll
-- Turn timer: duration from `lobby.turnDuration` (default 60s); only the active player dispatches expiry actions to avoid duplicate events
+- Turn timer: duration from `lobby.turnDuration` (default 60s); a single client dispatches expiry actions to avoid duplicate events — the active player's, or the host's when the active player is a bot
 
 ### Post-game analysis (`analysis/`)
 
