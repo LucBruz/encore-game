@@ -9,7 +9,7 @@ const BOT_EASY = { id: 'bot:easy:1', name: 'Bot facile 1' }
 describe('quel joueur analyser', () => {
     it('analyse directement la partie du joueur local, sans rien lui faire choisir', () => {
         const pick = pickReviewTarget([LUC, BOT_HARD, ANNA], LUC.id)
-        expect(pick).toMatchObject({ target: LUC.id, locked: true })
+        expect(pick).toMatchObject({ target: LUC.id, locked: true, isOwn: true })
     })
 
     it('ne propose jamais un bot', () => {
@@ -25,13 +25,23 @@ describe('quel joueur analyser', () => {
 
     it('laisse choisir parmi les humains quand on n a pas joue la partie', () => {
         const pick = pickReviewTarget([LUC, ANNA, BOT_HARD], 'quelqu-un-d-autre')
-        expect(pick).toMatchObject({ target: null, locked: false })
+        expect(pick).toMatchObject({ target: null, locked: false, isOwn: false })
         expect(pick.choices).toHaveLength(2)
     })
 
     it('retient le seul humain d une table de bots', () => {
         const pick = pickReviewTarget([BOT_EASY, LUC, BOT_HARD], 'quelqu-un-d-autre')
         expect(pick).toMatchObject({ target: LUC.id, locked: true })
+    })
+
+    /**
+     * Mesure en production : sur un lien partage, la seule humaine de la table
+     * etait retenue d'office — correct — mais la page affichait « Votre partie »
+     * a quelqu'un qui n'y avait pas joue.
+     */
+    it('ne presente pas comme la sienne la partie qu on n a pas jouee', () => {
+        const pick = pickReviewTarget([BOT_EASY, LUC, BOT_HARD], 'quelqu-un-d-autre')
+        expect(pick.isOwn).toBe(false)
     })
 
     it('n a rien a analyser sans joueur humain', () => {

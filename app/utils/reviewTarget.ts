@@ -12,6 +12,12 @@ export interface ReviewTarget {
     target: string | null
     /** Vrai quand il n'y a rien a choisir. */
     locked: boolean
+    /**
+     * Vrai seulement si c'est la partie de la personne qui regarde. Distinct de
+     * `locked` : une table avec un seul humain verrouille aussi le choix, mais
+     * pour quelqu'un qui ouvre un lien partage, ce n'est pas « sa » partie.
+     */
+    isOwn: boolean
 }
 
 /**
@@ -31,12 +37,12 @@ export function pickReviewTarget(
     const choices = players.filter(p => !isBotId(p.id))
 
     if (localPlayerId && choices.some(p => p.id === localPlayerId)) {
-        return { choices, target: localPlayerId, locked: true }
+        return { choices, target: localPlayerId, locked: true, isOwn: true }
     }
     if (choices.length === 1) {
-        return { choices, target: choices[0].id, locked: true }
+        return { choices, target: choices[0].id, locked: true, isOwn: false }
     }
-    return { choices, target: null, locked: false }
+    return { choices, target: null, locked: false, isOwn: false }
 }
 
 /**

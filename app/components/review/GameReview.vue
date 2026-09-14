@@ -25,7 +25,7 @@
           </button>
         </div>
       </template>
-      <p v-else class="label">Votre partie</p>
+      <p v-else class="label">{{ isOwn ? 'Votre partie' : `Partie de ${targetName}` }}</p>
       <p class="meta">
         {{ decisionCount }} décisions à analyser, environ {{ etaLabel }}.
         L'analyse déroule des centaines de parties par coup ; la page reste affichée mais
@@ -48,7 +48,7 @@
       <!-- Bilan -->
       <div class="card">
         <div class="summary-head">
-          <p class="label">{{ locked ? 'Votre partie' : review.playerName }} — {{ moves.length }} décisions</p>
+          <p class="label">{{ isOwn ? 'Votre partie' : `Partie de ${review.playerName}` }} — {{ moves.length }} décisions</p>
           <button v-if="!locked" class="link-btn" type="button" @click="reset">Analyser un autre joueur</button>
         </div>
         <div class="tally">
@@ -128,7 +128,7 @@
 
             <div class="legend">
               <span class="legend__item"><i class="swatch swatch--checked">✕</i> déjà coché</span>
-              <span class="legend__item"><i class="swatch swatch--played" /> votre coup</span>
+              <span class="legend__item"><i class="swatch swatch--played" /> {{ isOwn ? 'votre coup' : 'coup joué' }}</span>
               <span v-if="suggestedSet.size" class="legend__item">
                 <i class="swatch swatch--suggested" /> une alternative défendable
               </span>
@@ -285,6 +285,9 @@ const selected = ref(0)
 /** Joueurs proposables — les humains — et vrai quand il n'y a rien a choisir. */
 const choices = ref<{ id: string; name: string }[]>([])
 const locked = ref(false)
+/** C'est la partie de la personne qui regarde — pas seulement un choix verrouille. */
+const isOwn = ref(false)
+const targetName = computed(() => choices.value.find(p => p.id === target.value)?.name ?? '')
 
 /**
  * Auteur de chaque decision de la partie, releve une fois par un rejeu a vide.
@@ -378,10 +381,11 @@ const description = computed(() => {
         `${possible} coup${possible > 1 ? 's' : ''} possible${possible > 1 ? 's' : ''} en plus de passer, `
         + `dont ${m.goodMoves.length} que l'analyse ne sait pas départager du meilleur.`,
     ]
-    if (m.verdict === 'excellent') parts.push("Vous avez joué celui qu'elle retient.")
-    else if (m.playedWasGood) parts.push('Votre coup en fait partie.')
+    const played = isOwn.value ? 'Votre coup' : 'Le coup joué'
+    if (m.verdict === 'excellent') parts.push("C'est celui qu'elle retient.")
+    else if (m.playedWasGood) parts.push(`${played} en fait partie.`)
     else if (!isReproached(m)) {
-        parts.push(`Votre coup n'en fait pas partie, mais l'écart (${points(m.loss)} pt) est trop faible pour être affirmé.`)
+        parts.push(`${played} n'en fait pas partie, mais l'écart (${points(m.loss)} pt) est trop faible pour être affirmé.`)
     } else {
         parts.push(`Écart estimé : ${points(m.loss)} ± ${points(m.loss95)} points.`)
     }
@@ -423,6 +427,7 @@ onMounted(async () => {
     const pick = pickReviewTarget(players.value, props.defaultPlayerId)
     choices.value = pick.choices
     locked.value = pick.locked
+    isOwn.value = pick.isOwn
     target.value = pick.target ?? ''
     if (!pick.choices.length) {
         error.value = "Aucun joueur humain dans cette partie : il n'y a rien à analyser."
@@ -434,7 +439,7 @@ onMounted(async () => {
     primeStore()
     decisionOwners.value = replayDecisions(store, events.value).map(d => d.playerId)
 
-    if (props.autostart && locked.value && target.value) void run()
+    if (props.autostart && isOwn.value && target.value) void run()
 })
 
 async function run() {
