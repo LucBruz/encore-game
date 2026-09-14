@@ -191,8 +191,17 @@
 
     <!-- Color completion -->
     <Teleport to="body">
+      <!--
+        La cle est indispensable. Sans elle, quand la file contient deux couleurs,
+        Vue reutilise le composant pour la seconde : son onMounted ne se relance
+        pas, aucune animation ne demarre, `done` n'est plus emis, et la couleur
+        reste en file pour toujours — invisible, a opacite 0, mais assez presente
+        pour bloquer l'ecran de fin. Constate en production sur une partie
+        rechargee apres la fin.
+      -->
       <ColorCompletionOverlay
         v-if="store.lastColorCompleted"
+        :key="`${store.lastColorCompleted.playerId}:${store.lastColorCompleted.color}`"
         :color="store.lastColorCompleted.color"
         :player-name="completedPlayerName"
         :status="completedBonusType"

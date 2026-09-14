@@ -721,6 +721,16 @@ export const useGameStore = defineStore('game', {
             this.completionQueue.shift()
         },
 
+        /**
+         * Oublie toutes les animations de couleur en attente. Appele apres le
+         * rejeu d'une partie a la reconnexion : sinon chaque couleur completee
+         * depuis le debut repasse en celebration.
+         */
+        clearCompletionAnimations() {
+            this.completionQueue = []
+            this.pendingColorAnimations = []
+        },
+
         resetGame() {
             this.players = this.players.map(p => createPlayer(p.id, p.name))
             this.currentPlayerIndex = 0

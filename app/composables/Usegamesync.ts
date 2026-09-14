@@ -160,6 +160,12 @@ export function useGameSync() {
         // Replay des events AVANT de rejoindre le canal
         await replayEvents(gameId)
 
+        // Le rejeu repasse par les actions de tour, qui mettent en file une
+        // animation par couleur completee : toutes les celebrations de la partie
+        // s'y accumulent d'un coup. Un joueur qui se reconnecte n'a pas a les
+        // revoir, et sur une partie terminee elles masquaient l'ecran de fin.
+        store.clearCompletionAnimations()
+
         // Rejoindre le canal
         channel.value = joinGameChannel(supabase, gameId, applyRemoteAction)
 
