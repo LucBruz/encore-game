@@ -7,6 +7,12 @@ import type { DecisionVerdict, VerdictBands } from './verdict'
 export interface ReviewedMove extends DecisionVerdict {
     playerId: string
     playerName: string
+    /**
+     * Cases deja cochees par le joueur AVANT ce coup. Sans elles, la page ne
+     * peut montrer que le coup sur une grille vide, et un coup ne se comprend
+     * pas sans sa position.
+     */
+    checkedBefore: number[]
 }
 
 export interface GameReview {
@@ -72,7 +78,12 @@ export function startReview(store: any, events: GameEvent[], opts: ReviewOptions
                 bands: opts.bands ?? DEFAULT_BANDS,
                 seed: opts.seed,
             })
-            moves.push({ ...verdict, playerId: d.playerId, playerName: d.playerName })
+
+            const mask = d.players[d.seat].sheet.mask
+            const checkedBefore: number[] = []
+            for (let c = 0; c < mask.length; c++) if (mask[c]) checkedBefore.push(c)
+
+            moves.push({ ...verdict, playerId: d.playerId, playerName: d.playerName, checkedBefore })
             opts.onProgress?.(i + 1, mine.length)
         },
         finish: () => summarise(mine[0]?.playerName ?? '', opts.playerId, moves),
@@ -84,6 +95,30 @@ export function reviewGame(store: any, events: GameEvent[], opts: ReviewOptions)
     const run = startReview(store, events, opts)
     for (let i = 0; i < run.total; i++) run.step(i)
     return run.finish()
+}
+
+/**
+ * Rend la main au navigateur, le temps qu'il redessine et traite les evenements.
+ *
+ * `setTimeout(0)` ne convient pas : dans un onglet en arriere-plan, Chrome bride
+ * les minuteries a une seconde et plus, si bien qu'une analyse lancee puis
+ * laissee de cote en changeant d'onglet devenait plusieurs fois plus lente. Un
+ * message sur un MessageChannel est une tache ordinaire, que ce bridage ne
+ * touche pas.
+ */
+function yieldToBrowser(): Promise<void> {
+    return new Promise(resolve => {
+        if (typeof MessageChannel === 'undefined') {
+            setTimeout(resolve, 0)
+            return
+        }
+        const { port1, port2 } = new MessageChannel()
+        port1.onmessage = () => {
+            port1.close()
+            resolve()
+        }
+        port2.postMessage(null)
+    })
 }
 
 /**
@@ -103,7 +138,7 @@ export async function reviewGameAsync(
     const run = startReview(store, events, opts)
     for (let i = 0; i < run.total; i++) {
         run.step(i)
-        await new Promise(resolve => setTimeout(resolve, 0))
+        await yieldToBrowser()
     }
     return run.finish()
 }
