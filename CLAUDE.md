@@ -289,13 +289,22 @@ twice before this one showed it.
 candidates add the net's top 4 to v3's top 4, and **the net plays the decider's seat in
 every rollout**, so the targets say what a move is worth to the net. 7.3k positions /
 49.5k moves, 50 min on 10 processes; fine-tuned from the contrastive net, early stopping
-kept epoch 3. `public/data/value-net-onpolicy.json` — scripts only, not loaded by the app.
+kept epoch 3. Generation: `--sample 0.3 --topK 4 --netK 4`, 80 games per shard, 10
+shards; training: `train_rollouts.py --data training/data/onpolicy --init <contrastive
+net>` with its defaults (validation shard 9, hidden 128, 20 epochs, lr 1e-3, contrast 1.0,
+absolute 0.25, seed 1). `public/data/value-net-onpolicy.json` — scripts only, not loaded by the app.
 
 - Duel, seeds 5250000: **+0.67 [+0.21, +1.12]** — 23.41 against 22.75.
 - Holdout duel, seeds 7250000: **+0.76 [+0.32, +1.20]** — 23.53 against 22.77.
-- Win rate is a **tie** in both (43.6 % vs 43.8 %, 44.0 % vs 43.6 %): the gain is
-  points, not wins. It still finishes fewer games (35 % against 50 %) and spends more
-  jokers (7.25 against 6.70).
+- Win rate is a **tie** in both (43.6 % vs 43.8 %, 44.0 % vs 43.6 %): at that table the
+  gain is points, not wins. It still finishes fewer games (35 % against 50 %) and spends
+  more jokers (7.25 against 6.70).
+- **Head to head, net × 2 against v3-multi × 2** (`--only v3-multi,reseau-score`, seeds
+  5250000): **+2.24 [+1.94, +2.54]**, 20.38 against 18.14, and **29.9 % wins per seat
+  against 20.1 %**; it finishes as many games (25.8 % vs 24.2 %). Checked because the
+  mixed table seats two agents that rarely end a game, which pays a slow player — the
+  failure this project's measurement protocol warns about. The opposite holds: the edge
+  is largest where every opponent is v3-multi.
 - Disagreements on its own games: +0.15 [−0.04, +0.35] under v3's continuation,
   **+0.11 [−0.11, +0.33] under its own** (was −0.55). Remaining weak spot: spending a
   joker where v3 does not, −0.81 [−1.59, −0.02], n = 30.
