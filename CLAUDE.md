@@ -259,17 +259,20 @@ Measured against `v3-multi`, 2000 games at a 4-agent table, paired, seats rotate
   under v3-multi with shared dice; loss on the differences *within* a position, fine-tuned
   from the first net, early stopping on validation regret. **−2.42 [−2.88, −1.96]**:
   21.60 mean / 33.0 % wins against 24.02 / 50.4 %, second of four, 7 points above
-  `greedy-cem`. `public/data/value-net-rollouts.json`. It finishes 26.5 % of games against
+  `greedy-cem`. `public/data/value-net-rollouts.json` — loaded by the scripts only, not by
+the app. It finishes 26.5 % of games against
   57.3 % and spends more jokers.
 
 Why it loses — `scripts/check-disagreements.ts`, 300 decisions where net and v3 disagree,
 each pair of moves rolled out 16 times with the same dice:
 
-| positions from | rest of the game played by | net move − v3 move |
+| positions from (`--table`) | rest of the game played by (`--continuation`) | net move − v3 move |
 |---|---|---|
-| v3 tables | v3 | +0.06 [−0.16, +0.28] |
-| the net's own games | v3 | +0.10 [−0.10, +0.30] |
-| the net's own games | **the net** (its seat) | **−0.55 [−0.81, −0.30]** |
+| 4 × v3-multi (`v3`), rollout seeds 6000000 | v3 | +0.06 [−0.16, +0.28] |
+| net + 3 × v3-multi (`net`), rollout seeds 6500000 | v3 | +0.10 [−0.10, +0.30] |
+| same, rollout seeds 6750000 | **the net** (its seat) | **−0.55 [−0.81, −0.30]** |
+
+Games come from seeds 5250000 + g × 7919 in every row; the contrastive net throughout.
 
 Same positions, same moves in the last two rows; only who plays afterwards changes. The
 net's moves are as good as v3's **if v3 plays the rest** — which is exactly what its

@@ -29,10 +29,11 @@
  * Sorties : `<out>` au format brut de `lib/valueData.ts` (slot 0 = position apres
  * le candidat), et `<out>.targets` avec, par candidat, 16 octets :
  *   f32 score moyen du joueur, f32 marge moyenne (score moins meilleur adverse),
- *   u32 identifiant de la position, u8 drapeaux (1 meilleur selon v3, 2 passe),
+ *   u32 identifiant de la position, u8 drapeaux (1 meilleur selon v3, 2 passe,
+ *   4 meilleur selon le reseau avec `--net`),
  *   u8 nombre de candidats ecrits pour cette position, u16 libre.
  */
-import { closeSync, mkdirSync, openSync, writeSync } from 'node:fs'
+import { closeSync, mkdirSync, openSync, readFileSync, writeSync } from 'node:fs'
 import { ALL_GRIDS } from '../app/data/grids/index'
 import { makeRng } from '../engine/dice'
 import { applyMove, cloneSheet } from '../engine/state'
@@ -42,6 +43,8 @@ import type { Cells } from '../engine/types'
 import { V3Scorer, makeGreedyV3Bot } from '../bots/heuristicV3'
 import { continueMultiGame, playMultiGame } from '../bots/playMulti'
 import type { DecisionObservation, MultiPlayerState } from '../bots/playMulti'
+import { gridInfo, opponentCounts, summarizeOpponents } from '../bots/valueFeatures'
+import { ValueNetEvaluator, loadValueNet, makeValueNetBot } from '../bots/valueNet'
 import { RECORD_BYTES, SEATS, encode, loadMultiWeights, makePanel } from './lib/valueData'
 
 function arg(name: string, fallback: string): string {
@@ -65,18 +68,31 @@ const OUT = arg('out', 'training/data/roll-probe.bin')
 // cibles), une interruption laisse deux fichiers de meme longueur en positions ;
 // le verifier avant de reprendre.
 const FROM = Number(arg('from', '0'))
+// Donnees SUR LA POLITIQUE DU RESEAU (`--net <json>`). Mesure qui les motive : sur les
+// parties du reseau, ses coups valent ceux de v3 quand v3 joue la suite (+0,10), et
+// -0,55 quand c'est lui (scripts/check-disagreements.ts --continuation net). Des cibles
+// deroulees sous v3 apprennent ce que vaut une position POUR v3. Avec `--net` :
+//   - positions : le reseau au siege g % 4, v3-multi aux autres, seules ses decisions ;
+//   - candidats : top TOP_K de v3, top NET_K du reseau, passe, RANDOM au hasard ;
+//   - deroulements : le reseau joue le siege du decideur, v3-multi les autres.
+// Graines a prendre hors des blocs deja servis : 5550000 (positions), 5650000 (des).
+const NET = arg('net', '')
+const NET_K = Number(arg('netK', '4'))
 const TARGET_BYTES = 16
 
 const PANEL = makePanel()
 const vMulti = loadMultiWeights()
 const rolloutBot = makeGreedyV3Bot(vMulti, 'v3-multi')
+const net = NET ? loadValueNet(JSON.parse(readFileSync(NET, 'utf8'))) : null
+const netBot = net ? makeValueNetBot(net, 'reseau') : null
+const evaluator = net ? new ValueNetEvaluator(net) : null
 
 function rollout(o: DecisionObservation, cells: Cells, move: Move | null, seed: number): [number, number] {
     const players: MultiPlayerState[] = o.players.map((p, i) => {
         const sheet = cloneSheet(p.sheet)
         if (i === o.seat && move) applyMove(sheet, move)
         return {
-            name: p.name, bot: rolloutBot, sheet,
+            name: p.name, bot: netBot && i === o.seat ? netBot : rolloutBot, sheet,
             colorBonus: { ...p.colorBonus }, columnBonus: { ...p.columnBonus },
             passes: 0, forcedPasses: 0,
         }
@@ -102,13 +118,19 @@ for (let local = FROM; local < GAMES; local++) {
     const gridIndex = g % ALL_GRIDS.length
     const cells: Cells = ALL_GRIDS[gridIndex].cells
     const stats = gridStats(cells)
-    const seating = Array.from({ length: SEATS }, (_, s) => PANEL[(g + s) % PANEL.length])
+    const netSeat = g % SEATS
+    const seating = netBot
+        ? Array.from({ length: SEATS }, (_, s) => (s === netSeat ? netBot : rolloutBot))
+        : Array.from({ length: SEATS }, (_, s) => PANEL[(g + s) % PANEL.length])
     const pick = makeRng((SEED ^ 0x5bd1e995) + g * 31)
 
     const sampled: DecisionObservation[] = []
     playMultiGame(cells, seating, makeRng(SEED + g * 7919), {
         maxTurns: MAX_TURNS,
-        observe: o => { if (o.candidates.length >= 3 && pick() < SAMPLE_RATE && sampled.length < 64) sampled.push(o) },
+        observe: o => {
+            if (netBot && o.seat !== netSeat) return
+            if (o.candidates.length >= 3 && pick() < SAMPLE_RATE && sampled.length < 64) sampled.push(o)
+        },
     })
 
     sampled.forEach((o, d) => {
@@ -117,6 +139,22 @@ for (let local = FROM; local < GAMES; local++) {
         const ranked = [...o.candidates].sort((a, b) =>
             (b ? scorer.scoreAfter(b) : scorer.value) - (a ? scorer.scoreAfter(a) : scorer.value))
         const chosen = ranked.slice(0, TOP_K)
+        let netBest: Move | null | undefined
+        if (evaluator) {
+            const info = gridInfo(cells)
+            const others = o.players.filter((_, k) => k !== o.seat).map(p => p.sheet.mask)
+            const counts = opponentCounts(others)
+            const summaries = summarizeOpponents(info, others)
+            const isActive = o.turn >= 3 && o.seat === o.turn % o.players.length
+            const value = new Map(o.candidates.map(m => {
+                const s = cloneSheet(me)
+                if (m) applyMove(s, m)
+                return [m, evaluator.evaluate(info, s.mask, s.jokersUsed, counts, summaries, o.turn, isActive, 8)[0]]
+            }))
+            const byNet = [...o.candidates].sort((a, b) => value.get(b)! - value.get(a)!)
+            netBest = byNet[0]
+            for (const m of byNet.slice(0, NET_K)) if (!chosen.includes(m)) chosen.push(m)
+        }
         if (!chosen.includes(null)) chosen.push(null)
         const rest = ranked.filter(m => !chosen.includes(m))
         for (let k = 0; k < RANDOM && rest.length; k++) chosen.push(rest.splice(Math.floor(pick() * rest.length), 1)[0])
@@ -137,7 +175,7 @@ for (let local = FROM; local < GAMES; local++) {
             targets.writeFloatLE(score / ROLLOUTS, t)
             targets.writeFloatLE(margin / ROLLOUTS, t + 4)
             targets.writeUInt32LE(group >>> 0, t + 8)
-            targets[t + 12] = (move === ranked[0] ? 1 : 0) | (move === null ? 2 : 0)
+            targets[t + 12] = (move === ranked[0] ? 1 : 0) | (move === null ? 2 : 0) | (move === netBest ? 4 : 0)
             targets[t + 13] = chosen.length
         })
         writeSync(fdRaw, raw)
