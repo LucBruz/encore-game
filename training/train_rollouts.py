@@ -178,6 +178,12 @@ def main():
     steps = args.epochs * math.ceil(train["positions"] / args.groups)
     sched = torch.optim.lr_scheduler.OneCycleLR(opt, max_lr=args.lr, total_steps=steps, pct_start=0.1)
     history = [{"epoch": 0, **start}]
+    # Arret precoce sur le regret de validation : mesure faite, avec 15 000 positions
+    # le regret descend jusqu'a l'epoque 4 puis remonte (sur-apprentissage). Choisir
+    # l'epoque sur la validation flatte le chiffre de validation lui-meme ; le juge
+    # reste le duel sur graines jamais vues.
+    snapshot = lambda: {k: v.detach().clone() for k, v in model.state_dict().items()}
+    best = {"epoch": 0, "regret": start["regretNet"], "state": snapshot()}
 
     for epoch in range(args.epochs):
         t0 = time.time()
@@ -194,9 +200,13 @@ def main():
         print(f"  epoque {epoch + 1}/{args.epochs} ({time.time() - t0:.0f} s) : "
               f"regret reseau {m['regretNet']:.3f} / v3 {m['regretV3']:.3f}, accord v3 {100 * m['agreeV3']:.1f} %, "
               f"RMSE contraste {m['rmseContrast']:.3f}, absolue {m['rmseAbs']:.3f}")
+        if m["regretNet"] < best["regret"]:
+            best = {"epoch": epoch + 1, "regret": m["regretNet"], "state": snapshot()}
 
+    model.load_state_dict(best["state"])
+    print(f"  epoque retenue : {best['epoch']} (regret de validation {best['regret']:.3f})")
     export(model, args.out, {
-        "stage": "rollouts", "init": args.init, "trainPositions": train["positions"], "trainMoves": train["records"],
+        "stage": "rollouts", "init": args.init, "bestEpoch": best["epoch"], "trainPositions": train["positions"], "trainMoves": train["records"],
         "valPositions": val["positions"], "epochs": args.epochs, "contrast": args.contrast, "absolute": args.absolute,
         "history": history,
     })
