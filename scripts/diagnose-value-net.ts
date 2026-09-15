@@ -24,11 +24,16 @@ import type { DecisionObservation } from '../bots/playMulti'
 import { gridInfo, opponentCounts, summarizeOpponents } from '../bots/valueFeatures'
 import { ValueNetEvaluator, loadValueNet } from '../bots/valueNet'
 
-const i = process.argv.indexOf('--games')
-const GAMES = i !== -1 ? Number(process.argv[i + 1]) : 40
+function arg(name: string, fallback: string): string {
+    const k = process.argv.indexOf(`--${name}`)
+    return k !== -1 && process.argv[k + 1] ? process.argv[k + 1] : fallback
+}
+const GAMES = Number(arg('games', '40'))
+const NET = arg('net', 'public/data/value-net.json')
 
 const vMulti: WeightsV3 = JSON.parse(readFileSync('public/data/tuned-weights-multi.json', 'utf8')).tuned
-const net = loadValueNet(JSON.parse(readFileSync('public/data/value-net.json', 'utf8')))
+const net = loadValueNet(JSON.parse(readFileSync(NET, 'utf8')))
+console.log(`reseau : ${NET}`)
 const evaluator = new ValueNetEvaluator(net)
 
 function ranks(xs: number[]): number[] {

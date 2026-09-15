@@ -60,6 +60,11 @@ const RANDOM = Number(arg('random', '1'))
 const SAMPLE_RATE = Number(arg('sample', '0.08'))
 const MAX_TURNS = Number(arg('maxTurns', '60'))
 const OUT = arg('out', 'training/data/roll-probe.bin')
+// Reprise d'une tranche interrompue : rejoue a partir de la partie locale FROM et
+// ecrit A LA SUITE des fichiers. Les positions etant ecrites une par une (brut puis
+// cibles), une interruption laisse deux fichiers de meme longueur en positions ;
+// le verifier avant de reprendre.
+const FROM = Number(arg('from', '0'))
 const TARGET_BYTES = 16
 
 const PANEL = makePanel()
@@ -86,13 +91,13 @@ function rollout(o: DecisionObservation, cells: Cells, move: Move | null, seed: 
 }
 
 mkdirSync(OUT.replace(/[\\/][^\\/]+$/, ''), { recursive: true })
-const fdRaw = openSync(OUT, 'w')
-const fdTargets = openSync(`${OUT}.targets`, 'w')
+const fdRaw = openSync(OUT, FROM > 0 ? 'a' : 'w')
+const fdTargets = openSync(`${OUT}.targets`, FROM > 0 ? 'a' : 'w')
 const started = Date.now()
 let positions = 0
 let records = 0
 
-for (let local = 0; local < GAMES; local++) {
+for (let local = FROM; local < GAMES; local++) {
     const g = SHARD + local * SHARDS
     const gridIndex = g % ALL_GRIDS.length
     const cells: Cells = ALL_GRIDS[gridIndex].cells
