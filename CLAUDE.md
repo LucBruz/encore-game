@@ -236,6 +236,50 @@ treats passing as "no legal move"). Adding it was worth +1.51 solo — and is ex
 sinks the agent in a real game. The multiplayer-tuned agent keeps the option but almost
 never uses it.
 
+### Value network (`bots/valueNet.ts`, `training/`)
+
+A learned afterstate value, played 1-ply (argmax over every legal move and the pass).
+Features are computed in **one** TypeScript place (`bots/valueFeatures.ts`: 735 sparse
+inputs — checked cell × colour, stars, opponents' share of each cell — and 61 dense ones);
+Python only trains on the bytes `scripts/featurize.ts` writes, so training and play cannot
+drift apart. NNUE-style accumulator in TS, parity test against PyTorch
+(`bots/__tests__/valueNet.spec.ts`). 1.6 ms per decision against 0.18 for v3. Not wired
+into the game: nothing below justifies it.
+
+Reserved seeds, never reuse them for training: 5250000 evaluation duels, 6000000 and
+6500000 disagreement checks. Training data used 5150000 (outcomes), 5350000 / 5450000
+(rollout positions / rollout dice).
+
+Measured against `v3-multi`, 2000 games at a 4-agent table, paired, seats rotated:
+
+- **Outcome regression** (final score of self-play games from a panel of v3 variants):
+  **−7.67 [−8.15, −7.19]**. `public/data/value-net.json`.
+- **Contrastive, from paired rollouts** (`scripts/gen-rollouts.ts`, `training/train_rollouts.py`):
+  16.5k positions, each candidate (v3's top 6, pass, one random move) rolled out 8 times
+  under v3-multi with shared dice; loss on the differences *within* a position, fine-tuned
+  from the first net, early stopping on validation regret. **−2.42 [−2.88, −1.96]**:
+  21.60 mean / 33.0 % wins against 24.02 / 50.4 %, second of four, 7 points above
+  `greedy-cem`. `public/data/value-net-rollouts.json`. It finishes 26.5 % of games against
+  57.3 % and spends more jokers.
+
+Why it loses — `scripts/check-disagreements.ts`, 300 decisions where net and v3 disagree,
+each pair of moves rolled out 16 times with the same dice:
+
+| positions from | rest of the game played by | net move − v3 move |
+|---|---|---|
+| v3 tables | v3 | +0.06 [−0.16, +0.28] |
+| the net's own games | v3 | +0.10 [−0.10, +0.30] |
+| the net's own games | **the net** (its seat) | **−0.55 [−0.81, −0.30]** |
+
+Same positions, same moves in the last two rows; only who plays afterwards changes. The
+net's moves are as good as v3's **if v3 plays the rest** — which is exactly what its
+training targets measured, since every rollout handed control back to v3. They are worse
+when the net has to follow them up itself, worst on joker spending (−1.12 where the net
+spends one and v3 does not) and passing (−1.61). So neither distribution shift nor a
+per-move error explains the defeat: the net prices positions for a player better than
+itself. Per-move checks under the reference policy are blind to that, and came out null
+twice before this one showed it.
+
 Keep the negative results. They are measurements, not gaps.
 
 ### Key composables

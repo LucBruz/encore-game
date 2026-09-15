@@ -20,6 +20,11 @@
  * explications restantes : positions que seul le reseau atteint, ou effet cumule
  * d'ecarts individuellement anodins.
  *
+ * `--continuation net` : la suite est jouee par le reseau pour le siege du decideur
+ * (v3 pour les autres). Un deroulement sous v3 rend la main a v3 des le coup
+ * suivant, donc il ne voit pas ce que coute le coup a une politique qui ne sait
+ * pas l'exploiter (le tempo, typiquement).
+ *
  * Graines de deroulement reservees : 6000000 + i * 104729 (table v3),
  * 6500000 + i * 104729 (table net). Parties : 5250000 + g * 7919 (evaluation).
  */
@@ -31,8 +36,8 @@ import type { Move } from '../engine/state'
 import { gridStats } from '../engine/scoring'
 import { V3Scorer, makeGreedyV3Bot } from '../bots/heuristicV3'
 import type { WeightsV3 } from '../bots/heuristicV3'
-import { playMultiGame } from '../bots/playMulti'
-import type { DecisionObservation } from '../bots/playMulti'
+import { continueMultiGame, playMultiGame } from '../bots/playMulti'
+import type { DecisionObservation, MultiPlayerState } from '../bots/playMulti'
 import type { Bot } from '../bots/types'
 import { gridInfo, opponentCounts, summarizeOpponents } from '../bots/valueFeatures'
 import { ValueNetEvaluator, loadValueNet, makeValueNetBot } from '../bots/valueNet'
@@ -47,12 +52,28 @@ const NET = arg('net', 'public/data/value-net.json')
 const ROLLOUTS = Number(arg('rollouts', '16'))
 const MAX = Number(arg('max', '300'))
 const TABLE = arg('table', 'v3') as 'v3' | 'net'
+const CONTINUATION = arg('continuation', 'v3') as 'v3' | 'net'
 
 const vMulti: WeightsV3 = JSON.parse(readFileSync('public/data/tuned-weights-multi.json', 'utf8')).tuned
 const net = loadValueNet(JSON.parse(readFileSync(NET, 'utf8')))
 const evaluator = new ValueNetEvaluator(net)
 const v3bot = makeGreedyV3Bot(vMulti, 'v3-multi')
 const SEED_BASE = TABLE === 'net' ? 6500000 : 6000000
+
+const netBot = makeValueNetBot(net, 'reseau')
+
+/** Score final du decideur apres `move`, suite jouee par le reseau pour son siege. */
+function rolloutWith(o: DecisionObservation, cells: typeof ALL_GRIDS[number]['cells'], move: Move | null, seed: number): number {
+    const players: MultiPlayerState[] = o.players.map((p, i) => {
+        const sheet = cloneSheet(p.sheet)
+        if (i === o.seat && move) applyMove(sheet, move)
+        return {
+            name: p.name, bot: i === o.seat ? netBot : v3bot, sheet,
+            colorBonus: { ...p.colorBonus }, columnBonus: { ...p.columnBonus }, passes: 0, forcedPasses: 0,
+        }
+    })
+    return continueMultiGame(cells, players, makeRng(seed), o.turn + 1, { totalJokers: 8 }).scores[o.seat]
+}
 
 const kind = (m: Move | null) => (m === null ? 'passe' : m.jokersSpent > 0 ? `joker x${m.jokersSpent}` : 'sans joker')
 const argmax = (xs: number[]) => xs.reduce((best, v, k) => (v > xs[best] ? k : best), 0)
@@ -94,12 +115,24 @@ for (let g = 0; g < GAMES; g++) {
         if (a === b) continue
 
         const netMove = o.candidates[a], v3Move = o.candidates[b]
-        const [vn, vv] = evaluateCandidates(
-            { cells: grid.cells, players: o.players, seat: o.seat, turn: o.turn, candidates: o.candidates, played: null },
-            [netMove, v3Move],
-            { rollouts: ROLLOUTS, rolloutBot: v3bot, seed: SEED_BASE + all.length * 104729 },
-        )
-        const d = mean(vn.samples.map((s, i) => s - vv.samples[i]))
+        let d: number
+        if (CONTINUATION === 'v3') {
+            const [vn, vv] = evaluateCandidates(
+                { cells: grid.cells, players: o.players, seat: o.seat, turn: o.turn, candidates: o.candidates, played: null },
+                [netMove, v3Move],
+                { rollouts: ROLLOUTS, rolloutBot: v3bot, seed: SEED_BASE + all.length * 104729 },
+            )
+            d = mean(vn.samples.map((s, i) => s - vv.samples[i]))
+        } else {
+            // Suite jouee par le reseau pour SON siege, par v3 pour les autres : le
+            // coup est juge avec la politique qui le suivra reellement en partie.
+            let sum = 0
+            for (let r = 0; r < ROLLOUTS; r++) {
+                const seed = (SEED_BASE + 250000 + all.length * 104729 + r * 7919) >>> 0
+                sum += rolloutWith(o, grid.cells, netMove, seed) - rolloutWith(o, grid.cells, v3Move, seed)
+            }
+            d = sum / ROLLOUTS
+        }
         all.push(d)
         const key = `reseau ${kind(netMove)} / v3 ${kind(v3Move)}`
         if (!byType.has(key)) byType.set(key, [])
@@ -114,7 +147,7 @@ const fmt = (xs: number[]) => {
     return `${m >= 0 ? '+' : ''}${m.toFixed(2)} [${(m - 1.96 * se).toFixed(2)}, ${(m + 1.96 * se).toFixed(2)}]`
         + `  reseau meilleur ${(100 * better / xs.length).toFixed(0)} %  (n=${xs.length})`
 }
-console.log(`reseau : ${NET}, table ${TABLE}`)
+console.log(`reseau : ${NET}, table ${TABLE}, suite jouee par ${CONTINUATION}`)
 console.log(`${all.length} desaccords sur ${decisions} decisions testees (${(100 * all.length / decisions).toFixed(0)} %), `
     + `${ROLLOUTS} deroulements apparies chacun, ${((Date.now() - started) / 1000).toFixed(0)} s`)
 console.log(`ecart moyen (coup du reseau - coup de v3), score final : ${fmt(all)}`)
