@@ -1,0 +1,45 @@
+{
+  "games": 2000,
+  "seats": 4,
+  "maxTurns": 60,
+  "meanTurns": 36,
+  "naturalEndRate": 1,
+  "agents": [
+    {
+      "name": "reseau-score",
+      "games": 2000,
+      "meanScore": 23.53,
+      "winRate": 44,
+      "endRate": 35.4,
+      "meanPasses": 4.77,
+      "meanJokers": 7.27
+    },
+    {
+      "name": "v3-multi",
+      "games": 2000,
+      "meanScore": 22.77,
+      "winRate": 43.6,
+      "endRate": 50.8,
+      "meanPasses": 4.55,
+      "meanJokers": 6.69
+    },
+    {
+      "name": "v3-sans-passe",
+      "games": 2000,
+      "meanScore": 16.95,
+      "winRate": 8.8,
+      "endRate": 10.9,
+      "meanPasses": 3.42,
+      "meanJokers": 6.38
+    },
+    {
+      "name": "greedy-cem",
+      "games": 2000,
+      "meanScore": 13.94,
+      "winRate": 3.6,
+      "endRate": 2.9,
+      "meanPasses": 3.99,
+      "meanJokers": 6.68
+    }
+  ]
+}

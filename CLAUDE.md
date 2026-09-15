@@ -244,11 +244,12 @@ inputs — checked cell × colour, stars, opponents' share of each cell — and 
 Python only trains on the bytes `scripts/featurize.ts` writes, so training and play cannot
 drift apart. NNUE-style accumulator in TS, parity test against PyTorch
 (`bots/__tests__/valueNet.spec.ts`). 1.6 ms per decision against 0.18 for v3. Not wired
-into the game: nothing below justifies it.
+into the game.
 
-Reserved seeds, never reuse them for training: 5250000 evaluation duels, 6000000 and
-6500000 disagreement checks. Training data used 5150000 (outcomes), 5350000 / 5450000
-(rollout positions / rollout dice).
+Reserved seeds, never reuse them for training: 5250000 evaluation duels, 7250000 holdout
+duel, 6000000 / 6500000 / 6750000 disagreement checks. Training data used 5150000
+(outcomes), 5350000 / 5450000 (rollout positions / dice under v3), 5550000 / 5650000
+(on-policy positions / dice).
 
 Measured against `v3-multi`, 2000 games at a 4-agent table, paired, seats rotated:
 
@@ -282,6 +283,28 @@ spends one and v3 does not) and passing (−1.61). So neither distribution shift
 per-move error explains the defeat: the net prices positions for a player better than
 itself. Per-move checks under the reference policy are blind to that, and came out null
 twice before this one showed it.
+
+**On-policy rollouts — the net beats v3-multi on mean score.** Same generator with
+`--net`: positions from the net's own games (net at one seat, v3-multi at the others),
+candidates add the net's top 4 to v3's top 4, and **the net plays the decider's seat in
+every rollout**, so the targets say what a move is worth to the net. 7.3k positions /
+49.5k moves, 50 min on 10 processes; fine-tuned from the contrastive net, early stopping
+kept epoch 3. `public/data/value-net-onpolicy.json` — scripts only, not loaded by the app.
+
+- Duel, seeds 5250000: **+0.67 [+0.21, +1.12]** — 23.41 against 22.75.
+- Holdout duel, seeds 7250000: **+0.76 [+0.32, +1.20]** — 23.53 against 22.77.
+- Win rate is a **tie** in both (43.6 % vs 43.8 %, 44.0 % vs 43.6 %): the gain is
+  points, not wins. It still finishes fewer games (35 % against 50 %) and spends more
+  jokers (7.25 against 6.70).
+- Disagreements on its own games: +0.15 [−0.04, +0.35] under v3's continuation,
+  **+0.11 [−0.11, +0.33] under its own** (was −0.55). Remaining weak spot: spending a
+  joker where v3 does not, −0.81 [−1.59, −0.02], n = 30.
+
+One step of policy iteration, measured: the defeat came from valuing positions under the
+wrong continuation, and fixing only that turned −2.42 into +0.7. Validation regret alone
+did not predict it — the retrained net's regret (1.397) was still slightly worse than
+v3's choice (1.384) on its own targets. The duel is the judge. Cost: 1.6 ms per decision
+against 0.18 for v3.
 
 Keep the negative results. They are measurements, not gaps.
 
