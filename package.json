@@ -10,18 +10,14 @@
     "postinstall": "nuxt prepare",
     "test": "vitest run",
     "test:watch": "vitest",
-    "bench": "tsx scripts/bench-placement.ts",
-    "eval": "tsx scripts/eval.ts",
-    "tune": "tsx scripts/tune.ts",
-    "tune:v2": "tsx scripts/tune-v2.ts",
-    "tune:v3": "tsx scripts/tune-v3.ts",
     "calibrate": "tsx scripts/calibrate.ts",
     "duel": "tsx scripts/duel.ts",
     "tune:multi": "tsx scripts/tune-multi.ts",
     "analyse:cost": "tsx scripts/analyse-cost.ts",
     "analyse:spread": "tsx scripts/analyse-spread.ts",
     "analyse:bands": "tsx scripts/analyse-bands.ts",
-    "analyse:horizon": "tsx scripts/analyse-horizon.ts"
+    "analyse:horizon": "tsx scripts/analyse-horizon.ts",
+    "bench:search": "tsx scripts/bench-search.ts"
   },
   "dependencies": {
     "@nuxtjs/supabase": "2.0.4",

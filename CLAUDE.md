@@ -11,15 +11,14 @@ pnpm build        # Production build
 pnpm preview      # Preview production build
 pnpm generate     # Static site generation
 pnpm test         # Run the vitest suite (engine, store, bots, bot/store integration)
-pnpm bench        # Time the placement enumerator
-pnpm eval         # Agent benchmark -> public/data/eval.json
-pnpm tune         # CEM weight optimisation -> public/data/tuned-weights.json
-pnpm tune:v2      # CEM on the 21-parameter heuristic -> public/data/tuned-weights-v2.json
-pnpm tune:v3      # CEM on the v3 heuristic -> public/data/tuned-weights-v3.json
+pnpm tune:multi   # CEM on the v3 heuristic at a real table -> public/data/tuned-weights-multi.json
 pnpm calibrate    # difficulty calibration -> public/data/difficulty.json
+pnpm duel         # paired tournament (seats, value network, search: see scripts/duel.ts)
+pnpm bench:search # time per decision of the search bot
+pnpm analyse:horizon / analyse:bands / analyse:cost / analyse:spread  # review settings
 ```
 
-`eval` and `tune` accept flags after `--`, e.g. `pnpm eval -- --games 500 --mode first`.
+Scripts accept flags after `--`, e.g. `pnpm duel -- --seats 2 --games 400`.
 
 ## Architecture Overview
 
@@ -153,13 +152,39 @@ invisible from this repo.
 
 Plain TypeScript on top of `engine/`, no Nuxt runtime. Run via `tsx`.
 
-- `heuristic.ts` — 6-parameter position evaluation. Scores **progress**, not raw score: the real score is 0 for most of a game, so a greedy choice on raw score is degenerate.
-- `heuristicV3.ts` — **the current best policy.** Features come from an experienced player, and crucially each term is **gated by turn number**: isolated-component penalties (shape), early frontier and early bonus on the extreme columns, colour value rising with the turn, joker reluctance. The two phase horizons are themselves tuned parameters, so a wrong phase intuition collapses to zero rather than being baked in. `V3Scorer` evaluates candidates by local delta; the delta is property-tested against a full recompute.
+**Cleanup (2026-09-16): only what the game uses, what maintains it, and the final AI are
+kept.** Removed, recoverable from git history before that commit: `play.ts` (single-agent
+loop), `baselines/expectimax.ts`, `baselines/montecarlo.ts`, `baselines/heuristicV2.ts`,
+the single-agent scripts (`eval.ts`, `tune.ts`, `tune-v2.ts`, `tune-v3.ts`), the broken
+`bench-placement.ts`, the intermediate networks and every duel result file under
+`public/data/`, and the network experiments' one-off tools (`gen-dataset.ts`, `train.py`,
+`check-disagreements.ts`, `diagnose-value-net.ts`, `bench-value-net.ts`). The numbers they
+produced stay below as measurements.
+
+In the game:
+
+- `heuristicV3.ts` — **the policy the game plays**, at three difficulty levels. Features come from an experienced player, and crucially each term is **gated by turn number**: isolated-component penalties (shape), early frontier and early bonus on the extreme columns, colour value rising with the turn, joker reluctance. The two phase horizons are themselves tuned parameters, so a wrong phase intuition collapses to zero rather than being baked in. `V3Scorer` evaluates candidates by local delta; the delta is property-tested against a full recompute.
 - `difficulty.ts` / `scorers.ts` — one policy degraded by a softmax temperature over per-decision z-scored values. Levels are calibrated by bisection on a target score (`scripts/calibrate.ts`), not hand-set. Softmax rather than epsilon-greedy: epsilon-greedy produces blunders, softmax produces merely sub-optimal moves, which is what a weaker human does.
-- `heuristicV2.ts` — 21-parameter version (frontier size, live colours, free value tables). `V2Scorer` aggregates the sheet once per turn and evaluates each candidate by **local delta** — a full rescan per candidate was ~25x too slow. The delta is property-tested against a full recompute.
-- `cem.ts` — cross-entropy method, shared by both tuners.
-- `basic.ts` (random, greedy), `expectimax.ts`, `montecarlo.ts` — the last two are offline probes, far too slow for the browser.
-- `play.ts` — headless single-agent game loop.
+- `playMulti.ts` — the real multiplayer loop, also used by the post-game analysis;
+  `continueMultiGame` resumes any position, mid-turn included.
+
+Maintenance of what the game uses:
+
+- `cem.ts` — cross-entropy method behind `pnpm tune:multi`.
+- `baselines/basic.ts` (random, greedy on `baselines/heuristic.ts`, the 6-parameter v1) —
+  kept because `tune-multi.ts` seats them as sparring opponents and the `analyse:*` scripts
+  use the random bot; their weights are `public/data/tuned-weights.json` and
+  `tuned-weights-v3-h50.json`.
+
+Strongest AI, not yet wired into the game:
+
+- `valueNet.ts` / `valueFeatures.ts` — the value network (`public/data/value-net-mix.json`),
+  its move ranker and the network + dice-denial bot.
+- `search.ts` — play-time search on top of the network, **the strongest bot measured**.
+- `baselines/denial.ts` — v3 + dice denial, the reference opponent of those measurements.
+
+Retraining: `gen-rollouts.ts --net` -> `featurize.ts` -> `training/train_rollouts.py`;
+evaluation: `duel.ts` (with `--from` shards and `merge-duels.ts`), `bench-search.ts`.
 
 **`app/composables/useBotPlayer.ts`** bridges engine and store: converts `checkedCells` to a mask, calls `legalMoves`, and maps the chosen move back to dice indices. Those indices are **relative to the dice list passed in** — for a passive player that is `availableForPassive`, which is what the store actions expect.
 
@@ -202,11 +227,11 @@ stalling, because the agent alone decides when the game ends — so it learned t
 `bots/playMulti.ts` implements the real game: dice denial (passive players only get the 4
 remaining dice), the game ending when the first player completes two colours, and
 first/others bonuses. **Tune and evaluate there** (`pnpm tune:multi`, `pnpm duel`).
-`scripts/tune-v3.ts` and `scripts/eval.ts` are single-agent, kept as witnesses.
+The single-agent scripts that produced the witness numbers below have been removed.
 
 ### Measured findings
 
-Numbers come from `pnpm eval` (2000 paired games, 8 grids). Comparisons are paired: at equal game index every agent sees the same dice on the same grid, and the harness reports the paired delta with a 95% interval.
+Numbers came from the single-agent `eval.ts` (2000 paired games, 8 grids; script since removed). Comparisons are paired: at equal game index every agent sees the same dice on the same grid, and the harness reports the paired delta with a 95% interval.
 
 - CEM tuning is worth **+4.39 [+4.15, +4.63]** over hand-set weights, validated on disjoint holdout seeds.
 - 2-ply expectimax: **+0.28 [-0.26, +0.82]** — not significant, for ~140x the cost. Dice are fully rerolled each turn, so one turn of lookahead adds nothing the position evaluation does not already capture.
@@ -254,17 +279,16 @@ duel, 6000000 / 6500000 / 6750000 disagreement checks. Training data used 515000
 Measured against `v3-multi`, 2000 games at a 4-agent table, paired, seats rotated:
 
 - **Outcome regression** (final score of self-play games from a panel of v3 variants):
-  **−7.67 [−8.15, −7.19]**. `public/data/value-net.json`.
+  **−7.67 [−8.15, −7.19]**. (Network and its tools removed in the cleanup.)
 - **Contrastive, from paired rollouts** (`scripts/gen-rollouts.ts`, `training/train_rollouts.py`):
   16.5k positions, each candidate (v3's top 6, pass, one random move) rolled out 8 times
   under v3-multi with shared dice; loss on the differences *within* a position, fine-tuned
   from the first net, early stopping on validation regret. **−2.42 [−2.88, −1.96]**:
   21.60 mean / 33.0 % wins against 24.02 / 50.4 %, second of four, 7 points above
-  `greedy-cem`. `public/data/value-net-rollouts.json` — loaded by the scripts only, not by
-the app. It finishes 26.5 % of games against
+  `greedy-cem`. (Network removed in the cleanup.) It finishes 26.5 % of games against
   57.3 % and spends more jokers.
 
-Why it loses — `scripts/check-disagreements.ts`, 300 decisions where net and v3 disagree,
+Why it loses — `check-disagreements.ts` (since removed), 300 decisions where net and v3 disagree,
 each pair of moves rolled out 16 times with the same dice:
 
 | positions from (`--table`) | rest of the game played by (`--continuation`) | net move − v3 move |
@@ -292,7 +316,7 @@ every rollout**, so the targets say what a move is worth to the net. 7.3k positi
 kept epoch 3. Generation: `--sample 0.3 --topK 4 --netK 4`, 80 games per shard, 10
 shards; training: `train_rollouts.py --data training/data/onpolicy --init <contrastive
 net>` with its defaults (validation shard 9, hidden 128, 20 epochs, lr 1e-3, contrast 1.0,
-absolute 0.25, seed 1). `public/data/value-net-onpolicy.json` — scripts only, not loaded by the app.
+absolute 0.25, seed 1). (Network removed in the cleanup.)
 
 - Duel, seeds 5250000: **+0.67 [+0.21, +1.12]** — 23.41 against 22.75.
 - Holdout duel, seeds 7250000: **+0.76 [+0.32, +1.20]** — 23.53 against 22.77.
@@ -324,7 +348,7 @@ and winning:
 Same weights in both rows. Maximising your own points makes a slow player who lets the
 opponent end the game; maximising the gap makes it race. Re-running the same training
 with early stopping on `margin` (epoch 4) gives **59.5 % wins, +2.19 [+1.72, +2.65]** —
-`public/data/value-net-margin.json`.
+(network removed in the cleanup; `value-net-mix.json` supersedes it).
 
 **Second on-policy round — the net beats v3-multi at every table size.** Data generated
 with the margin head playing (`gen-rollouts --net <margin net> --head margin --seats mix`),

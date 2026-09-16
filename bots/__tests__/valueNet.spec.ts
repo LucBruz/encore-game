@@ -19,7 +19,7 @@ import { ValueNetEvaluator, loadValueNet, makeValueNetBot } from '../valueNet'
  * Chemins surchargeables pour verifier un reseau d'essai :
  *   VALUE_NET=training/runs/probe/value-net.json VALUE_NET_PARITY=training/runs/probe/parity.json
  */
-const NET = process.env.VALUE_NET ?? 'public/data/value-net.json'
+const NET = process.env.VALUE_NET ?? 'public/data/value-net-mix.json'
 const PARITY = process.env.VALUE_NET_PARITY ?? 'bots/__tests__/fixtures/value-net-parity.json'
 
 function observeGame(seed: number, grid = 0): DecisionObservation[] {

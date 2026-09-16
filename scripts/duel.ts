@@ -1,8 +1,7 @@
 /**
  * Tournoi multijoueur : 4 agents a la meme table, vraie regle.
  *
- *   corepack pnpm duel
- *   corepack pnpm duel -- --games 3000
+ *   pnpm duel -- --seats 2 --seed 5250000 --valueNet public/data/value-net-mix.json --heads margin --search 4:16:4
  *
  * Pourquoi ce script existe : toute l'optimisation precedente est MONO-AGENT, et
  * le solitaire ne punit pas la temporisation — un agent qui passe souvent et
@@ -16,16 +15,13 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { ALL_GRIDS } from '../app/data/grids/index'
 import { makeRng } from '../engine/dice'
-import { makeGreedyBot } from '../bots/baselines/basic'
-import { makeGreedyV3Bot, V3Scorer } from '../bots/heuristicV3'
+import { makeGreedyV3Bot } from '../bots/heuristicV3'
 import type { WeightsV3 } from '../bots/heuristicV3'
-import { gridStats } from '../engine/scoring'
 import { playMultiGame } from '../bots/playMulti'
 import { makeDenialBot } from '../bots/baselines/denial'
 import { loadValueNet, makeValueNetBot, makeValueNetDenialBot } from '../bots/valueNet'
 import { makeSearchBot } from '../bots/search'
-import type { Bot, TurnContext } from '../bots/types'
-import type { Cells } from '../engine/types'
+import type { Bot } from '../bots/types'
 
 function arg(name: string, fallback: string): string {
     const i = process.argv.indexOf(`--${name}`)
@@ -38,58 +34,24 @@ const GAMES = Number(arg('games', '2000'))
 const FROM = Number(arg('from', '0'))
 const SEED = Number(arg('seed', '31415'))
 const MAX_TURNS = Number(arg('maxTurns', '60'))
-const OUT = arg('out', 'public/data/duel.json')
+const OUT = arg('out', 'training/runs/duel.json')
 
 const load = (p: string) => JSON.parse(readFileSync(p, 'utf8')).tuned
 
-const v3h50: WeightsV3 = load('public/data/tuned-weights-v3-h50.json')
-const v1 = load('public/data/tuned-weights.json')
-const vMulti: WeightsV3 | null = (() => { try { return load('public/data/tuned-weights-multi.json') } catch { return null } })()
+// La reference : l'heuristique v3 reglee en partie multijoueur, celle du jeu.
+const vMulti: WeightsV3 = load('public/data/tuned-weights-multi.json')
+const bots: Bot[] = [makeGreedyV3Bot(vMulti, 'v3-multi')]
 
-/** Meme evaluation, mais le passe volontaire est interdit. */
-function makeV3NoPass(w: WeightsV3, name: string): Bot {
-    const cache = new WeakMap<object, any>()
-    const statsFor = (cells: Cells) => {
-        const k = cells as unknown as object
-        let s = cache.get(k); if (!s) { s = gridStats(cells); cache.set(k, s) }
-        return s
-    }
-    return {
-        name,
-        chooseMove({ cells, sheet, moves, totalJokers, turn }: TurnContext) {
-            if (moves.length === 0) return null
-            const sc = new V3Scorer(cells, sheet.mask, sheet.jokersUsed, statsFor(cells), w, totalJokers, turn)
-            let best = moves[0], bestV = -Infinity
-            for (const m of moves) { const v = sc.scoreAfter(m); if (v > bestV) { bestV = v; best = m } }
-            return best
-        },
-    }
-}
-
-const bots: Bot[] = [
-    // 1. Le parametrage actuel : thesaurise les jokers, passe volontiers.
-    makeGreedyV3Bot(v3h50, 'v3-thesauriseur'),
-    // 2. Memes poids, mais interdiction de passer volontairement.
-    makeV3NoPass(v3h50, 'v3-sans-passe'),
-    // 3. Memes poids, joker bon marche : il le depense au lieu de passer.
-    makeGreedyV3Bot({ ...v3h50, jokerValue: 1.5 }, 'v3-joker-1.5'),
-    // 4. Le champion precedent, sans aucune notion de forme ni de tour.
-    makeGreedyBot(v1, 'greedy-cem'),
-]
-
-// 5. Optimise directement en partie a 4 : il remplace le thesauriseur, qui n'a
-// plus d'interet que comme temoin de ce que produit un cadrage solitaire.
-if (vMulti) bots.push(makeGreedyV3Bot(vMulti, 'v3-multi'))
-
-// Variantes conscientes du deni de des : memes poids, seul le prix du service
-// rendu aux adversaires change. denialWeight = 0 serait l'agent de base.
-const DENIALS = arg('denials', '0.3,0.8').split(',').map(Number).filter(x => x > 0)
-if (vMulti) for (const w of DENIALS) {
+// Meme heuristique + deni de des (`bots/baselines/denial.ts`) : l'adversaire de
+// reference des mesures du reseau, parce qu'il partage son objectif (regarder ce
+// qu'un coup laisse aux autres).  --denials 0.8
+const DENIALS = arg('denials', '0.8').split(',').map(Number).filter(x => x > 0)
+for (const w of DENIALS) {
     bots.push(makeDenialBot({ weights: vMulti, denialWeight: w, name: `deni-${w}` }))
 }
 
-// Reseaux de valeur (`training/train.py`), une entree par chemin et par tete.
-//   --valueNet public/data/value-net.json --heads score,margin
+// Reseaux de valeur (`training/train_rollouts.py`), une entree par chemin et par tete.
+//   --valueNet public/data/value-net-mix.json --heads margin
 // A mesurer sur des graines jamais vues a l'entrainement : --seed 5250000.
 const VALUE_NETS = arg('valueNet', '').split(',').filter(Boolean)
 const HEADS = arg('heads', 'score').split(',').filter(Boolean) as ('score' | 'margin')[]
@@ -107,7 +69,6 @@ for (const path of VALUE_NETS) {
     // -> recherche-k4-r16-h4, recherche-k4-r16-h4-d1. Adversaires simules par v3-multi.
     for (const spec of SEARCHES) {
         const [topK, rollouts, horizon, denialWeight = 0] = spec.split(':').map(Number)
-        if (!vMulti) throw new Error('--search demande public/data/tuned-weights-multi.json')
         const name = `recherche-k${topK}-r${rollouts}-h${horizon}${denialWeight ? `-d${denialWeight}` : ''}`
         bots.push(makeSearchBot(net, {
             topK, rollouts, horizon, denialWeight, name,

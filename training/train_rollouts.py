@@ -2,7 +2,8 @@
 Reseau de valeur, etape 2 : apprendre a COMPARER les coups d'une meme position.
 
     training/.venv/Scripts/python.exe training/train_rollouts.py \
-        --init public/data/value-net.json --out training/runs/rollouts/value-net.json
+        --data training/data/<round> --init public/data/value-net-mix.json --head margin \
+        --out training/runs/<round>/value-net.json
 
 Donnees : `scripts/gen-rollouts.ts` (plusieurs coups par position, chacun evalue
 par deroulements apparies sous v3-multi) passees par `scripts/featurize.ts`
@@ -142,7 +143,7 @@ def main():
     p = argparse.ArgumentParser()
     p.add_argument("--data", default="training/data")
     p.add_argument("--val-shards", default="9")
-    p.add_argument("--init", default="public/data/value-net.json")
+    p.add_argument("--init", default="public/data/value-net-mix.json")
     p.add_argument("--hidden", type=int, default=128)
     p.add_argument("--epochs", type=int, default=20)
     p.add_argument("--groups", type=int, default=512, help="positions par lot")
