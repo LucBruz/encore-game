@@ -439,6 +439,8 @@ games, seeds 5250000:
 | search bot | opponent | wins | paired score gap |
 |---|---|---|---|
 | search | `deni-0.8` | **74.8 %** (75.1 shared) | +7.18 [+6.11, +8.25] |
+| search, **3 seats** | `deni-0.8` | **53.2 % per seat** (parity 33 %), 13.4 % for it | +6.48 [+5.68, +7.27] |
+| search, **4 seats**, 2 of each | `deni-0.8` | **40.8 % per seat** (parity 25 %), 9.2 % for it | +5.73 [+5.09, +6.37] |
 | search + denial 1 | `deni-0.8` | 71.5 % (72.1 shared) | +6.20 [+5.12, +7.28] |
 | search + denial 1 | network + denial 1 | 61.8 % (62.0 shared) | +2.51 [+1.46, +3.56] |
 
@@ -447,7 +449,8 @@ games, seeds 5250000:
 already plays out the rest of the current turn with the dice it leaves, so the opponent's
 use of them is simulated rather than estimated; charging a denial penalty on top counts it
 twice, and per-dice-pair shortlisting fills the top 4 with the same placement on different
-pairs. Search alone is the strongest bot measured.
+pairs. Search alone is the strongest bot measured, at every table size (the 3- and 4-seat
+rows are 402 games each, 6 shards of 67).
 
 `ctx.table.players` is the game loop's live array, not a copy: `makeSearchBot` clones before
 simulating, and any bot reading it must do the same.

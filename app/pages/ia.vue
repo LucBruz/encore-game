@@ -308,6 +308,9 @@
         elle savait exactement comment il répondrait. Les autres lignes sont contre des
         adversaires qu'elle ne modélise pas, et c'est elles qu'il faut retenir.
         <br><br>
+        À 3 et 4 joueurs, la parité serait de 33 % et 25 % par siège : la recherche en fait
+        53 % et 41 %, le même réseau n'extrapole plus selon la taille de table.
+        <br><br>
         Temps mesuré : 0,55 s par coup en moyenne en tête-à-tête, 1,0 s au pire ; 0,7 s et
         1,4 s à 4 joueurs. Une recherche plus large (6 coups, 32 simulations, 6 tours)
         atteignait 4,9 s : trop lente.
@@ -410,6 +413,8 @@ const DENIAL_NET = [
 /** Recherche 4 coups x 16 simulations x 4 tours, adversaires simules par v3-multi. */
 const SEARCH_RESULTS = [
   { label: 'deni', opponent: 'deni-0.8', table: '2 joueurs', win: '74,8 %', delta: '+7,18 [6,11 ; 8,25]', games: 400, caveat: false },
+  { label: 'deni-3', opponent: 'deni-0.8', table: '3 joueurs', win: '53,2 % / siège', delta: '+6,48 [5,68 ; 7,27]', games: 402, caveat: false },
+  { label: 'deni-4', opponent: 'deni-0.8', table: '4 joueurs, 2 de chaque', win: '40,8 % / siège', delta: '+5,73 [5,09 ; 6,37]', games: 402, caveat: false },
   { label: 'net-deni', opponent: 'réseau + déni', table: '2 joueurs', win: '61,8 %', delta: '+2,51 [1,46 ; 3,56]', games: 400, caveat: false },
   { label: 'v3', opponent: 'v3-multi', table: '2 joueurs', win: '84,0 %', delta: '+10,96 [9,87 ; 12,05]', games: 400, caveat: true },
 ]
