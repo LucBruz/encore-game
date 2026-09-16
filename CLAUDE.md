@@ -326,6 +326,25 @@ opponent end the game; maximising the gap makes it race. Re-running the same tra
 with early stopping on `margin` (epoch 4) gives **59.5 % wins, +2.19 [+1.72, +2.65]** —
 `public/data/value-net-margin.json`.
 
+**Second on-policy round — the net beats v3-multi at every table size.** Data generated
+with the margin head playing (`gen-rollouts --net <margin net> --head margin --seats mix`),
+8.7k positions split evenly over 2, 3 and 4 seats, the net playing the decider's seat in
+every rollout; fine-tuned from the margin-selected net, early stopping on `margin`
+(epoch 5). `public/data/value-net-mix.json`. This is the first round whose validation
+regret beats v3's choice on its own targets (2.00 against 2.23).
+
+| table | net wins | v3-multi | parity | paired score gap |
+|---|---|---|---|---|
+| 2 seats, seeds 5250000 | **63.7 %** | 36.3 % | 50 % | +3.24 [+2.78, +3.70] |
+| 2 seats, seeds 7250000 | **63.0 %** | 37.0 % | 50 % | +2.89 [+2.42, +3.36] |
+| 3 seats | 43.0 % per seat | 23.6 % | 33 % | +2.95 [+2.57, +3.32] |
+| 4 seats, net × 2 | 33.5 % per seat | 16.6 % | 25 % | +2.81 [+2.52, +3.10] |
+| 4 seats, mixed table | **51.8 %** | 35.0 % | 25 % | +2.16 [+1.69, +2.63] |
+
+2000 games per row, seats rotated, ties shared (3–7 % of games). It now **ends** more
+games than v3 everywhere (69.7 % against 30.4 head to head), the opposite of the score
+head's failing, and still spends more jokers (6.9 against 5.0) — it buys tempo with them.
+
 **Table size is a network input, so a net trained at one size extrapolates at another.**
 Every position generated before this came from a 4-seat table: `n` is byte 1 of every
 feature record, `opponentCounts` can only reach 3, and `denseFeatures` sorts opponents

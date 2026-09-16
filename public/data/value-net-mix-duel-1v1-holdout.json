@@ -1,0 +1,30 @@
+{
+  "games": 2000,
+  "seats": 2,
+  "maxTurns": 60,
+  "meanTurns": 31.9,
+  "naturalEndRate": 1,
+  "tieRate": 0.036,
+  "agents": [
+    {
+      "name": "reseau-margin",
+      "games": 2000,
+      "meanScore": 26.41,
+      "winRate": 63,
+      "winShare": 62.5,
+      "endRate": 69.5,
+      "meanPasses": 1.95,
+      "meanJokers": 6.88
+    },
+    {
+      "name": "v3-multi",
+      "games": 2000,
+      "meanScore": 23.52,
+      "winRate": 37,
+      "winShare": 37.5,
+      "endRate": 30.4,
+      "meanPasses": 1.97,
+      "meanJokers": 5.02
+    }
+  ]
+}
