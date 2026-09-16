@@ -145,7 +145,7 @@ invisible from this repo.
 - `/` (`app/pages/index.vue`) — home: create or join a game, and the lobby. The host can add bots there (see "Bots in multiplayer")
 - `/game/[id]` (`app/pages/game/[id].vue`) — main game view; handles page-refresh reconnection by re-fetching from Supabase if lobby state is empty
 - `/solo` (`app/pages/solo.vue`) — local game against bots. **No Supabase, no Realtime**: drives `gameStore` directly, so it works offline and needs no schema change
-- `/ia` (`app/pages/ia.vue`) — agent benchmark, read from `public/data/*.json`
+- `/ia` (`app/pages/ia.vue`) — the agents page: ranking, the heuristic, the value network's corrections, dice denial and search. Measured numbers are written in the page (the result files were removed); it only fetches `difficulty.json` and `tuned-weights-multi.json`
 - `/review/[id]` (`app/pages/review/[id].vue`) — thin wrapper around `GameReview`, so an analysis has an address: reopen or share it after closing the game tab. The main entry point is the end-of-game screen (see "Game review UI")
 
 ### Agents (`bots/`)
