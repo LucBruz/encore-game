@@ -364,6 +364,52 @@ every table size, and is level with the best heuristic variant that shares its o
 Its targets were rolled out against `v3-multi` opponents — training against `deni-0.8`
 is the obvious next round, and has not been done.
 
+**Adding dice denial to the network — the two gains add up.** The network scores the
+sheet after a move, so it cannot see which dice a move leaves the opponents: `legalMoves`
+merges dice pairs that are equivalent for the player. `makeValueNetDenialBot`
+(`bots/valueNet.ts`) enumerates per dice pair when active and subtracts what the remaining
+dice offer the opponents at best, **valued by the same network from their seat and on the
+same head**, so both terms are in points. Head to head, 2000 games, seeds 5250000,
+`public/data/value-net-mix.json`:
+
+| denial weight | wins vs `v3-multi` | paired score gap |
+|---|---|---|
+| 0 (network alone) | 63.7 % | +3.24 |
+| 0.5 | 71.5 % | +5.53 [+5.08, +5.99] |
+| **1** | **73.4 %** (73.0 shared) | **+6.00 [+5.53, +6.46]** |
+| 2 | 66.6 % | +4.30 [+3.82, +4.78] |
+
+The optimum sits at 1, which is what the margin head predicts at 2 players: what the
+opponent gains, I lose. Against `deni-0.8` — the heuristic the network alone could not beat
+(49.3 %) — it now wins **55.4 %** (55.2 shared), +1.05 [+0.55, +1.55]. About 12 min for
+2000 games, so a few ms per decision. **Not yet measured at 3 and 4 seats**: those runs
+were stopped before finishing.
+
+**Play-time search — 84 % head to head, with a caveat on the opponent model.** The game
+allows up to 3 s per move, against 1.6 ms for the network. `makeSearchBot`
+(`bots/search.ts`) shortlists the network's top 4 moves, plays each forward with 16
+simulations sharing the same dice, 4 turns beyond the current one (rest of the current turn
+included, through `continueMultiGame`'s `resume`), the network at its own seat and
+`v3-multi` as the model of the opponents, then lets the network estimate the final margin
+of the position reached — or takes the real margin if the game ended. Bots now receive
+`ctx.table` (sheets and claimed bonuses), which the simulation needs to score an ending.
+The simulations use their own rng: `ctx.rng` is the game's, and drawing from it would
+change the real dice.
+
+- Time per decision (`scripts/bench-search.ts`, other jobs running): 553 ms mean, 1.0 s worst
+  head to head; 702 ms mean, 1.4 s worst at 4 seats. 6 x 32 x 6 reached 4.9 s: too slow.
+- Head to head against `v3-multi`, 400 games (8 shards merged), seeds 5250000:
+  **84.0 % wins** (83.8 shared), 31.13 against 20.16, **+10.96 [+9.87, +12.05]**.
+
+**Caveat, not yet checked:** the opponent model inside the simulations *is* `v3-multi`, the
+opponent of that duel. The search knew exactly how its opponent would play, which no real
+game offers. The number that matters is against an opponent it does not model — `deni-0.8`,
+or the network itself — and it has not been run. Neither has search combined with denial.
+
+Duels of slow bots run in parallel shards: `duel.ts --from <first game> --games <n>` plays one
+slice of the same tournament and writes raw counts and per-game scores;
+`scripts/merge-duels.ts` combines them, checked identical to a single run.
+
 **Table size is a network input, so a net trained at one size extrapolates at another.**
 Every position generated before this came from a 4-seat table: `n` is byte 1 of every
 feature record, `opponentCounts` can only reach 3, and `denseFeatures` sorts opponents
