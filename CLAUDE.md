@@ -309,6 +309,31 @@ absolute 0.25, seed 1). `public/data/value-net-onpolicy.json` — scripts only, 
   **+0.11 [−0.11, +0.33] under its own** (was −0.55). Remaining weak spot: spending a
   joker where v3 does not, −0.81 [−1.59, −0.02], n = 30.
 
+**The head decides the policy, and it is worth more than any retraining so far.** The net
+has two outputs, `score` (own final score) and `margin` (own score minus the best
+opponent's); both are trained by the same loss, and `--head` only picks which one early
+stopping watches. Playing `margin` instead of `score` changes which move is chosen, and
+head to head (2 seats, 2000 games, seeds 5250000) that is the difference between losing
+and winning:
+
+| played head | mean score | wins | games it ends |
+|---|---|---|---|
+| `score` | 28.66 vs 30.04 | **45.0 %** | 31.1 % vs 68.8 % |
+| `margin` | 26.42 vs 24.66 | **58.0 %** | 62.3 % vs 37.7 % |
+
+Same weights in both rows. Maximising your own points makes a slow player who lets the
+opponent end the game; maximising the gap makes it race. Re-running the same training
+with early stopping on `margin` (epoch 4) gives **59.5 % wins, +2.19 [+1.72, +2.65]** —
+`public/data/value-net-margin.json`.
+
+**Table size is a network input, so a net trained at one size extrapolates at another.**
+Every position generated before this came from a 4-seat table: `n` is byte 1 of every
+feature record, `opponentCounts` can only reach 3, and `denseFeatures` sorts opponents
+into `MAX_OPPONENTS = 3` slots, padding the missing ones with values no training record
+ever contained. That is why the same net wins the 4-seat table and loses 1v1 with the
+score head. `gen-rollouts --seats mix` (2/3/4 alternating) and `duel --seats` exist for
+this; always report the table size beside a win rate.
+
 One step of policy iteration, measured: the defeat came from valuing positions under the
 wrong continuation, and fixing only that turned −2.42 into +0.7. Validation regret alone
 did not predict it — the retrained net's regret (1.397) was still slightly worse than
