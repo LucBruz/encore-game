@@ -1,6 +1,13 @@
 import type { Rng, Roll } from '../engine/dice'
 import type { Move, Sheet } from '../engine/state'
-import type { Cells } from '../engine/types'
+import type { Cells, ColorKey } from '../engine/types'
+
+/** Ce qu'un joueur a sur la table : sa feuille et les bonus deja reclames. Public. */
+export interface TablePlayer {
+    sheet: Sheet
+    colorBonus: Partial<Record<ColorKey, 'first' | 'others'>>
+    columnBonus: Record<number, 'first' | 'others'>
+}
 
 export interface TurnContext {
     cells: Cells
@@ -18,6 +25,12 @@ export interface TurnContext {
     fullRoll?: Roll
     /** Feuilles adverses. Publiques dans le vrai jeu, donc utilisables. */
     opponents?: Sheet[]
+    /**
+     * Toute la table, bonus compris, et le siege du joueur. Necessaire a un bot qui
+     * simule la suite : le score final depend de qui a reclame quoi en premier, ce
+     * que les feuilles seules ne disent pas. A ne pas modifier.
+     */
+    table?: { seat: number; players: readonly TablePlayer[] }
 }
 
 export interface Bot {

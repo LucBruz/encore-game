@@ -22,7 +22,8 @@ import type { WeightsV3 } from '../bots/heuristicV3'
 import { gridStats } from '../engine/scoring'
 import { playMultiGame } from '../bots/playMulti'
 import { makeDenialBot } from '../bots/baselines/denial'
-import { loadValueNet, makeValueNetBot } from '../bots/valueNet'
+import { loadValueNet, makeValueNetBot, makeValueNetDenialBot } from '../bots/valueNet'
+import { makeSearchBot } from '../bots/search'
 import type { Bot, TurnContext } from '../bots/types'
 import type { Cells } from '../engine/types'
 
@@ -32,6 +33,9 @@ function arg(name: string, fallback: string): string {
 }
 
 const GAMES = Number(arg('games', '2000'))
+// Tranche d'un tournoi plus long : parties FROM .. FROM + GAMES - 1, memes des et meme
+// rotation que dans le tournoi entier. Fusion : scripts/merge-duels.ts.
+const FROM = Number(arg('from', '0'))
 const SEED = Number(arg('seed', '31415'))
 const MAX_TURNS = Number(arg('maxTurns', '60'))
 const OUT = arg('out', 'public/data/duel.json')
@@ -89,10 +93,27 @@ if (vMulti) for (const w of DENIALS) {
 // A mesurer sur des graines jamais vues a l'entrainement : --seed 5250000.
 const VALUE_NETS = arg('valueNet', '').split(',').filter(Boolean)
 const HEADS = arg('heads', 'score').split(',').filter(Boolean) as ('score' | 'margin')[]
+const NET_DENIALS = arg('netDenials', '').split(',').map(Number).filter(x => x > 0)
+const SEARCHES = arg('search', '').split(',').filter(Boolean)
 for (const path of VALUE_NETS) {
     const net = loadValueNet(JSON.parse(readFileSync(path, 'utf8')))
     const label = VALUE_NETS.length > 1 ? path.replace(/^.*[\\/]/, '').replace(/\.json$/, '') : 'reseau'
     for (const head of HEADS) bots.push(makeValueNetBot(net, `${label}-${head}`, head))
+    // Reseau + deni de des :  --netDenials 0.5,1  ->  reseau-margin-deni-0.5, ...
+    for (const w of NET_DENIALS) for (const head of HEADS) {
+        bots.push(makeValueNetDenialBot(net, { head, denialWeight: w, name: `${label}-${head}-deni-${w}` }))
+    }
+    // Recherche au moment de jouer :  --search 4:16:4,4:16:4:1  (candidats:simulations:tours[:deni])
+    // -> recherche-k4-r16-h4, recherche-k4-r16-h4-d1. Adversaires simules par v3-multi.
+    for (const spec of SEARCHES) {
+        const [topK, rollouts, horizon, denialWeight = 0] = spec.split(':').map(Number)
+        if (!vMulti) throw new Error('--search demande public/data/tuned-weights-multi.json')
+        const name = `recherche-k${topK}-r${rollouts}-h${horizon}${denialWeight ? `-d${denialWeight}` : ''}`
+        bots.push(makeSearchBot(net, {
+            topK, rollouts, horizon, denialWeight, name,
+            opponentBot: makeGreedyV3Bot(vMulti, 'v3-multi-modele'),
+        }))
+    }
 }
 
 // Table restreinte, pour que deux agents se croisent a chaque partie et que
@@ -123,7 +144,7 @@ const scoreByGame: (number | null)[][] = bots.map(() => [])
 let totalTurns = 0
 let natural = 0
 
-for (let g = 0; g < GAMES; g++) {
+for (let g = FROM; g < FROM + GAMES; g++) {
     const grid = ALL_GRIDS[g % ALL_GRIDS.length]
 
     // Table de 4 tiree parmi B agents, en rotation : sur B parties consecutives
@@ -142,7 +163,7 @@ for (let g = 0; g < GAMES; g++) {
     seating.forEach((botIdx, seat) => {
         gameSum[botIdx] += r.scores[seat]
         gameSeats[botIdx]++
-        scoreByGame[botIdx][g] = gameSum[botIdx] / gameSeats[botIdx]
+        scoreByGame[botIdx][g - FROM] = gameSum[botIdx] / gameSeats[botIdx]
         totals[botIdx] += r.scores[seat]
         played[botIdx]++
         passes[botIdx] += r.passes[seat]
@@ -213,7 +234,15 @@ for (const i of order) {
 
 mkdirSync(OUT.replace(/\/[^/]+$/, ''), { recursive: true })
 writeFileSync(OUT, JSON.stringify({
-    games: GAMES, seats: SEATS, maxTurns: MAX_TURNS,
+    games: GAMES, from: FROM, seed: SEED, seats: SEATS, maxTurns: MAX_TURNS,
+    // Comptes bruts et scores partie par partie : de quoi fusionner des tranches.
+    raw: {
+        totalTurns, natural, tiedGames,
+        agents: bots.map((b, i) => ({
+            name: b.name, totals: totals[i], played: played[i], wins: wins[i], shares: shares[i],
+            ends: ends[i], passes: passes[i], jokers: jokers[i], perGame: scoreByGame[i],
+        })),
+    },
     meanTurns: +(totalTurns / GAMES).toFixed(1),
     naturalEndRate: +(natural / GAMES).toFixed(3),
     tieRate: +(tiedGames / GAMES).toFixed(3),

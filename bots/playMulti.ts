@@ -60,7 +60,7 @@ function scorePlayer(cells: Cells, p: MultiPlayerState, totalJokers: number): nu
 }
 
 /** Retire du lancer la paire de des mise de cote par le joueur actif. */
-function removeChosenDice(roll: Roll, move: Move): Roll {
+export function removeChosenDice(roll: Roll, move: Move): Roll {
     return {
         colors: roll.colors.filter((_, i) => i !== move.colorDieIndex),
         numbers: roll.numbers.filter((_, i) => i !== move.numberDieIndex),
@@ -95,6 +95,15 @@ export interface MultiOptions {
      * feuilles par decision, d'ou l'option : une partie normale ne le paie pas.
      */
     observe?: (observation: DecisionObservation) => void
+    /**
+     * Reprise AU MILIEU du tour `startTurn`, pour un bot qui simule la suite d'un coup
+     * qu'il envisage : `roll` est le lancer de ce tour (aucun tirage), `played` le
+     * nombre de joueurs de l'ordre du tour qui ont deja joue, `poolForPassives` les des
+     * qu'auront les passifs restants. Les bonus du tour sont resolus pour TOUS les
+     * joueurs a la fin, comme d'habitude : ceux qui ont joue avant la reprise n'ont
+     * encore rien reclame.
+     */
+    resume?: { roll: Roll; played: number; poolForPassives: Roll }
 }
 
 export function playMultiGame(
@@ -143,7 +152,8 @@ export function continueMultiGame(
 
     for (; turn < maxTurns; turn++) {
         const activeIndex = turn % players.length
-        const roll = rollDice(rng)
+        const resuming = opts.resume && turn === startTurn ? opts.resume : null
+        const roll = resuming ? resuming.roll : rollDice(rng)
 
         // Snapshot AVANT le tour : qui avait deja reclame quoi. Deux joueurs qui
         // completent la meme colonne au meme tour ne peuvent pas etre "premier"
@@ -162,9 +172,9 @@ export function continueMultiGame(
             ? players.map((_, i) => i)
             : [activeIndex, ...players.map((_, i) => i).filter(i => i !== activeIndex)]
 
-        let poolForPassives: Roll = roll
+        let poolForPassives: Roll = resuming ? resuming.poolForPassives : roll
 
-        for (const idx of order) {
+        for (const idx of resuming ? order.slice(resuming.played) : order) {
             const p = players[idx]
             const pool = (simultaneous || idx === activeIndex) ? roll : poolForPassives
             const moves = legalMoves(cells, p.sheet, pool, { totalJokers })
@@ -178,6 +188,7 @@ export function continueMultiGame(
                     isActive,
                     fullRoll: pool,
                     opponents: players.filter((_, i) => i !== idx).map(o => o.sheet),
+                    table: { seat: idx, players },
                 })
 
             if (opts.observe) {

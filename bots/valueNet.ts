@@ -1,5 +1,7 @@
+import type { Roll } from '../engine/dice'
 import { CELL_COUNT } from '../engine/grid'
-import type { Move } from '../engine/state'
+import { legalMoves, legalMovesByDicePair } from '../engine/state'
+import type { Move, Sheet } from '../engine/state'
 import type { CheckedMask } from '../engine/types'
 import type { Bot, TurnContext } from './types'
 import {
@@ -161,6 +163,131 @@ export function makeValueNetBot(net: ValueNet, name = 'value-net', head: 'score'
                 if (v > bestValue) { bestValue = v; best = move }
             }
             return best
+        },
+    }
+}
+
+export interface ScoredMove { move: Move | null; value: number }
+
+/**
+ * Note chaque option d'une decision — le passe d'abord, puis les coups — avec le
+ * reseau, moins `denialWeight` x ce que les des restants offrent aux adversaires
+ * quand le joueur est actif (voir `makeValueNetDenialBot`). Sert au bot a deni et a
+ * la preselection des candidats du bot a recherche.
+ */
+export function makeMoveRanker(net: ValueNet, head: 'score' | 'margin' = 'margin') {
+    const evaluator = new ValueNetEvaluator(net)
+    const headIndex = net.heads.indexOf(head)
+    if (headIndex === -1) throw new Error(`tete inconnue : ${head}`)
+    const mine = new Uint8Array(CELL_COUNT)
+    const theirs = new Uint8Array(CELL_COUNT)
+
+    /** Meilleure valeur, passe compris, qu'un adversaire tire d'un lancer depuis son siege. */
+    function bestFor(
+        cells: TurnContext['cells'], info: GridInfo, opp: Sheet,
+        oppOpponents: CheckedMask[], roll: Roll, turn: number, totalJokers: number,
+    ): number {
+        const counts = opponentCounts(oppOpponents)
+        const summaries = summarizeOpponents(info, oppOpponents)
+        let best = evaluator.evaluate(info, opp.mask, opp.jokersUsed, counts, summaries, turn, false, totalJokers)[headIndex]
+        for (const m of legalMoves(cells, opp, roll, { totalJokers })) {
+            theirs.set(opp.mask)
+            for (const idx of m.placement) theirs[idx] = 1
+            const v = evaluator.evaluate(
+                info, theirs, opp.jokersUsed + m.jokersSpent, counts, summaries, turn, false, totalJokers,
+            )[headIndex]
+            if (v > best) best = v
+        }
+        return best
+    }
+
+    return function rank(ctx: TurnContext, denialWeight: number): ScoredMove[] {
+        const { cells, sheet, moves, turn, totalJokers, isActive, fullRoll, opponents } = ctx
+        const info = gridInfo(cells)
+        const others = (opponents ?? []).map(o => o.mask)
+        const counts = opponentCounts(others)
+        const summaries = summarizeOpponents(info, others)
+        const active = isActive ?? false
+        const deny = denialWeight > 0 && active && !!fullRoll && others.length > 0
+
+        const denial = (roll: Roll): number => {
+            let sum = 0
+            opponents!.forEach((opp, j) => {
+                const theirOpponents = [sheet.mask, ...others.filter((_, k) => k !== j)]
+                sum += bestFor(cells, info, opp, theirOpponents, roll, turn, totalJokers)
+            })
+            return sum / opponents!.length
+        }
+        const byPair = new Map<number, number>()
+        const denialForPair = (ci: number, ni: number): number => {
+            const key = ci * 8 + ni
+            let v = byPair.get(key)
+            if (v === undefined) {
+                v = denial({
+                    colors: fullRoll!.colors.filter((_, i) => i !== ci),
+                    numbers: fullRoll!.numbers.filter((_, i) => i !== ni),
+                })
+                byPair.set(key, v)
+            }
+            return v
+        }
+
+        const out: ScoredMove[] = [{
+            move: null,
+            value: evaluator.evaluate(info, sheet.mask, sheet.jokersUsed, counts, summaries, turn, active, totalJokers)[headIndex]
+                - (deny ? denialWeight * denial(fullRoll!) : 0),
+        }]
+        const candidates = deny ? legalMovesByDicePair(cells, sheet, fullRoll!, { totalJokers }) : moves
+        for (const m of candidates) {
+            mine.set(sheet.mask)
+            for (const idx of m.placement) mine[idx] = 1
+            const v = evaluator.evaluate(
+                info, mine, sheet.jokersUsed + m.jokersSpent, counts, summaries, turn, active, totalJokers,
+            )[headIndex]
+            out.push({ move: m, value: deny ? v - denialWeight * denialForPair(m.colorDieIndex, m.numberDieIndex) : v })
+        }
+        return out
+    }
+}
+
+/** Premier maximum strict : le passe gagne les egalites, comme dans `makeValueNetBot`. */
+export function bestOf(scored: ScoredMove[]): Move | null {
+    let best = scored[0]
+    for (const s of scored) if (s.value > best.value) best = s
+    return best.move
+}
+
+export interface ValueNetDenialOptions {
+    head?: 'score' | 'margin'
+    /** Poids de ce que les des restants rapportent aux adversaires. 0 = `makeValueNetBot`. */
+    denialWeight: number
+    name?: string
+}
+
+/**
+ * Reseau de valeur + DENI DE DES (voir `bots/baselines/denial.ts`).
+ *
+ * Le reseau note la feuille apres le coup ; il ne voit donc pas quels des restent
+ * aux adversaires, et la generation normale fusionne justement les paires de des
+ * equivalentes pour soi. Quand le bot est actif, les coups sont enumeres PAR PAIRE
+ * et chacun est penalise par ce que les 4 des restants offrent au mieux aux
+ * adversaires — mesure par le meme reseau, depuis leur siege et sur la meme tete,
+ * donc dans la meme unite (des points) que la valeur du coup. A 2 joueurs et sur la
+ * tete `margin`, un poids de 1 est exactement la marge : ce que gagne l'adversaire,
+ * je le perds.
+ *
+ * La feuille propre qui sert d'adversaire a l'adversaire est celle d'AVANT le coup :
+ * une approximation, identique pour tous les candidats.
+ */
+export function makeValueNetDenialBot(
+    net: ValueNet, { head = 'margin', denialWeight, name }: ValueNetDenialOptions,
+): Bot {
+    const rank = makeMoveRanker(net, head)
+    return {
+        name: name ?? `value-net-${head}-deni-${denialWeight}`,
+        chooseMove(ctx: TurnContext): Move | null {
+            if (ctx.moves.length === 0) return null
+            return bestOf(rank(ctx, denialWeight))
         },
     }
 }
