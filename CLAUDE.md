@@ -382,8 +382,14 @@ same head**, so both terms are in points. Head to head, 2000 games, seeds 525000
 The optimum sits at 1, which is what the margin head predicts at 2 players: what the
 opponent gains, I lose. Against `deni-0.8` — the heuristic the network alone could not beat
 (49.3 %) — it now wins **55.4 %** (55.2 shared), +1.05 [+0.55, +1.55]. About 12 min for
-2000 games, so a few ms per decision. **Not yet measured at 3 and 4 seats**: those runs
-were stopped before finishing.
+2000 games, so a few ms per decision. At more seats the gain shrinks — the active player
+comes round less often and the penalty is a mean over several opponents; the weight was
+chosen at 2 seats:
+
+| table (vs `v3-multi`) | network alone | network + denial 1 |
+|---|---|---|
+| 3 seats, wins per seat | 43.0 % (+2.95) | **46.1 %** (+4.41 [+4.03, +4.80]) |
+| 4 seats, 2 of each | 33.5 % (+2.81) | **34.5 %** (+3.76 [+3.46, +4.05]) |
 
 **Play-time search — 84 % head to head, with a caveat on the opponent model.** The game
 allows up to 3 s per move, against 1.6 ms for the network. `makeSearchBot`
@@ -401,10 +407,26 @@ change the real dice.
 - Head to head against `v3-multi`, 400 games (8 shards merged), seeds 5250000:
   **84.0 % wins** (83.8 shared), 31.13 against 20.16, **+10.96 [+9.87, +12.05]**.
 
-**Caveat, not yet checked:** the opponent model inside the simulations *is* `v3-multi`, the
-opponent of that duel. The search knew exactly how its opponent would play, which no real
-game offers. The number that matters is against an opponent it does not model — `deni-0.8`,
-or the network itself — and it has not been run. Neither has search combined with denial.
+**That 84 % is inflated**: the opponent model inside the simulations *is* `v3-multi`, the
+opponent of that duel, so the search knew exactly how it would be answered. Against
+opponents it does **not** model (still simulating them as `v3-multi`), head to head, 400
+games, seeds 5250000:
+
+| search bot | opponent | wins | paired score gap |
+|---|---|---|---|
+| search | `deni-0.8` | **74.8 %** (75.1 shared) | +7.18 [+6.11, +8.25] |
+| search + denial 1 | `deni-0.8` | 71.5 % (72.1 shared) | +6.20 [+5.12, +7.28] |
+| search + denial 1 | network + denial 1 | 61.8 % (62.0 shared) | +2.51 [+1.46, +3.56] |
+
+**Denial adds nothing on top of search.** Paired over the same 400 games against
+`deni-0.8`, adding it changes the search's margin by −0.98 [−2.29, +0.33]. The search
+already plays out the rest of the current turn with the dice it leaves, so the opponent's
+use of them is simulated rather than estimated; charging a denial penalty on top counts it
+twice, and per-dice-pair shortlisting fills the top 4 with the same placement on different
+pairs. Search alone is the strongest bot measured.
+
+`ctx.table.players` is the game loop's live array, not a copy: `makeSearchBot` clones before
+simulating, and any bot reading it must do the same.
 
 Duels of slow bots run in parallel shards: `duel.ts --from <first game> --games <n>` plays one
 slice of the same tournament and writes raw counts and per-game scores;
