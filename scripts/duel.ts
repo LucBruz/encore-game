@@ -110,6 +110,11 @@ const B = bots.length
 const totals = new Array(B).fill(0)
 const played = new Array(B).fill(0)
 const wins = new Array(B).fill(0)
+// `winnerIndex` tranche les egalites par le siege le plus bas. La rotation rend ce
+// biais symetrique, mais un taux de victoire ne doit pas dependre de l'arbitrage :
+// `shares` partage la partie entre les sieges a egalite, et `tied` compte ces parties.
+const shares = new Array(B).fill(0)
+let tiedGames = 0
 const ends = new Array(B).fill(0)
 const passes = new Array(B).fill(0)
 const jokers = new Array(B).fill(0)
@@ -145,6 +150,11 @@ for (let g = 0; g < GAMES; g++) {
         if (r.winnerIndex === seat) wins[botIdx]++
         if (r.enderIndex === seat) ends[botIdx]++
     })
+    const top = Math.max(...r.scores)
+    const topSeats = r.scores.map((v, seat) => (v === top ? seat : -1)).filter(seat => seat >= 0)
+    if (topSeats.length > 1) tiedGames++
+    for (const seat of topSeats) shares[seating[seat]] += 1 / topSeats.length
+
     totalTurns += r.turns
     if (r.endedNaturally) natural++
 }
@@ -156,16 +166,18 @@ const sd = (xs: number[]) => {
 }
 
 console.log(`Tournoi — ${GAMES} parties de ${SEATS} joueurs parmi ${B} agents, 8 grilles, rotation des sieges`)
-console.log(`  duree moyenne ${(totalTurns / GAMES).toFixed(1)} tours, ${(100 * natural / GAMES).toFixed(1)} % finies par 2 couleurs
+console.log(`  duree moyenne ${(totalTurns / GAMES).toFixed(1)} tours, ${(100 * natural / GAMES).toFixed(1)} % finies par 2 couleurs, `
+    + `${(100 * tiedGames / GAMES).toFixed(1)} % a egalite
 `)
 
 const pad = (s: string | number, w: number) => String(s).padStart(w)
-console.log(`${'agent'.padEnd(18)} ${pad('parties', 8)} ${pad('score moy', 10)} ${pad('victoires', 10)} ${pad('a fini', 8)} ${pad('passes', 8)} ${pad('jokers', 8)}`)
+console.log(`${'agent'.padEnd(18)} ${pad('parties', 8)} ${pad('score moy', 10)} ${pad('victoires', 10)} ${pad('partagees', 10)} ${pad('a fini', 8)} ${pad('passes', 8)} ${pad('jokers', 8)}`)
 const order = bots.map((_, i) => i).sort((a, b) => totals[b] / played[b] - totals[a] / played[a])
 for (const i of order) {
     console.log(
         `${bots[i].name.padEnd(18)} ${pad(played[i], 8)} ${pad((totals[i] / played[i]).toFixed(2), 10)}`
         + ` ${pad(`${(100 * wins[i] / played[i]).toFixed(1)} %`, 10)}`
+        + ` ${pad(`${(100 * shares[i] / played[i]).toFixed(1)} %`, 10)}`
         + ` ${pad(`${(100 * ends[i] / played[i]).toFixed(1)} %`, 8)}`
         + ` ${pad((passes[i] / played[i]).toFixed(2), 8)}`
         + ` ${pad((jokers[i] / played[i]).toFixed(2), 8)}`,
@@ -204,11 +216,13 @@ writeFileSync(OUT, JSON.stringify({
     games: GAMES, seats: SEATS, maxTurns: MAX_TURNS,
     meanTurns: +(totalTurns / GAMES).toFixed(1),
     naturalEndRate: +(natural / GAMES).toFixed(3),
+    tieRate: +(tiedGames / GAMES).toFixed(3),
     agents: order.map(i => ({
         name: bots[i].name,
         games: played[i],
         meanScore: +(totals[i] / played[i]).toFixed(2),
         winRate: +(100 * wins[i] / played[i]).toFixed(1),
+        winShare: +(100 * shares[i] / played[i]).toFixed(1),
         endRate: +(100 * ends[i] / played[i]).toFixed(1),
         meanPasses: +(passes[i] / played[i]).toFixed(2),
         meanJokers: +(jokers[i] / played[i]).toFixed(2),
