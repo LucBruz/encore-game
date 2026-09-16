@@ -249,7 +249,7 @@ into the game.
 Reserved seeds, never reuse them for training: 5250000 evaluation duels, 7250000 holdout
 duel, 6000000 / 6500000 / 6750000 disagreement checks. Training data used 5150000
 (outcomes), 5350000 / 5450000 (rollout positions / dice under v3), 5550000 / 5650000
-(on-policy positions / dice).
+(on-policy positions / dice), 5750000 / 5850000 (mixed-seat positions / dice).
 
 Measured against `v3-multi`, 2000 games at a 4-agent table, paired, seats rotated:
 
@@ -341,9 +341,28 @@ regret beats v3's choice on its own targets (2.00 against 2.23).
 | 4 seats, net × 2 | 33.5 % per seat | 16.6 % | 25 % | +2.81 [+2.52, +3.10] |
 | 4 seats, mixed table | **51.8 %** | 35.0 % | 25 % | +2.16 [+1.69, +2.63] |
 
-2000 games per row, seats rotated, ties shared (3–7 % of games). It now **ends** more
+2000 games per row, seats rotated, ties shared (3–7 % of games; `winShare` and
+`tieRate` exist only in duel files written after that change — older ones have a win
+rate that includes ties won on the lowest seat). It now **ends** more
 games than v3 everywhere (69.7 % against 30.4 head to head), the opposite of the score
 head's failing, and still spends more jokers (6.9 against 5.0) — it buys tempo with them.
+
+**Scope of that win — most of it is the objective, not the network.** `v3-multi`'s
+weights were tuned by CEM on mean score, so beating it with a margin-maximising net
+compares two objectives as much as two representations. The control is `deni-0.8`
+(`bots/baselines/denial.ts`), the same v3 weights plus a price on what a move hands the
+opponents, measured here for the first time head to head (2 seats, 2000 games, seeds
+5250000):
+
+- `deni-0.8` against `v3-multi`: **63.6 % wins**, +3.87 [+3.37, +4.36].
+- the net against `deni-0.8`: **49.3 % wins**, −0.74 [−1.22, −0.26].
+
+So a heuristic that looks at the opponents gains as much over `v3-multi` as the net does,
+and the net is a shade behind it on points while ending more games (56.5 % against
+43.5 %). The honest claim: the net beats the project's tuned champion by a wide margin at
+every table size, and is level with the best heuristic variant that shares its objective.
+Its targets were rolled out against `v3-multi` opponents — training against `deni-0.8`
+is the obvious next round, and has not been done.
 
 **Table size is a network input, so a net trained at one size extrapolates at another.**
 Every position generated before this came from a 4-seat table: `n` is byte 1 of every

@@ -1,0 +1,30 @@
+{
+  "games": 2000,
+  "seats": 2,
+  "maxTurns": 60,
+  "meanTurns": 32.9,
+  "naturalEndRate": 1,
+  "tieRate": 0.025,
+  "agents": [
+    {
+      "name": "deni-0.8",
+      "games": 2000,
+      "meanScore": 25.03,
+      "winRate": 50.8,
+      "winShare": 50.8,
+      "endRate": 43.5,
+      "meanPasses": 2.03,
+      "meanJokers": 5.23
+    },
+    {
+      "name": "reseau-margin",
+      "games": 2000,
+      "meanScore": 24.29,
+      "winRate": 49.3,
+      "winShare": 49.2,
+      "endRate": 56.5,
+      "meanPasses": 3.02,
+      "meanJokers": 7.21
+    }
+  ]
+}
