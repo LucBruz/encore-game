@@ -104,7 +104,7 @@ if (ONLY.length) {
     bots.splice(0, bots.length, ...bots.filter(b => ONLY.includes(b.name)))
 }
 
-const SEATS = 4
+const SEATS = Number(arg('seats', '4'))
 const B = bots.length
 
 const totals = new Array(B).fill(0)

@@ -45,7 +45,7 @@ import { continueMultiGame, playMultiGame } from '../bots/playMulti'
 import type { DecisionObservation, MultiPlayerState } from '../bots/playMulti'
 import { gridInfo, opponentCounts, summarizeOpponents } from '../bots/valueFeatures'
 import { ValueNetEvaluator, loadValueNet, makeValueNetBot } from '../bots/valueNet'
-import { RECORD_BYTES, SEATS, encode, loadMultiWeights, makePanel } from './lib/valueData'
+import { RECORD_BYTES, encode, loadMultiWeights, makePanel } from './lib/valueData'
 
 function arg(name: string, fallback: string): string {
     const i = process.argv.indexOf(`--${name}`)
@@ -77,6 +77,15 @@ const FROM = Number(arg('from', '0'))
 //   - deroulements : le reseau joue le siege du decideur, v3-multi les autres.
 // Graines a prendre hors des blocs deja servis : 5550000 (positions), 5650000 (des).
 const NET = arg('net', '')
+// Nombre de joueurs a table. `mix` alterne 2, 3 et 4 d'une partie a l'autre : tout ce
+// qui precede a ete genere a 4 joueurs, et le nombre d'adversaires est une ENTREE du
+// reseau (trois emplacements tries, deux restent vides a 2 joueurs). Mesure : le reseau
+// gagne la table mixte a 4 et perd le tete-a-tete (45 % de victoires), ou il extrapole.
+const TABLE_SEATS = arg('seats', '4')
+// Tete du reseau qui JOUE pendant la generation : les donnees sont sur la politique,
+// donc elles doivent venir de la tete qui jouera en partie. Mesure a 2 joueurs :
+// tete `score` 45 % de victoires, tete `margin` 58 % — ce ne sont pas les memes parties.
+const HEAD = arg('head', 'score') as 'score' | 'margin'
 const NET_K = Number(arg('netK', '4'))
 const TARGET_BYTES = 16
 
@@ -84,7 +93,7 @@ const PANEL = makePanel()
 const vMulti = loadMultiWeights()
 const rolloutBot = makeGreedyV3Bot(vMulti, 'v3-multi')
 const net = NET ? loadValueNet(JSON.parse(readFileSync(NET, 'utf8'))) : null
-const netBot = net ? makeValueNetBot(net, 'reseau') : null
+const netBot = net ? makeValueNetBot(net, 'reseau', HEAD) : null
 const evaluator = net ? new ValueNetEvaluator(net) : null
 
 function rollout(o: DecisionObservation, cells: Cells, move: Move | null, seed: number): [number, number] {
@@ -118,10 +127,11 @@ for (let local = FROM; local < GAMES; local++) {
     const gridIndex = g % ALL_GRIDS.length
     const cells: Cells = ALL_GRIDS[gridIndex].cells
     const stats = gridStats(cells)
-    const netSeat = g % SEATS
+    const tableSeats = TABLE_SEATS === 'mix' ? 2 + (g % 3) : Number(TABLE_SEATS)
+    const netSeat = g % tableSeats
     const seating = netBot
-        ? Array.from({ length: SEATS }, (_, s) => (s === netSeat ? netBot : rolloutBot))
-        : Array.from({ length: SEATS }, (_, s) => PANEL[(g + s) % PANEL.length])
+        ? Array.from({ length: tableSeats }, (_, s) => (s === netSeat ? netBot : rolloutBot))
+        : Array.from({ length: tableSeats }, (_, s) => PANEL[(g + s) % PANEL.length])
     const pick = makeRng((SEED ^ 0x5bd1e995) + g * 31)
 
     const sampled: DecisionObservation[] = []
@@ -149,7 +159,7 @@ for (let local = FROM; local < GAMES; local++) {
             const value = new Map(o.candidates.map(m => {
                 const s = cloneSheet(me)
                 if (m) applyMove(s, m)
-                return [m, evaluator.evaluate(info, s.mask, s.jokersUsed, counts, summaries, o.turn, isActive, 8)[0]]
+                return [m, evaluator.evaluate(info, s.mask, s.jokersUsed, counts, summaries, o.turn, isActive, 8)[HEAD === 'margin' ? 1 : 0]]
             }))
             const byNet = [...o.candidates].sort((a, b) => value.get(b)! - value.get(a)!)
             netBest = byNet[0]
