@@ -144,7 +144,7 @@ invisible from this repo.
 ### Pages
 - `/` (`app/pages/index.vue`) — home: create or join a game, and the lobby. The host can add bots there (see "Bots in multiplayer")
 - `/game/[id]` (`app/pages/game/[id].vue`) — main game view; handles page-refresh reconnection by re-fetching from Supabase if lobby state is empty
-- `/solo` (`app/pages/solo.vue`) — local game against bots. **No Supabase, no Realtime**: drives `gameStore` directly, so it works offline and needs no schema change
+- `/solo` (`app/pages/solo.vue`) — local game against bots. **No Supabase, no Realtime**, so it works offline and needs no schema change. Every move still goes through `applyGameAction` — the same path as multiplayer — and is recorded in a local log in the `game_events` format, which `GameReview` reads through its `local` prop: that is what gives solo games a post-game analysis (tested: a solo game replayed from its log ends identically, `app/pages/__tests__/solo-log.spec.ts`)
 - `/ia` (`app/pages/ia.vue`) — the agents page: ranking, the heuristic, the value network's corrections, dice denial and search. Measured numbers are written in the page (the result files were removed); it only fetches `difficulty.json` and `tuned-weights-multi.json`
 - `/review/[id]` (`app/pages/review/[id].vue`) — thin wrapper around `GameReview`, so an analysis has an address: reopen or share it after closing the game tab. The main entry point is the end-of-game screen (see "Game review UI")
 
@@ -474,6 +474,28 @@ v3's choice (1.384) on its own targets. The duel is the judge. Cost: 1.6 ms per 
 against 0.18 for v3.
 
 Keep the negative results. They are measurements, not gaps.
+
+### Internationalisation (`i18n/`)
+
+French and English, with `@nuxtjs/i18n` (installed with `corepack pnpm`, since CI runs
+`pnpm install --frozen-lockfile`). Texts live in `i18n/locales/fr.json` and `en.json`;
+`LangSwitch.vue` is the FR/EN toggle.
+
+- **Which language:** the browser's on a first visit, **English as the fallback** (a
+  browser in neither French nor English, or with no language, e.g. a crawler), then the
+  toggle's choice, kept in the `encore_lang` cookie. Checked on the server render:
+  fr-FR / fr-CA get French; en, de, ja and no header get English; a saved choice wins.
+- **`no_prefix` strategy:** the language never changes URLs, so a game link already
+  sent to players keeps working whatever language opens it. `app.vue` sets `<html lang>`.
+- **Messages are bundled in `i18n/i18n.config.ts`, not lazy-loaded.** The lazy
+  `file:` locales answered 404 in the browser in dev: the server render was right, then
+  hydration replaced every text with its raw key. A few KB each, so bundling is free.
+- The agents page (`ia.vue`) keeps its long paragraphs in the locale files as simple
+  HTML (`<strong>`, `<code>`) rendered with `v-html`, hence `strictMessage: false`. They
+  are our own texts, never user input. Its tables keep numbers in code and format them by
+  language (decimal comma and `84,0 %` in French, `84.0%` in English).
+- Bot names stored in `game_players` when a bot joins a lobby stay in the host's
+  language at that time; they are data, not UI.
 
 ### Key composables
 - **`Usegamesync.ts`** — multiplayer sync (see above)

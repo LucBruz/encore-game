@@ -2,6 +2,13 @@
   <NuxtPage :transition="{ name: 'page-slide', mode: 'out-in' }" />
 </template>
 
+<script setup lang="ts">
+// Declare la langue affichee sur <html lang> : lecteurs d'ecran et moteurs de
+// recherche lisent la page dans la bonne langue, et elle suit la bascule FR/EN.
+const { locale } = useI18n()
+useHead({ htmlAttrs: { lang: locale } })
+</script>
+
 <style>
 .page-slide-enter-active {
   transition: opacity 0.25s ease, transform 0.25s ease;

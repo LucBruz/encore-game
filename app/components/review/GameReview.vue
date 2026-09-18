@@ -1,17 +1,13 @@
 <template>
   <div class="review">
-    <p class="lede">
-      Le moteur est mis à votre place, avec vos seules informations : votre feuille,
-      celles des adversaires — publiques dans la règle — et le lancer du tour. Les dés
-      à venir sont tirés au hasard, jamais ceux que vous avez réellement eus.
-    </p>
+    <p class="lede">{{ $t('review.lede') }}</p>
 
     <div v-if="error" class="card card--error">{{ error }}</div>
 
     <!-- Choix du joueur puis lancement -->
     <div v-if="phase === 'idle'" class="card">
       <template v-if="!locked">
-        <p class="label">Quel joueur analyser ?</p>
+        <p class="label">{{ $t('review.whichPlayer') }}</p>
         <div class="chips">
           <button
             v-for="p in choices"
@@ -25,22 +21,18 @@
           </button>
         </div>
       </template>
-      <p v-else class="label">{{ isOwn ? 'Votre partie' : `Partie de ${targetName}` }}</p>
-      <p class="meta">
-        {{ decisionCount }} décisions à analyser, environ {{ etaLabel }}.
-        L'analyse déroule des centaines de parties par coup ; la page reste affichée mais
-        ne répond pas pendant ce temps.
-      </p>
+      <p v-else class="label">{{ isOwn ? $t('review.yourGame') : $t('review.gameOf', { name: targetName }) }}</p>
+      <p class="meta">{{ $t('review.eta', { n: decisionCount, eta: etaLabel }) }}</p>
       <button class="btn" type="button" :disabled="!target" @click="run">
-        Lancer l'analyse
+        {{ $t('review.start') }}
       </button>
     </div>
 
     <!-- Progression -->
     <div v-else-if="phase === 'running'" class="card">
-      <p class="label">Analyse en cours</p>
+      <p class="label">{{ $t('review.running') }}</p>
       <div class="bar"><div class="bar__fill" :style="{ width: `${pct}%` }" /></div>
-      <p class="meta">{{ done }} / {{ total }} décisions — {{ remainingLabel }}</p>
+      <p class="meta">{{ $t('review.progress', { done, total, left: remainingLabel }) }}</p>
     </div>
 
     <!-- Résultat -->
@@ -48,35 +40,35 @@
       <!-- Bilan -->
       <div class="card">
         <div class="summary-head">
-          <p class="label">{{ isOwn ? 'Votre partie' : `Partie de ${review.playerName}` }} — {{ moves.length }} décisions</p>
-          <button v-if="!locked" class="link-btn" type="button" @click="reset">Analyser un autre joueur</button>
+          <p class="label">{{ $t('review.summary', { title: isOwn ? $t('review.yourGame') : $t('review.gameOf', { name: review.playerName }), n: moves.length }) }}</p>
+          <button v-if="!locked" class="link-btn" type="button" @click="reset">{{ $t('review.other') }}</button>
         </div>
         <div class="tally">
           <div v-for="k in CLASS_ORDER" :key="k" class="tally__item">
             <span class="mark" :style="{ color: CLASS_META[k].color }">{{ CLASS_META[k].mark }}</span>
             <span class="tally__n">{{ counts[k] }}</span>
-            <span class="tally__k">{{ CLASS_META[k].label }}</span>
+            <span class="tally__k">{{ $t(CLASS_META[k].label) }}</span>
           </div>
         </div>
         <p class="meta">
-          L'outil ne reproche un coup que si l'écart au meilleur dépasse {{ BANDS.accuse }} points
-          <em>et</em> sort du bruit de mesure. Il y a presque toujours plusieurs coups également
-          défendables, donc pas de « meilleur coup » unique ; et pas de score de précision global
-          non plus : l'analyse juge des coups, elle ne sait pas classer deux joueurs proches.
+          <i18n-t keypath="review.rule" scope="global">
+            <template #accuse>{{ BANDS.accuse }}</template>
+            <template #and><em>{{ $t('review.and') }}</em></template>
+          </i18n-t>
         </p>
       </div>
 
       <div v-if="!moves.length" class="card">
-        <p class="meta">Ce joueur n'a aucune décision enregistrée dans cette partie.</p>
+        <p class="meta">{{ $t('review.noDecision') }}</p>
       </div>
 
       <template v-else>
         <!-- Courbe -->
         <div class="card">
-          <p class="label">Écart au meilleur coup, tour par tour</p>
+          <p class="label">{{ $t('review.chartTitle') }}</p>
           <div class="chart">
             <div class="chart__threshold" :style="{ bottom: thresholdBottom }">
-              <span>seuil de reproche · {{ BANDS.accuse }} pts</span>
+              <span>{{ $t('review.threshold', { n: BANDS.accuse }) }}</span>
             </div>
             <button
               v-for="(m, i) in moves"
@@ -84,7 +76,7 @@
               class="chart__col"
               :class="{ 'chart__col--on': i === selected }"
               type="button"
-              :aria-label="`Tour ${m.turn + 1}, ${CLASS_META[classOf(m)].label}`"
+              :aria-label="$t('review.turnAria', { n: m.turn + 1, label: $t(CLASS_META[classOf(m)].label) })"
               @click="go(i)"
             >
               <span
@@ -104,7 +96,7 @@
             <div class="board-head">
               <span class="mark mark--big" :style="{ color: currentMeta.color }">{{ currentMeta.mark }}</span>
               <div class="board-head__text">
-                <p class="board-title">Tour {{ current.turn + 1 }} — {{ currentMeta.label }}</p>
+                <p class="board-title">{{ $t('review.boardTitle', { n: current.turn + 1, label: $t(currentMeta.label) }) }}</p>
                 <p class="meta">{{ description }}</p>
               </div>
             </div>
@@ -127,18 +119,18 @@
             </div>
 
             <div class="legend">
-              <span class="legend__item"><i class="swatch swatch--checked">✕</i> déjà coché</span>
-              <span class="legend__item"><i class="swatch swatch--played" /> {{ isOwn ? 'votre coup' : 'coup joué' }}</span>
+              <span class="legend__item"><i class="swatch swatch--checked">✕</i> {{ $t('review.legendChecked') }}</span>
+              <span class="legend__item"><i class="swatch swatch--played" /> {{ isOwn ? $t('review.legendYours') : $t('review.legendPlayed') }}</span>
               <span v-if="suggestedSet.size" class="legend__item">
-                <i class="swatch swatch--suggested" /> une alternative défendable
+                <i class="swatch swatch--suggested" /> {{ $t('review.legendAlt') }}
               </span>
             </div>
 
             <div class="nav">
-              <button class="navbtn" type="button" :disabled="selected === 0" @click="go(0)">« Début</button>
-              <button class="navbtn" type="button" :disabled="selected === 0" @click="go(selected - 1)">‹ Précédent</button>
-              <button class="navbtn" type="button" :disabled="selected >= moves.length - 1" @click="go(selected + 1)">Suivant ›</button>
-              <button class="navbtn" type="button" :disabled="selected >= moves.length - 1" @click="go(moves.length - 1)">Fin »</button>
+              <button class="navbtn" type="button" :disabled="selected === 0" @click="go(0)">{{ $t('review.navStart') }}</button>
+              <button class="navbtn" type="button" :disabled="selected === 0" @click="go(selected - 1)">{{ $t('review.navPrev') }}</button>
+              <button class="navbtn" type="button" :disabled="selected >= moves.length - 1" @click="go(selected + 1)">{{ $t('review.navNext') }}</button>
+              <button class="navbtn" type="button" :disabled="selected >= moves.length - 1" @click="go(moves.length - 1)">{{ $t('review.navEnd') }}</button>
             </div>
             <div class="nav">
               <button
@@ -147,7 +139,7 @@
                 :disabled="prevError === null"
                 @click="prevError !== null && go(prevError)"
               >
-                ‹ Erreur précédente
+                {{ $t('review.prevError') }}
               </button>
               <button
                 class="navbtn navbtn--err"
@@ -155,14 +147,14 @@
                 :disabled="nextError === null"
                 @click="nextError !== null && go(nextError)"
               >
-                Erreur suivante ›
+                {{ $t('review.nextError') }}
               </button>
             </div>
-            <p class="hint">Flèches ← → du clavier pour passer d'un coup à l'autre.</p>
+            <p class="hint">{{ $t('review.keys') }}</p>
           </div>
 
           <div class="card">
-            <p class="label">Coups</p>
+            <p class="label">{{ $t('review.moves') }}</p>
             <ol class="movelist">
               <li v-for="(m, i) in moves" :key="i">
                 <button
@@ -175,7 +167,7 @@
                   <span class="mrow__turn">{{ m.turn + 1 }}</span>
                   <span class="mrow__move">
                     <i v-if="m.played" class="dot" :style="{ background: COLOR_MAP[m.played.color]?.hex }" />
-                    {{ m.played ? `× ${m.played.placement.length}` : 'Passe' }}
+                    {{ m.played ? `× ${m.played.placement.length}` : $t('review.pass') }}
                   </span>
                   <span class="mark" :style="{ color: CLASS_META[classOf(m)].color }">{{ CLASS_META[classOf(m)].mark }}</span>
                   <span class="mrow__loss">{{ isReproached(m) ? `−${m.loss.toFixed(1)}` : '' }}</span>
@@ -255,11 +247,12 @@ type MoveClass = 'meilleur' | 'defendable' | 'sansReproche' | 'erreur' | 'faute'
 const CLASS_ORDER: MoveClass[] = ['meilleur', 'defendable', 'sansReproche', 'erreur', 'faute']
 
 const CLASS_META: Record<MoveClass, { mark: string; label: string; color: string }> = {
-    meilleur: { mark: '!', label: 'Meilleur coup', color: '#5cc96e' },
-    defendable: { mark: '✓', label: 'Défendable', color: '#5b9ff5' },
-    sansReproche: { mark: '·', label: 'Sans reproche', color: '#8f8fa3' },
-    erreur: { mark: '?', label: 'Erreur', color: '#f58a35' },
-    faute: { mark: '??', label: 'Faute', color: '#e85a82' },
+    // `label` est une cle de traduction.
+    meilleur: { mark: '!', label: 'review.classBest', color: '#5cc96e' },
+    defendable: { mark: '✓', label: 'review.classDefensible', color: '#5b9ff5' },
+    sansReproche: { mark: '·', label: 'review.classUnfaulted', color: '#8f8fa3' },
+    erreur: { mark: '?', label: 'review.classMistake', color: '#f58a35' },
+    faute: { mark: '??', label: 'review.classBlunder', color: '#e85a82' },
 }
 
 function classOf(m: { verdict: Verdict; playedWasGood: boolean }): MoveClass {
@@ -278,6 +271,7 @@ const isReproached = (m: { verdict: Verdict }) => m.verdict === 'erreur' || m.ve
  */
 const SECONDS_PER_DECISION = 4.2
 
+const { t, locale } = useI18n()
 const BANDS = DEFAULT_BANDS
 const phase = ref<'idle' | 'running' | 'done'>('idle')
 const error = ref('')
@@ -378,23 +372,20 @@ const suggestedSet = computed(() =>
         : new Set<number>(),
 )
 
-const points = (x: number) => x.toFixed(2).replace('.', ',')
+const points = (x: number) => (locale.value === 'fr' ? x.toFixed(2).replace('.', ',') : x.toFixed(2))
 
 const description = computed(() => {
     const m = current.value
     if (!m) return ''
     const possible = Math.max(0, m.legalMoves - 1)
-    const parts = [
-        `${possible} coup${possible > 1 ? 's' : ''} possible${possible > 1 ? 's' : ''} en plus de passer, `
-        + `dont ${m.goodMoves.length} que l'analyse ne sait pas départager du meilleur.`,
-    ]
-    const played = isOwn.value ? 'Votre coup' : 'Le coup joué'
-    if (m.verdict === 'excellent') parts.push("C'est celui qu'elle retient.")
-    else if (m.playedWasGood) parts.push(`${played} en fait partie.`)
+    const parts = [t('review.descPossible', { n: possible, good: m.goodMoves.length }, possible)]
+    const played = isOwn.value ? t('review.playedYours') : t('review.playedTheirs')
+    if (m.verdict === 'excellent') parts.push(t('review.descBest'))
+    else if (m.playedWasGood) parts.push(t('review.descGood', { played }))
     else if (!isReproached(m)) {
-        parts.push(`${played} n'en fait pas partie, mais l'écart (${points(m.loss)} pt) est trop faible pour être affirmé.`)
+        parts.push(t('review.descSmall', { played, loss: points(m.loss) }))
     } else {
-        parts.push(`Écart estimé : ${points(m.loss)} ± ${points(m.loss95)} points.`)
+        parts.push(t('review.descGap', { loss: points(m.loss), ci: points(m.loss95) }))
     }
     return parts.join(' ')
 })
@@ -410,7 +401,7 @@ function primeStore() {
 onMounted(async () => {
     if (props.local) {
         if (!props.local.events.length) {
-            error.value = "Cette partie n'a aucun coup enregistré."
+            error.value = t('review.errNoMoves')
             return
         }
         players.value = props.local.players
@@ -428,7 +419,7 @@ onMounted(async () => {
         ])
 
         if (!rows?.length || !log?.length) {
-            error.value = "Cette partie n'a aucun coup enregistré."
+            error.value = t('review.errNoMoves')
             return
         }
 
@@ -447,7 +438,7 @@ onMounted(async () => {
     isOwn.value = pick.isOwn
     target.value = pick.target ?? ''
     if (!pick.choices.length) {
-        error.value = "Aucun joueur humain dans cette partie : il n'y a rien à analyser."
+        error.value = t('review.errNoHuman')
         return
     }
 
@@ -470,12 +461,12 @@ async function run() {
         review.value = await reviewGameAsync(store, events.value, {
             rolloutBot: makeGreedyV3Bot(V3_WEIGHTS, 'v3-multi'),
             playerId: target.value,
-            onProgress: (d, t) => { done.value = d; total.value = t },
+            onProgress: (d, n) => { done.value = d; total.value = n },
         })
         selected.value = initialMoveIndex(review.value.moves)
         phase.value = 'done'
     } catch (e: any) {
-        error.value = `L'analyse a échoué : ${e?.message ?? e}`
+        error.value = t('review.errFailed', { message: e?.message ?? e })
         phase.value = 'idle'
     }
 }

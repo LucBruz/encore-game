@@ -42,7 +42,7 @@
             class="chip"
             :class="{ 'chip--on': difficulty === id }"
             @click="difficulty = id as DifficultyId"
-          >{{ d.label }}</button>
+          >{{ $t(`difficulty.${id}`) }}</button>
         </div>
         <p class="hint">
           <i18n-t keypath="solo.difficultyHint" scope="global">
@@ -226,8 +226,8 @@ function start() {
     ...Array.from({ length: botCount.value }, (_, i) => ({
       id: `bot-${i + 1}`,
       name: botCount.value === 1
-        ? DIFFICULTIES[difficulty.value].label
-        : `${DIFFICULTIES[difficulty.value].label} #${i + 1}`,
+        ? t(`difficulty.${difficulty.value}`)
+        : `${t(`difficulty.${difficulty.value}`)} #${i + 1}`,
     })),
   ]
   store.initPlayers(players)

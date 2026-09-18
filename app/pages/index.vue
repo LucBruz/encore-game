@@ -73,7 +73,7 @@
             type="button"
             @click="botDifficulty = id"
           >
-            {{ BOT_LABELS[id] }}
+            {{ $t(`difficulty.${id}`) }}
           </button>
         </div>
         <button class="btn btn--ghost btn--full btn--sm" type="button" @click="lobby.addBot(botDifficulty)">

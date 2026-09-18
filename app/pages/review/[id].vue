@@ -1,8 +1,9 @@
 <template>
   <div class="page">
     <header class="rv-header">
-      <NuxtLink to="/" class="back">← Retour</NuxtLink>
-      <h1 class="rv-title">Analyse de la partie</h1>
+      <NuxtLink to="/" class="back">{{ $t('common.back') }}</NuxtLink>
+      <h1 class="rv-title">{{ $t('review.pageTitle') }}</h1>
+      <LangSwitch />
     </header>
 
     <GameReview :game-id="gameId" :default-player-id="lobby.localPlayerId" />

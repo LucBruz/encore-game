@@ -34,15 +34,16 @@ export default defineNuxtConfig({
     '@nuxtjs/supabase',
     '@nuxtjs/i18n',
   ],
-  // Francais par defaut, anglais au choix. `no_prefix` : la langue ne change pas
-  // les URL — les liens de partie deja envoyes a des joueurs doivent continuer de
-  // marcher, et le choix se retient dans un cookie.
+  // Langue du navigateur a la premiere visite, anglais en repli (navigateur ni
+  // francais ni anglais, ou sans langue declaree), puis le choix du bouton FR/EN,
+  // garde dans un cookie. `no_prefix` : la langue ne change pas les URL — les liens
+  // de partie deja envoyes a des joueurs doivent continuer de marcher.
   i18n: {
-    defaultLocale: 'fr',
+    defaultLocale: 'en',
     strategy: 'no_prefix',
     locales: [
-      { code: 'fr', language: 'fr-FR', name: 'Francais', file: 'fr.json' },
-      { code: 'en', language: 'en-US', name: 'English', file: 'en.json' },
+      { code: 'fr', language: 'fr-FR', name: 'Francais' },
+      { code: 'en', language: 'en-US', name: 'English' },
     ],
     detectBrowserLanguage: {
       useCookie: true,

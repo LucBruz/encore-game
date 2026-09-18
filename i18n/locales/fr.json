@@ -25,6 +25,18 @@
     "you": "(toi)",
     "youShort": "toi"
   },
+  "difficulty": {
+    "easy": "Facile",
+    "hard": "Difficile",
+    "medium": "Moyen"
+  },
+  "error": {
+    "broken": "Quelque chose a cassé",
+    "brokenText": "Une erreur inattendue s'est produite. Réessayez depuis l'accueil.",
+    "home": "Retour à l'accueil",
+    "notFound": "Page introuvable",
+    "notFoundText": "Cette adresse ne correspond à aucune page du jeu."
+  },
   "game": {
     "activePlayer": "Joueur actif",
     "analyse": "Analyser la partie",
@@ -93,8 +105,186 @@
     "waiting": "En attente...",
     "waitingOthers": "En attente des autres joueurs..."
   },
+  "ia": {
+    "agents": {
+      "deni": {
+        "idea": "heuristique v3 + déni de dés",
+        "name": "deni-0.8"
+      },
+      "net": {
+        "idea": "réseau de valeur, joue pour l'écart",
+        "name": "réseau"
+      },
+      "netDenial": {
+        "idea": "réseau, moins ce que les dés laissés rapportent à l'adversaire",
+        "name": "réseau + déni"
+      },
+      "search": {
+        "idea": "réseau + simulation de la suite de chaque coup",
+        "name": "recherche"
+      },
+      "v3": {
+        "idea": "heuristique v3 réglée en partie à 4",
+        "name": "v3-multi"
+      }
+    },
+    "barsCaption": "victoires contre deni-0.8 en tête-à-tête — 50 % = jeu égal",
+    "colAgent": "agent",
+    "colGames": "parties",
+    "colIdea": "principe",
+    "colInGame": "dans le jeu",
+    "colMeaning": "ce que ça dit",
+    "colMulti": "multijoueur",
+    "colOpponent": "adversaire",
+    "colPaired": "écart apparié",
+    "colParam": "paramètre",
+    "colSearchWins": "victoires de la recherche",
+    "colSolo": "solitaire",
+    "colTable": "table",
+    "colTime": "temps / coup",
+    "colVsDenial": "contre deni-0.8",
+    "colVsV3": "contre v3-multi",
+    "colVsV3Short": "vs v3-multi",
+    "colWins": "victoires",
+    "denialHeurHead": "heuristique, 4 joueurs",
+    "denialMeta": "Joueur actif, un choix a deux effets : ce qu'il rapporte, et ce qu'il retire aux autres, qui n'auront que les 4 dés restants. Il faut pour ça énumérer les coups <strong>par paire de dés</strong> : la génération normale fusionne les paires équivalentes pour soi — dans plus de 8 tours sur 10 — et jette exactement l'information qui compte pour autrui.",
+    "denialNetHead": "réseau, tête-à-tête",
+    "denialNote": "L'optimum est <strong>intérieur</strong> dans les deux cas : trop dénier nuit aussi. Pour le réseau, ce que les dés restants rapportent à l'adversaire est évalué par le même réseau depuis son siège, donc dans la même unité — et à 2 joueurs, un prix de 1 est exactement la logique de l'écart : ce qu'il gagne, je le perds. Le gain diminue avec le nombre de joueurs (46,1 % par siège à 3 joueurs, 34,5 % à 4, contre 43,0 et 33,5 sans déni).<br><br><strong>Inutile une fois la recherche ajoutée</strong> : sur les mêmes 400 parties, l'écart est de −0,98 point [−2,29 ; +0,33]. La recherche simule déjà ce que l'adversaire fait des dés laissés ; ajouter le prix du déni le compte deux fois.",
+    "denialTitle": "Le déni de dés",
+    "diagBy": "suite jouée par",
+    "diagGap": "coup du réseau − coup de v3",
+    "diagNetGames": "parties du réseau",
+    "diagSame": "mêmes positions, mêmes coups",
+    "diagTheNet": "le réseau",
+    "hoarder": "agent thésauriseur",
+    "lede": "D'une heuristique réglée à la main jusqu'à un réseau de neurones qui réfléchit avant de jouer — et surtout la mesure qui permet de dire lequel gagne, et de combien. Chaque chiffre est un écart apparié : à numéro de partie égal, les agents reçoivent les mêmes dés sur la même grille.",
+    "lessonMeta": "Les agents ont d'abord été optimisés <strong>en solitaire</strong> : une feuille, pas d'adversaire, une limite de 50 tours posée comme garde-fou anti-boucle. Ce cadrage classe les agents <strong>à l'envers au sommet</strong>.",
+    "lessonNote": "Le solitaire ne punit pas la temporisation, puisque l'agent y décide seul quand la partie s'arrête. Il avait donc appris à thésauriser ses 8 jokers — +8 points garantis au décompte — et à passer 12 fois par partie. À une vraie table, les autres finissent à sa place.<br><br>Trois choses n'existent que dans le simulateur multijoueur : le <strong>déni de dés</strong> (le joueur actif met sa paire de côté, les passifs n'ont que les 4 restants), la <strong>fin décidée par autrui</strong>, et les bonus <strong>premier / suivants</strong> qui récompensent la vitesse. Tout ce qui suit est mesuré là.",
+    "lessonTitle": "Le protocole comptait plus que l'algorithme",
+    "levelScore": "score",
+    "levelsMeta": "Une seule politique, un seul bouton : une température softmax sur les valeurs z-scorées à chaque décision. À température nulle c'est la politique brute ; plus elle monte, plus l'agent pioche dans le haut du classement au lieu de prendre systématiquement le meilleur coup.",
+    "levelsNote": "Les températures sont trouvées par <strong>dichotomie sur un taux de victoire cible</strong>, mesuré en partie à 4 contre trois exemplaires du niveau maximal. Le plafond est ~25 %, quatre joueurs identiques se partageant les victoires.<br><br>Le softmax est préféré à l'ε-greedy, qui produit des <strong>bourdes</strong> : jouer parfaitement puis poser cinq croix n'importe où. Un joueur faible joue un coup correct mais pas le meilleur, ce que le softmax reproduit.",
+    "levelsTitle": "Les trois niveaux du jeu",
+    "method": {
+      "m1": "<strong>Moteur headless</strong> — les règles vivent dans <code>engine/</code>, en données pures, sans Vue ni Pinia. L'interface, les agents et l'entraînement partagent la même implémentation : aucun agent n'est optimisé sur des règles différentes de celles auxquelles on joue.",
+      "m2": "<strong>Comparaisons appariées</strong> — à index de partie égal, tous les agents reçoivent la même graine, donc les mêmes dés sur la même grille. Le bruit est commun et s'annule dans les écarts, chacun reporté avec son intervalle à 95 %.",
+      "m3": "<strong>Graines réservées</strong> — les duels d'évaluation utilisent des graines que ni le réglage ni l'entraînement n'ont jamais vues, et les résultats sont confirmés sur un second bloc disjoint.",
+      "m4": "<strong>Données sur la politique qui joue</strong> — un coup est noté en simulant la suite avec l'agent qui la jouera vraiment ; noter pour un autre joueur a coûté 2,4 points par partie.",
+      "m5": "<strong>Toujours donner la taille de table</strong> — le même réseau gagnait à 4 joueurs et perdait en tête-à-tête : le nombre d'adversaires est une entrée du réseau.",
+      "m6": "<strong>Résultats négatifs conservés</strong> — l'expectimax profondeur 2 n'apportait rien pour 140× le coût, une heuristique à 21 paramètres faisait moins bien qu'à 6, et le déni n'ajoute rien à la recherche. Ce sont des mesures, pas des omissions."
+    },
+    "methodTitle": "Méthode",
+    "netMeta": "Un réseau de valeur : il note la feuille obtenue après chaque coup possible, et joue le mieux noté. 735 entrées creuses (cases cochées par couleur, étoiles, cases des adversaires) et 61 entrées calculées, écrites en TypeScript à un seul endroit ; Python n'entraîne que sur ces octets, le jeu et l'entraînement ne peuvent pas diverger. Un test vérifie que PyTorch et TypeScript calculent la même chose. Il a d'abord <strong>perdu</strong> — chaque étape corrige ce que la précédente a mesuré.",
+    "netNote": "Le diagnostic de l'étape 2, et la leçon la plus utile du projet. Ses coups étaient aussi bons que ceux de v3 <strong>si v3 jouait la suite</strong> — exactement ce que ses données d'entraînement mesuraient, puisque chaque simulation rendait la main à v3. Joués par lui-même, ils valaient moins. Il notait les positions pour un joueur meilleur que lui. Deux vérifications coup par coup, sous v3, étaient sorties nulles avant que celle-ci le montre.<br><br>Et la réserve de l'étape 5 : <strong>deni-0.8</strong>, une heuristique qui regarde elle aussi l'adversaire, bat v3-multi presque autant (63,6 %). L'essentiel du gain venait de l'objectif — jouer pour l'écart — plus que du réseau lui-même.",
+    "netTitle": "Le réseau de neurones : cinq corrections",
+    "noPass": "le même, sans droit de passer",
+    "notYet": "pas encore",
+    "perSeat": "{v} / siège",
+    "playThem": "Jouer contre eux →",
+    "price": "prix {w}",
+    "rankMeta": "Parties en tête-à-tête, sièges alternés, graines jamais utilisées pour régler ou entraîner les agents. Les égalités (2 à 5 % des parties) sont partagées. <strong>deni-0.8</strong> sert d'adversaire de référence : c'est la meilleure heuristique, et comme les réseaux, elle regarde ce qu'un coup laisse à l'adversaire.",
+    "rankNote": "<strong>*</strong> Surestimé : la recherche simule son adversaire comme v3-multi, elle savait donc exactement comment celui-ci répondrait (voir plus bas).<br><br>Le jeu utilise aujourd'hui <strong>v3-multi</strong>, rendue plus ou moins faible par niveau de difficulté. Les trois premiers agents sont mesurés mais pas encore branchés : la recherche prend une demi-seconde par coup et devra tourner hors du fil principal pour ne pas figer l'interface.",
+    "rankTitle": "Le classement",
+    "searchMeta": "Le jeu accepte jusqu'à 3 secondes par coup, le réseau en prend 1,6 ms. La recherche garde les 4 meilleurs coups selon le réseau, puis joue la suite de chacun <strong>16 fois, 4 tours plus loin</strong> — le réseau à sa place, v3-multi pour l'adversaire, la fin du tour en cours comprise — et laisse le réseau estimer l'écart final de la position atteinte. Les 4 coups voient les mêmes dés, sinon le hasard écraserait la différence.",
+    "searchNote": "<strong>Le 84 % est surestimé.</strong> Dans ses simulations, la recherche suppose que l'adversaire joue comme v3-multi — et c'était justement l'adversaire de ce duel : elle savait exactement comment il répondrait. Les autres lignes sont contre des adversaires qu'elle ne modélise pas, et c'est elles qu'il faut retenir.<br><br>À 3 et 4 joueurs, la parité serait de 33 % et 25 % par siège : la recherche en fait 53 % et 41 %, le même réseau n'extrapole plus selon la taille de table.<br><br>Temps mesuré : 0,55 s par coup en moyenne en tête-à-tête, 1,0 s au pire ; 0,7 s et 1,4 s à 4 joueurs. Une recherche plus large (6 coups, 32 simulations, 6 tours) atteignait 4,9 s : trop lente.",
+    "searchTitle": "Réfléchir avant de jouer : la recherche",
+    "solo": "en solitaire",
+    "steps": {
+      "s1": {
+        "result": "−7,67 points",
+        "text": "Entraîné sur l'issue de parties simulées, il prédisait bien le score et jouait mal : il n'avait jamais vu deux coups d'une même position, et apprenait le prix d'un joker en comparant des parties différentes.",
+        "title": "Prédire le score final"
+      },
+      "s2": {
+        "result": "−2,42 points",
+        "text": "Chaque candidat est joué 8 fois jusqu'au bout avec les mêmes dés, par v3-multi, et le réseau apprend les écarts entre coups. Mieux, mais toujours battu — et le diagnostic ci-dessous montre pourquoi.",
+        "title": "Comparer les coups d'une même position"
+      },
+      "s3": {
+        "result": "+0,7 point",
+        "text": "Mêmes simulations, mais le réseau tient son siège jusqu'à la fin : les données disent ce qu'un coup vaut pour lui. Premier réseau devant v3-multi à une table de 4 — et pourtant 45 % en tête-à-tête.",
+        "title": "Le réseau joue lui-même la suite"
+      },
+      "s4": {
+        "result": "45 % → 58 %",
+        "text": "Le réseau a deux sorties : son score, et son écart au meilleur adversaire. Mêmes poids, autre sortie jouée. Viser ses points fait un joueur lent qui se fait couper ; viser l'écart le fait courir : il termine 62 % des parties au lieu de 31 %.",
+        "title": "Jouer pour l'écart, pas pour ses points"
+      },
+      "s5": {
+        "result": "63,7 %",
+        "text": "Toutes les données venaient de tables à 4, et le nombre d'adversaires est une entrée du réseau : en tête-à-tête il extrapolait. Nouvelles données à 2, 3 et 4 joueurs : il bat v3-multi à toutes les tailles de table (43,0 % par siège à 3, 33,5 % à 4).",
+        "title": "Des parties de 2 à 4 joueurs"
+      }
+    },
+    "stories": {
+      "cellValue": "couvrir du terrain vaut plus — c'est du tempo",
+      "colorExponent": "le solitaire disait « étale-toi », le multijoueur dit « finis tes couleurs » — parce que finir met fin à la partie",
+      "colorValueLate": "et elle compte beaucoup plus",
+      "extremeColumnEarly": "finir tôt les colonnes A et O : le signal le plus robuste du projet",
+      "jokerValue": "thésauriser est puni",
+      "lateHorizon": "la phase couleurs démarre bien plus tôt",
+      "orphan1": "les cases isolées redeviennent chères"
+    },
+    "table2": "2 joueurs",
+    "table3": "3 joueurs",
+    "table4": "à une table de 4",
+    "table4mix": "4 joueurs, 2 de chaque",
+    "timeFew": "quelques ms",
+    "title": "Agents & IA",
+    "weightsMeta": "v3 évalue une feuille avec des critères de joueur expérimenté, chacun pondéré selon l'avancement de la partie. Les poids sont optimisés par <strong>entropie croisée</strong> — échantillonner une gaussienne, garder les meilleurs, refitter sur eux. Sans gradient, robuste au bruit de mesure, contre un panel d'adversaires volontairement hétérogène.",
+    "weightsTitle": "L'heuristique : ce que l'optimiseur a appris",
+    "yes": "oui"
+  },
   "lang": {
     "aria": "Choix de la langue"
+  },
+  "review": {
+    "and": "et",
+    "boardTitle": "Tour {n} — {label}",
+    "chartTitle": "Écart au meilleur coup, tour par tour",
+    "classBest": "Meilleur coup",
+    "classBlunder": "Faute",
+    "classDefensible": "Défendable",
+    "classMistake": "Erreur",
+    "classUnfaulted": "Sans reproche",
+    "descBest": "C'est celui qu'elle retient.",
+    "descGap": "Écart estimé : {loss} ± {ci} points.",
+    "descGood": "{played} en fait partie.",
+    "descPossible": "{n} coup possible en plus de passer, dont {good} que l'analyse ne sait pas départager du meilleur. | {n} coups possibles en plus de passer, dont {good} que l'analyse ne sait pas départager du meilleur.",
+    "descSmall": "{played} n'en fait pas partie, mais l'écart ({loss} pt) est trop faible pour être affirmé.",
+    "errFailed": "L'analyse a échoué : {message}",
+    "errNoHuman": "Aucun joueur humain dans cette partie : il n'y a rien à analyser.",
+    "errNoMoves": "Cette partie n'a aucun coup enregistré.",
+    "eta": "{n} décisions à analyser, environ {eta}. L'analyse déroule des centaines de parties par coup ; la page reste affichée mais ne répond pas pendant ce temps.",
+    "gameOf": "Partie de {name}",
+    "keys": "Flèches ← → du clavier pour passer d'un coup à l'autre.",
+    "lede": "Le moteur est mis à votre place, avec vos seules informations : votre feuille, celles des adversaires — publiques dans la règle — et le lancer du tour. Les dés à venir sont tirés au hasard, jamais ceux que vous avez réellement eus.",
+    "legendAlt": "une alternative défendable",
+    "legendChecked": "déjà coché",
+    "legendPlayed": "coup joué",
+    "legendYours": "votre coup",
+    "moves": "Coups",
+    "navEnd": "Fin »",
+    "navNext": "Suivant ›",
+    "navPrev": "‹ Précédent",
+    "navStart": "« Début",
+    "nextError": "Erreur suivante ›",
+    "noDecision": "Ce joueur n'a aucune décision enregistrée dans cette partie.",
+    "other": "Analyser un autre joueur",
+    "pageTitle": "Analyse de la partie",
+    "pass": "Passe",
+    "playedTheirs": "Le coup joué",
+    "playedYours": "Votre coup",
+    "prevError": "‹ Erreur précédente",
+    "progress": "{done} / {total} décisions — {left}",
+    "rule": "L'outil ne reproche un coup que si l'écart au meilleur dépasse {accuse} points {and} sort du bruit de mesure. Il y a presque toujours plusieurs coups également défendables, donc pas de « meilleur coup » unique ; et pas de score de précision global non plus : l'analyse juge des coups, elle ne sait pas classer deux joueurs proches.",
+    "running": "Analyse en cours",
+    "start": "Lancer l'analyse",
+    "summary": "{title} — {n} décisions",
+    "threshold": "seuil de reproche · {n} pts",
+    "turnAria": "Tour {n}, {label}",
+    "whichPlayer": "Quel joueur analyser ?",
+    "yourGame": "Votre partie"
   },
   "solo": {
     "analyse": "Analyser ma partie",

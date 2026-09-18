@@ -15,17 +15,13 @@ const handleBack = () => clearError({ redirect: '/' })
     <div class="card">
       <p class="code">{{ error?.statusCode || 500 }}</p>
       <h1 class="title">
-        {{ error?.statusCode === 404 ? 'Page introuvable' : 'Quelque chose a casse' }}
+        {{ error?.statusCode === 404 ? $t('error.notFound') : $t('error.broken') }}
       </h1>
       <p class="message">
-        {{
-          error?.statusCode === 404
-            ? "Cette adresse ne correspond a aucune page du jeu."
-            : "Une erreur inattendue s'est produite. Reessayez depuis l'accueil."
-        }}
+        {{ error?.statusCode === 404 ? $t('error.notFoundText') : $t('error.brokenText') }}
       </p>
       <p v-if="error?.message && error.statusCode !== 404" class="detail">{{ error.message }}</p>
-      <button class="btn" @click="handleBack">Retour a l'accueil</button>
+      <button class="btn" @click="handleBack">{{ $t('error.home') }}</button>
     </div>
   </div>
 </template>

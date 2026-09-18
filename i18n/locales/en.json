@@ -25,6 +25,18 @@
     "you": "(you)",
     "youShort": "you"
   },
+  "difficulty": {
+    "easy": "Easy",
+    "hard": "Hard",
+    "medium": "Medium"
+  },
+  "error": {
+    "broken": "Something broke",
+    "brokenText": "An unexpected error occurred. Try again from the home page.",
+    "home": "Back to home",
+    "notFound": "Page not found",
+    "notFoundText": "This address does not match any page of the game."
+  },
   "game": {
     "activePlayer": "Active player",
     "analyse": "Analyse the game",
@@ -93,8 +105,186 @@
     "waiting": "Waiting...",
     "waitingOthers": "Waiting for the other players..."
   },
+  "ia": {
+    "agents": {
+      "deni": {
+        "idea": "v3 heuristic + dice denial",
+        "name": "deni-0.8"
+      },
+      "net": {
+        "idea": "value network, plays for the margin",
+        "name": "network"
+      },
+      "netDenial": {
+        "idea": "network, minus what the dice left behind give the opponent",
+        "name": "network + denial"
+      },
+      "search": {
+        "idea": "network + simulating what follows each move",
+        "name": "search"
+      },
+      "v3": {
+        "idea": "v3 heuristic tuned at a 4-player table",
+        "name": "v3-multi"
+      }
+    },
+    "barsCaption": "wins against deni-0.8 head to head — 50% = even",
+    "colAgent": "agent",
+    "colGames": "games",
+    "colIdea": "idea",
+    "colInGame": "in the game",
+    "colMeaning": "what it says",
+    "colMulti": "multiplayer",
+    "colOpponent": "opponent",
+    "colPaired": "paired gap",
+    "colParam": "parameter",
+    "colSearchWins": "search wins",
+    "colSolo": "single-player",
+    "colTable": "table",
+    "colTime": "time / move",
+    "colVsDenial": "vs deni-0.8",
+    "colVsV3": "vs v3-multi",
+    "colVsV3Short": "vs v3-multi",
+    "colWins": "wins",
+    "denialHeurHead": "heuristic, 4 players",
+    "denialMeta": "As the active player, a choice has two effects: what it brings you, and what it takes from the others, who only get the 4 remaining dice. That requires enumerating moves <strong>per dice pair</strong>: the normal generator merges pairs that are equivalent for you — in more than 8 turns out of 10 — and throws away exactly the information that matters to the others.",
+    "denialNetHead": "network, head to head",
+    "denialNote": "The optimum is <strong>interior</strong> in both cases: denying too much hurts too. For the network, what the remaining dice give the opponent is valued by the same network from their seat, so in the same unit — and with 2 players, a weight of 1 is exactly the logic of the margin: what they gain, I lose. The gain shrinks with more players (46.1% per seat at 3 players, 34.5% at 4, against 43.0 and 33.5 without denial).<br><br><strong>Useless once search is added</strong>: over the same 400 games, the gap is −0.98 point [−2.29, +0.33]. The search already simulates what the opponent does with the dice left; adding the denial price counts it twice.",
+    "denialTitle": "Dice denial",
+    "diagBy": "rest played by",
+    "diagGap": "network move − v3 move",
+    "diagNetGames": "the network's games",
+    "diagSame": "same positions, same moves",
+    "diagTheNet": "the network",
+    "hoarder": "hoarding agent",
+    "lede": "From a hand-tuned heuristic to a neural network that thinks before it plays — and above all the measurement that says which one wins, and by how much. Every number is a paired gap: at equal game index, the agents get the same dice on the same grid.",
+    "lessonMeta": "The agents were first tuned <strong>single-player</strong>: one sheet, no opponent, a 50-turn cap as an anti-loop safeguard. That framing ranks the agents <strong>upside down at the top</strong>.",
+    "lessonNote": "Single-player does not punish stalling, since the agent alone decides when the game ends. So it had learnt to hoard its 8 exclamation points — +8 points guaranteed at the count — and to pass 12 times a game. At a real table, the others finish the game for it.<br><br>Three things only exist in the multiplayer simulator: <strong>dice denial</strong> (the active player sets their pair aside, the passive players only get the remaining 4), <strong>an ending decided by someone else</strong>, and the <strong>first / others</strong> bonuses that reward speed. Everything below is measured there.",
+    "lessonTitle": "The protocol mattered more than the algorithm",
+    "levelScore": "score",
+    "levelsMeta": "One policy, one knob: a softmax temperature over the z-scored values of each decision. At zero temperature it is the raw policy; the higher it goes, the more the agent picks from the top of the ranking instead of always taking the best move.",
+    "levelsNote": "The temperatures are found by <strong>bisection on a target win rate</strong>, measured at a 4-player table against three copies of the top level. The ceiling is ~25%, four identical players sharing the wins.<br><br>Softmax is preferred to ε-greedy, which produces <strong>blunders</strong>: playing perfectly, then dropping five crosses anywhere. A weak player plays a decent move but not the best one, which is what softmax reproduces.",
+    "levelsTitle": "The game's three levels",
+    "method": {
+      "m1": "<strong>Headless engine</strong> — the rules live in <code>engine/</code>, as plain data, with no Vue or Pinia. The interface, the agents and the training share the same implementation: no agent is tuned on rules other than the ones we play.",
+      "m2": "<strong>Paired comparisons</strong> — at equal game index, every agent gets the same seed, so the same dice on the same grid. The noise is shared and cancels out in the gaps, each reported with its 95% interval.",
+      "m3": "<strong>Reserved seeds</strong> — evaluation duels use seeds that neither tuning nor training ever saw, and results are confirmed on a second, disjoint block.",
+      "m4": "<strong>Data from the policy that plays</strong> — a move is scored by simulating the rest with the agent that will really play it; scoring for another player cost 2.4 points per game.",
+      "m5": "<strong>Always report the table size</strong> — the same network won at 4 players and lost head to head: the number of opponents is a network input.",
+      "m6": "<strong>Negative results kept</strong> — depth-2 expectimax brought nothing for 140× the cost, a 21-parameter heuristic did worse than a 6-parameter one, and denial adds nothing to search. These are measurements, not omissions."
+    },
+    "methodTitle": "Method",
+    "netMeta": "A value network: it scores the sheet obtained after each possible move, and plays the best-scored one. 735 sparse inputs (checked squares by colour, stars, the opponents' squares) and 61 computed inputs, written in TypeScript in one single place; Python only trains on those bytes, so the game and the training cannot drift apart. A test checks that PyTorch and TypeScript compute the same thing. It <strong>lost</strong> at first — each step fixes what the previous one measured.",
+    "netNote": "The diagnosis of step 2, and the most useful lesson of the project. Its moves were as good as v3's <strong>if v3 played the rest</strong> — exactly what its training data measured, since every simulation handed control back to v3. Played by itself, they were worth less. It was valuing positions for a player better than itself. Two move-by-move checks under v3 had come out null before this one showed it.<br><br>And the caveat of step 5: <strong>deni-0.8</strong>, a heuristic that also looks at the opponent, beats v3-multi almost as much (63.6%). Most of the gain came from the objective — playing for the margin — more than from the network itself.",
+    "netTitle": "The neural network: five corrections",
+    "noPass": "the same, not allowed to pass",
+    "notYet": "not yet",
+    "perSeat": "{v} / seat",
+    "playThem": "Play against them →",
+    "price": "weight {w}",
+    "rankMeta": "Head-to-head games, seats alternated, on seeds never used to tune or train the agents. Ties (2 to 5 % of games) are shared. <strong>deni-0.8</strong> is the reference opponent: it is the best heuristic, and like the networks it looks at what a move leaves the opponent.",
+    "rankNote": "<strong>*</strong> Overstated: the search simulates its opponent as v3-multi, so it knew exactly how that opponent would answer (see below).<br><br>The game currently plays <strong>v3-multi</strong>, weakened more or less depending on the difficulty level. The first three agents are measured but not wired in yet: the search takes half a second per move and will have to run off the main thread so the interface does not freeze.",
+    "rankTitle": "The ranking",
+    "searchMeta": "The game allows up to 3 seconds per move; the network takes 1.6 ms. The search keeps the network's 4 best moves, then plays out each one <strong>16 times, 4 turns ahead</strong> — the network in its seat, v3-multi for the opponent, the rest of the current turn included — and lets the network estimate the final margin of the position reached. The 4 moves see the same dice, otherwise chance would drown the difference.",
+    "searchNote": "<strong>The 84% is overstated.</strong> In its simulations, the search assumes the opponent plays like v3-multi — which was precisely the opponent of that duel: it knew exactly how it would answer. The other rows are against opponents it does not model, and those are the ones to remember.<br><br>At 3 and 4 players, parity would be 33% and 25% per seat: the search reaches 53% and 41%, so the network no longer extrapolates with table size.<br><br>Measured time: 0.55 s per move on average head to head, 1.0 s at worst; 0.7 s and 1.4 s at 4 players. A wider search (6 moves, 32 simulations, 6 turns) reached 4.9 s: too slow.",
+    "searchTitle": "Thinking before playing: search",
+    "solo": "single-player",
+    "steps": {
+      "s1": {
+        "result": "−7.67 points",
+        "text": "Trained on the outcome of simulated games, it predicted the score well and played badly: it had never seen two moves from the same position, and learnt the price of an exclamation point by comparing different games.",
+        "title": "Predict the final score"
+      },
+      "s2": {
+        "result": "−2.42 points",
+        "text": "Each candidate is played out 8 times to the end with the same dice, by v3-multi, and the network learns the gaps between moves. Better, but still beaten — and the diagnosis below shows why.",
+        "title": "Compare the moves of one position"
+      },
+      "s3": {
+        "result": "+0.7 point",
+        "text": "Same simulations, but the network keeps its seat until the end: the data says what a move is worth to it. The first network ahead of v3-multi at a 4-player table — and yet 45% head to head.",
+        "title": "The network plays the rest itself"
+      },
+      "s4": {
+        "result": "45% → 58%",
+        "text": "The network has two outputs: its score, and its margin over the best opponent. Same weights, a different output played. Aiming for points makes a slow player who gets cut off; aiming for the margin makes it race: it ends 62% of games instead of 31%.",
+        "title": "Play for the margin, not for your points"
+      },
+      "s5": {
+        "result": "63.7%",
+        "text": "All the data came from 4-player tables, and the number of opponents is a network input: head to head, it was extrapolating. New data at 2, 3 and 4 players: it beats v3-multi at every table size (43.0% per seat at 3, 33.5% at 4).",
+        "title": "Games of 2 to 4 players"
+      }
+    },
+    "stories": {
+      "cellValue": "covering ground is worth more — that's tempo",
+      "colorExponent": "single-player said \"spread out\", multiplayer says \"finish your colours\" — because finishing ends the game",
+      "colorValueLate": "and it counts for much more",
+      "extremeColumnEarly": "finish columns A and O early: the most robust signal of the project",
+      "jokerValue": "hoarding is punished",
+      "lateHorizon": "the colour phase starts much earlier",
+      "orphan1": "isolated squares become expensive again"
+    },
+    "table2": "2 players",
+    "table3": "3 players",
+    "table4": "at a 4-player table",
+    "table4mix": "4 players, 2 of each",
+    "timeFew": "a few ms",
+    "title": "Agents & AI",
+    "weightsMeta": "v3 evaluates a sheet with the criteria of an experienced player, each weighted by how far the game has progressed. The weights are tuned by <strong>cross-entropy</strong> — sample a Gaussian, keep the best, refit on them. No gradient, robust to measurement noise, against a deliberately varied panel of opponents.",
+    "weightsTitle": "The heuristic: what the optimiser learnt",
+    "yes": "yes"
+  },
   "lang": {
     "aria": "Language"
+  },
+  "review": {
+    "and": "and",
+    "boardTitle": "Turn {n} — {label}",
+    "chartTitle": "Gap to the best move, turn by turn",
+    "classBest": "Best move",
+    "classBlunder": "Blunder",
+    "classDefensible": "Defensible",
+    "classMistake": "Mistake",
+    "classUnfaulted": "Not faulted",
+    "descBest": "It is the one it picks.",
+    "descGap": "Estimated gap: {loss} ± {ci} points.",
+    "descGood": "{played} is one of them.",
+    "descPossible": "{n} possible move besides passing, of which {good} the analysis cannot separate from the best. | {n} possible moves besides passing, of which {good} the analysis cannot separate from the best.",
+    "descSmall": "{played} is not one of them, but the gap ({loss} pt) is too small to be asserted.",
+    "errFailed": "The analysis failed: {message}",
+    "errNoHuman": "No human player in this game: there is nothing to analyse.",
+    "errNoMoves": "This game has no recorded move.",
+    "eta": "{n} decisions to analyse, about {eta}. The analysis plays out hundreds of games per move; the page stays up but does not respond meanwhile.",
+    "gameOf": "{name}'s game",
+    "keys": "Use the ← → keys to step through the moves.",
+    "lede": "The engine is put in your seat with only what you knew: your sheet, your opponents' sheets (public under the rules) and the roll of the turn. Future dice are drawn at random, never the ones you actually got.",
+    "legendAlt": "a defensible alternative",
+    "legendChecked": "already checked",
+    "legendPlayed": "move played",
+    "legendYours": "your move",
+    "moves": "Moves",
+    "navEnd": "End »",
+    "navNext": "Next ›",
+    "navPrev": "‹ Previous",
+    "navStart": "« Start",
+    "nextError": "Next mistake ›",
+    "noDecision": "This player has no recorded decision in this game.",
+    "other": "Analyse another player",
+    "pageTitle": "Game analysis",
+    "pass": "Pass",
+    "playedTheirs": "The move played",
+    "playedYours": "Your move",
+    "prevError": "‹ Previous mistake",
+    "progress": "{done} / {total} decisions — {left}",
+    "rule": "The tool only faults a move when the gap to the best exceeds {accuse} points {and} clears the measurement noise. There are almost always several equally defensible moves, so no single \"best move\"; and no overall accuracy score either: the analysis judges moves, it cannot rank two close players.",
+    "running": "Analysis running",
+    "start": "Start the analysis",
+    "summary": "{title} — {n} decisions",
+    "threshold": "fault threshold · {n} pts",
+    "turnAria": "Turn {n}, {label}",
+    "whichPlayer": "Which player to analyse?",
+    "yourGame": "Your game"
   },
   "solo": {
     "analyse": "Analyse my game",
@@ -104,7 +294,7 @@
     "botRolling": "The bot is rolling...",
     "difficulty": "Difficulty",
     "difficultyCalibrated": "calibrated by measurement",
-    "difficultyHint": "One policy for all three levels, weakened by a temperature and {calibrated} at a 4-player table: {rate} % wins against three bots at the highest level, where the theoretical ceiling is 25 %.",
+    "difficultyHint": "One policy for all three levels, weakened by a temperature and {calibrated} at a 4-player table: {rate}% wins against three bots at the highest level, where the theoretical ceiling is 25%.",
     "hideAnalysis": "↑ Hide the analysis",
     "lede": "Play against {bot}, whose evaluation weights were tuned by cross-entropy {tuning}. No connection needed: everything runs in your browser.",
     "ledeTuning": "at a real 4-player table",
