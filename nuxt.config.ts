@@ -32,7 +32,25 @@ export default defineNuxtConfig({
     '@nuxtjs/tailwindcss',
     '@pinia/nuxt',
     '@nuxtjs/supabase',
+    '@nuxtjs/i18n',
   ],
+  // Francais par defaut, anglais au choix. `no_prefix` : la langue ne change pas
+  // les URL — les liens de partie deja envoyes a des joueurs doivent continuer de
+  // marcher, et le choix se retient dans un cookie.
+  i18n: {
+    defaultLocale: 'fr',
+    strategy: 'no_prefix',
+    locales: [
+      { code: 'fr', language: 'fr-FR', name: 'Francais', file: 'fr.json' },
+      { code: 'en', language: 'en-US', name: 'English', file: 'en.json' },
+    ],
+    detectBrowserLanguage: {
+      useCookie: true,
+      cookieKey: 'encore_lang',
+      alwaysRedirect: false,
+      fallbackLocale: 'en',
+    },
+  },
   supabase: {
     redirect: false,
   },

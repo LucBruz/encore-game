@@ -21,7 +21,11 @@ onMounted(() => setTimeout(() => emit('done'), 3200))
     <div class="banner-dot" />
     <div class="banner-content">
       <span class="banner-name">{{ playerName }}</span>
-      <span class="banner-msg">a complété la couleur <strong>{{ info.label }}</strong> !</span>
+      <span class="banner-msg">
+        <i18n-t keypath="game.completed" scope="global">
+          <template #color><strong>{{ $t(`colorsTitle.${color}`) }}</strong></template>
+        </i18n-t>
+      </span>
     </div>
     <div class="banner-shimmer" />
   </div>

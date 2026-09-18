@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 
 const props = withDefaults(defineProps<{
   subtitle?: string
   ready?: boolean
 }>(), {
-  subtitle: 'Chargement de la partie...',
+  subtitle: undefined,
   ready: false
 })
 
@@ -14,6 +14,8 @@ const emit = defineEmits<{ done: [] }>()
 const lettersRef: (HTMLElement | null)[] = []
 const particleEls: HTMLElement[] = []
 const bangRef = ref<HTMLElement | null>(null)
+const { t } = useI18n()
+const subtitleText = computed(() => props.subtitle ?? t('game.loading'))
 const subtitleRef = ref<HTMLElement | null>(null)
 const progressRef = ref<HTMLElement | null>(null)
 const ringsContainerRef = ref<SVGSVGElement | null>(null)
@@ -160,7 +162,7 @@ onMounted(async () => {
     </div>
 
     <!-- Sous-titre -->
-    <p ref="subtitleRef" class="loader-subtitle">{{ subtitle }}</p>
+    <p ref="subtitleRef" class="loader-subtitle">{{ subtitleText }}</p>
 
     <!-- Barre de progression -->
     <div class="loader-progress-track">

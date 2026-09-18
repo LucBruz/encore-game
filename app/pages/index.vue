@@ -3,11 +3,12 @@
     <LoaderScreen v-if="showLoader" @done="showLoader = false" />
     <!-- Header -->
     <header class="page-header">
+      <LangSwitch class="page-lang" />
       <h1 class="page-title">ENCORE!</h1>
-      <p class="page-subtitle">Jeu de société multijoueur en temps réel</p>
+      <p class="page-subtitle">{{ $t('home.subtitle') }}</p>
       <nav v-if="!lobby.gameId" class="page-nav">
-        <NuxtLink to="/solo" class="nav-link nav-link--solo">Jouer contre un bot</NuxtLink>
-        <NuxtLink to="/ia" class="nav-link">Benchmark des agents</NuxtLink>
+        <NuxtLink to="/solo" class="nav-link nav-link--solo">{{ $t('home.playBot') }}</NuxtLink>
+        <NuxtLink to="/ia" class="nav-link">{{ $t('home.benchmark') }}</NuxtLink>
       </nav>
     </header>
 
@@ -21,16 +22,16 @@
 
       <div class="lobby-code-header">
         <div>
-          <p class="lobby-label">Code de la partie</p>
+          <p class="lobby-label">{{ $t('home.gameCode') }}</p>
           <p class="lobby-code">{{ lobby.gameCode }}</p>
         </div>
         <button class="btn btn--ghost btn--sm" @click="copyCode">
-          {{ copied ? '✓ Copié !' : 'Copier' }}
+          {{ copied ? $t('common.copied') : $t('common.copy') }}
         </button>
       </div>
 
       <div class="lobby-players">
-        <p class="lobby-label">Joueurs ({{ lobby.players.length }})</p>
+        <p class="lobby-label">{{ $t('home.players', { count: lobby.players.length }) }}</p>
         <div
           v-for="player in lobby.players"
           :key="player.playerId"
@@ -38,15 +39,15 @@
         >
           <span class="lobby-player__name">
             {{ player.playerName }}
-            <span v-if="player.playerId === lobby.localPlayerId" class="lobby-player__you">(toi)</span>
-            <span v-else-if="isBotId(player.playerId)" class="lobby-player__bot">bot</span>
+            <span v-if="player.playerId === lobby.localPlayerId" class="lobby-player__you">{{ $t('common.you') }}</span>
+            <span v-else-if="isBotId(player.playerId)" class="lobby-player__bot">{{ $t('common.bot') }}</span>
           </span>
           <span class="lobby-player__right">
             <span
               class="lobby-player__status"
               :class="player.isReady ? 'lobby-player__status--ready' : 'lobby-player__status--waiting'"
             >
-              {{ player.isReady ? '✓ Prêt' : 'En attente...' }}
+              {{ player.isReady ? $t('home.ready') : $t('home.waiting') }}
             </span>
             <button
               v-if="lobby.isHost && isBotId(player.playerId)"
@@ -54,7 +55,7 @@
               type="button"
               @click="lobby.removeBot(player.playerId)"
             >
-              Retirer
+              {{ $t('home.remove') }}
             </button>
           </span>
         </div>
@@ -62,7 +63,7 @@
 
       <!-- Ajout de bots : hote uniquement, avant le demarrage -->
       <div v-if="lobby.isHost && lobby.players.length < MAX_PLAYERS" class="lobby-bots">
-        <p class="lobby-label">Ajouter un bot</p>
+        <p class="lobby-label">{{ $t('home.addBot') }}</p>
         <div class="duration-selector">
           <button
             v-for="id in DIFFICULTY_OPTIONS"
@@ -76,10 +77,10 @@
           </button>
         </div>
         <button class="btn btn--ghost btn--full btn--sm" type="button" @click="lobby.addBot(botDifficulty)">
-          Ajouter ce bot
+          {{ $t('home.addThisBot') }}
         </button>
         <p class="lobby-bots__hint">
-          Un bot est prêt d'emblée. La partie démarre dès que tous les joueurs le sont.
+          {{ $t('home.botHint') }}
         </p>
       </div>
 
@@ -89,12 +90,12 @@
           :disabled="lobby.status === 'loading'"
           @click="handleSetReady"
         >
-          {{ lobby.status === 'loading' ? 'Chargement...' : 'Je suis prêt !' }}
+          {{ lobby.status === 'loading' ? $t('common.loading') : $t('home.imReady') }}
         </button>
       </div>
 
       <p v-else class="lobby-waiting-msg">
-        En attente des autres joueurs...
+        {{ $t('home.waitingOthers') }}
       </p>
 
     </div>
@@ -104,22 +105,22 @@
 
       <!-- Section A : Créer une partie -->
       <div class="form-card">
-        <h2 class="form-title">Créer une partie</h2>
+        <h2 class="form-title">{{ $t('home.createTitle') }}</h2>
 
         <div class="form-group">
-          <label class="form-label">Ton prénom</label>
+          <label class="form-label">{{ $t('common.firstName') }}</label>
           <input
             v-model="createName"
             class="form-input"
             type="text"
-            placeholder="ex: Alice"
+            :placeholder="$t('home.createPlaceholder')"
             maxlength="20"
             @keyup.enter="handleCreate"
           />
         </div>
 
         <div class="form-group">
-          <label class="form-label">Grille</label>
+          <label class="form-label">{{ $t('common.grid') }}</label>
 
           <!-- Numéros de grilles -->
           <div class="grid-nums">
@@ -149,7 +150,7 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label">Temps par tour</label>
+          <label class="form-label">{{ $t('home.turnTime') }}</label>
           <div class="duration-selector">
             <button
               v-for="d in DURATION_OPTIONS"
@@ -169,40 +170,40 @@
           :disabled="!createName.trim() || lobby.status === 'loading'"
           @click="handleCreate"
         >
-          {{ lobby.status === 'loading' ? 'Création...' : 'Créer une partie →' }}
+          {{ lobby.status === 'loading' ? $t('home.creating') : $t('home.create') }}
         </button>
 
         <div v-if="generatedCode" class="code-display">
-          <p class="code-display__label">Partage ce code !</p>
+          <p class="code-display__label">{{ $t('home.shareCode') }}</p>
           <p class="code-display__code">{{ generatedCode }}</p>
           <button class="btn btn--ghost btn--sm btn--full" @click="copyCode">
-            {{ copied ? '✓ Copié !' : 'Copier le code' }}
+            {{ copied ? $t('common.copied') : $t('home.copyCode') }}
           </button>
         </div>
       </div>
 
       <!-- Section B : Rejoindre une partie -->
       <div class="form-card">
-        <h2 class="form-title">Rejoindre une partie</h2>
+        <h2 class="form-title">{{ $t('home.joinTitle') }}</h2>
 
         <div class="form-group">
-          <label class="form-label">Ton prénom</label>
+          <label class="form-label">{{ $t('common.firstName') }}</label>
           <input
             v-model="joinName"
             class="form-input"
             type="text"
-            placeholder="ex: Bob"
+            :placeholder="$t('home.joinPlaceholder')"
             maxlength="20"
           />
         </div>
 
         <div class="form-group">
-          <label class="form-label">Code de la partie</label>
+          <label class="form-label">{{ $t('home.gameCode') }}</label>
           <input
             v-model="joinCode"
             class="form-input form-input--code"
             type="text"
-            placeholder="ex: XK92PL"
+            :placeholder="$t('home.codePlaceholder')"
             maxlength="6"
             @input="joinCode = ($event.target as HTMLInputElement).value.toUpperCase()"
             @keyup.enter="handleJoin"
@@ -214,7 +215,7 @@
           :disabled="!joinName.trim() || joinCode.length !== 6 || lobby.status === 'loading'"
           @click="handleJoin"
         >
-          {{ lobby.status === 'loading' ? 'Connexion...' : 'Rejoindre →' }}
+          {{ lobby.status === 'loading' ? $t('home.connecting') : $t('home.join') }}
         </button>
       </div>
 
@@ -312,6 +313,16 @@ onMounted(() => {
 }
 
 .page-header { @apply text-center; }
+
+/* Bascule de langue : posee en haut a droite du bandeau, sans pousser le titre. */
+.page-lang {
+  @apply flex justify-center mb-2;
+}
+
+@media (min-width: 640px) {
+  .page-lang { @apply absolute right-4 top-4 mb-0; }
+  .page { @apply relative; }
+}
 
 .page-title {
   @apply text-5xl font-black tracking-tight;

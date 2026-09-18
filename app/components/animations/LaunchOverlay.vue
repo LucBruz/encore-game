@@ -147,7 +147,7 @@ onMounted(async () => {
       <!-- Chip joueur -->
       <div ref="playerChipRef" class="launch-chip">
         <span class="lc-name">{{ playerName }}</span>
-        <span class="lc-you">toi</span>
+        <span class="lc-you">{{ $t('common.youShort') }}</span>
       </div>
 
       <!-- Dés -->

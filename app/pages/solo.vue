@@ -2,21 +2,26 @@
   <div class="page" :class="{ 'page--playing': started }">
     <!-- Écran de configuration -->
     <div v-if="!started" class="setup">
-      <NuxtLink to="/" class="back">← Retour</NuxtLink>
-      <h1>Partie solo</h1>
+      <div class="setup-top">
+        <NuxtLink to="/" class="back">{{ $t('common.back') }}</NuxtLink>
+        <LangSwitch />
+      </div>
+      <h1>{{ $t('solo.title') }}</h1>
       <p class="lede">
-        Affronte <strong>v3-multi</strong>, dont les poids d'évaluation ont été optimisés
-        par entropie croisée <strong>directement en partie à 4 joueurs</strong>. Aucune connexion : tout tourne dans ton navigateur.
-        <NuxtLink to="/ia" class="link">Voir le benchmark →</NuxtLink>
+        <i18n-t keypath="solo.lede" scope="global">
+          <template #bot><strong>v3-multi</strong></template>
+          <template #tuning><strong>{{ $t('solo.ledeTuning') }}</strong></template>
+        </i18n-t>
+        <NuxtLink to="/ia" class="link">{{ $t('solo.seeBenchmark') }}</NuxtLink>
       </p>
 
       <label class="field">
-        <span>Ton prénom</span>
-        <input v-model="playerName" type="text" maxlength="20" placeholder="ex: Luc">
+        <span>{{ $t('common.firstName') }}</span>
+        <input v-model="playerName" type="text" maxlength="20" :placeholder="$t('solo.namePlaceholder')">
       </label>
 
       <div class="field">
-        <span>Adversaires</span>
+        <span>{{ $t('solo.opponents') }}</span>
         <div class="chips">
           <button
             v-for="n in [1, 2, 3]"
@@ -24,12 +29,12 @@
             class="chip"
             :class="{ 'chip--on': botCount === n }"
             @click="botCount = n"
-          >{{ n }} bot{{ n > 1 ? 's' : '' }}</button>
+          >{{ $t('solo.botCount', n, { count: n }) }}</button>
         </div>
       </div>
 
       <div class="field">
-        <span>Difficulté</span>
+        <span>{{ $t('solo.difficulty') }}</span>
         <div class="chips">
           <button
             v-for="(d, id) in DIFFICULTIES"
@@ -40,15 +45,15 @@
           >{{ d.label }}</button>
         </div>
         <p class="hint">
-          Même politique pour les trois niveaux, dégradée par température et
-          <strong>calibrée par mesure</strong> en partie à 4 joueurs :
-          {{ DIFFICULTIES[difficulty].winRate }} % de victoires contre trois bots au niveau
-          maximal, où le plafond théorique est 25 %.
+          <i18n-t keypath="solo.difficultyHint" scope="global">
+            <template #calibrated><strong>{{ $t('solo.difficultyCalibrated') }}</strong></template>
+            <template #rate>{{ DIFFICULTIES[difficulty].winRate }}</template>
+          </i18n-t>
         </p>
       </div>
 
       <div class="field">
-        <span>Grille</span>
+        <span>{{ $t('common.grid') }}</span>
         <div class="chips">
           <button
             v-for="g in GRID_IDS"
@@ -61,7 +66,7 @@
       </div>
 
       <button class="btn-start" :disabled="!playerName.trim()" @click="start">
-        Commencer →
+        {{ $t('solo.start') }}
       </button>
     </div>
 
@@ -84,7 +89,8 @@
             <span class="pchip__score">{{ store.scoreForPlayer(p.id) }}</span>
           </button>
         </div>
-        <div class="turn">tour {{ store.turnNumber + 1 }}</div>
+        <LangSwitch />
+        <div class="turn">{{ $t('solo.turn', { n: store.turnNumber + 1 }) }}</div>
       </header>
 
       <div class="layout">
@@ -113,7 +119,7 @@
             </div>
             <GameJokers :total="store.grid.jokers" :used="viewedPlayer.jokersUsed" />
             <div class="score">
-              <span>score</span>
+              <span>{{ $t('solo.score') }}</span>
               <strong>{{ store.scoreForPlayer(viewedPlayer.id) }}</strong>
             </div>
           </div>
@@ -138,18 +144,18 @@
       </div>
 
       <div v-if="store.gameOver" class="over">
-        <h2>Partie terminée</h2>
+        <h2>{{ $t('solo.over') }}</h2>
         <ol>
           <li v-for="p in ranking" :key="p.id" :class="{ 'me': p.id === humanId }">
-            <span>{{ p.name }}</span><strong>{{ store.scoreForPlayer(p.id) }} pts</strong>
+            <span>{{ p.name }}</span><strong>{{ $t('solo.points', { n: store.scoreForPlayer(p.id) }) }}</strong>
           </li>
         </ol>
-        <button class="btn-start" @click="restart">Rejouer</button>
+        <button class="btn-start" @click="restart">{{ $t('solo.replay') }}</button>
 
         <!-- Analyse de la partie. Le mode solo ne passe pas par Supabase : le
              journal des coups tenu ci-dessous suffit, c'est le meme format. -->
         <button class="btn-review" @click="showReview = !showReview">
-          {{ showReview ? '↑ Masquer l’analyse' : 'Analyser ma partie' }}
+          {{ showReview ? $t('solo.hideAnalysis') : $t('solo.analyse') }}
         </button>
         <div v-if="showReview" class="review-section">
           <LazyGameReview
@@ -176,6 +182,7 @@ import type { DifficultyId } from '~/composables/useBotPlayer'
 
 const GRID_IDS = ['01', '02', '03', '04', '05', '06', '07', '08']
 
+const { t } = useI18n()
 const store = useGameStore()
 const difficulty = ref<DifficultyId>('medium')
 // Recree le bot quand le niveau change : la temperature est fixee a la construction.
@@ -287,7 +294,7 @@ async function drive(): Promise<void> {
       if (store.phase === 'waiting_roll') {
         if (store.activePlayerId === humanId || store.isFirstThreeTurns) break
         isBotThinking.value = true
-        thinkingLabel.value = 'Le bot lance les dés...'
+        thinkingLabel.value = t('solo.botRolling')
         await wait(650)
         play('ROLL_DICES', { roll: rollAllDices() })
         continue
@@ -296,7 +303,7 @@ async function drive(): Promise<void> {
       if (store.phase === 'active_selecting') {
         if (store.activePlayerId === humanId) break
         isBotThinking.value = true
-        thinkingLabel.value = 'Le bot choisit sa combinaison...'
+        thinkingLabel.value = t('solo.botChoosing')
         await wait(700)
         playBot(store.activePlayerId)
         continue
@@ -309,7 +316,7 @@ async function drive(): Promise<void> {
         })
         if (pending.length > 0) {
           isBotThinking.value = true
-          thinkingLabel.value = 'Le bot joue...'
+          thinkingLabel.value = t('solo.botPlaying')
           await wait(600)
           playBot(pending[0])
           continue
@@ -362,6 +369,10 @@ watch(() => store.players.map(p => `${p.hasPlaced}${p.hasPassed}`).join(), () =>
 .page--playing {
   @apply py-6;
   max-width: min(1760px, 100%);
+}
+
+.setup-top {
+  @apply flex items-center justify-between gap-3 mb-1;
 }
 
 .back {

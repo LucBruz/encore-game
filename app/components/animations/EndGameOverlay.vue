@@ -213,7 +213,7 @@ onMounted(async () => {
             <div class="pc-top">
               <span class="pc-name">
                 {{ player.name }}
-                <span v-if="player.isLocal" class="pc-tag">toi</span>
+                <span v-if="player.isLocal" class="pc-tag">{{ $t('common.youShort') }}</span>
               </span>
               <span v-if="i === 0" class="pc-medal">★</span>
             </div>
@@ -267,7 +267,7 @@ onMounted(async () => {
           <!-- Score -->
           <div class="pc-num" :class="{ 'pc-num--dim': i > 0 }">
             <span :ref="(el) => { if (el) scoreEls[i] = el as HTMLElement }">0</span>
-            <span class="pc-unit">pts</span>
+            <span class="pc-unit">{{ $t('common.points') }}</span>
           </div>
         </div>
       </div>
@@ -311,7 +311,7 @@ onMounted(async () => {
       <!-- Analyse de la partie -->
       <template v-if="reviewGameId">
         <button class="btn-grids" @click="showReview = !showReview">
-          {{ showReview ? '↑ Masquer l’analyse' : 'Analyser ma partie' }}
+          {{ showReview ? $t('game.hideAnalysis') : $t('game.analyseMine') }}
         </button>
 
         <!-- Chargement a la demande : le moteur d'analyse ne pese sur la page de
@@ -319,7 +319,7 @@ onMounted(async () => {
         <div v-if="showReview" class="review-section">
           <LazyGameReview :game-id="reviewGameId" :default-player-id="lobby.localPlayerId" autostart />
           <NuxtLink :to="`/review/${reviewGameId}`" class="review-permalink">
-            Ouvrir l’analyse dans sa propre page, pour y revenir plus tard
+            {{ $t('game.permalink') }}
           </NuxtLink>
         </div>
       </template>
@@ -327,7 +327,7 @@ onMounted(async () => {
       <!-- CTA -->
       <div ref="ctaRef" class="endgame-cta-wrap">
         <button class="endgame-cta" @click="emit('replay')">
-          Rejouer une partie →
+          {{ $t('game.replayGame') }}
         </button>
       </div>
 

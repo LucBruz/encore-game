@@ -10,7 +10,7 @@
         :disabled="readonly"
         @click="handleRoll"
       >
-        <span>Lancer les dés</span>
+        <span>{{ $t('game.roll') }}</span>
       </button>
     </div>
 
@@ -88,30 +88,30 @@
           class="btn-pass"
           :disabled="readonly"
           @click="handlePass"
-        >Passer</button>
+        >{{ $t('game.pass') }}</button>
         <button
           v-else-if="hasConfirmed && !currentPlayer?.hasPlaced"
           class="btn-pass"
           :disabled="readonly"
           @click="handlePass"
-        >Passer</button>
+        >{{ $t('game.pass') }}</button>
         <button
           v-if="canSelect && comboIsReady"
           class="btn-confirm"
           :disabled="!comboIsPlayable"
           @click="confirmCombo"
-        >✓ Confirmer</button>
+        >{{ $t('game.confirm') }}</button>
       </div>
 
       <!-- Pourquoi la confirmation est bloquée -->
       <div v-if="canSelect && jokersShort" class="combo-hint">
-        Plus de joker disponible : choisis un autre dé
+        {{ $t('game.noJoker') }}
       </div>
       <div v-else-if="canSelect && comboIsReady && !comboIsPlayable" class="combo-hint">
-        Aucun placement possible avec cette combinaison
+        {{ $t('game.noPlacementCombo') }}
       </div>
       <div v-else-if="noPlayableCombo" class="combo-hint">
-        Aucune combinaison jouable sur ta grille — tu dois passer
+        {{ $t('game.noPlayableCombo') }}
       </div>
 
       <!-- Tour passe : dire pourquoi. Sans ce message, un tour saute par le
@@ -120,9 +120,9 @@
 
       <!-- Badge phase bas-droite -->
       <div class="dices-badge">
-        <span v-if="store.phase === 'turn_end'" class="badge badge--done">✓ Tour suivant...</span>
-        <span v-else-if="hasConfirmed && !currentPlayer?.hasPlaced" class="badge badge--active">Place sur la grille</span>
-        <span v-else-if="hasConfirmed && currentPlayer?.hasPlaced" class="badge badge--done">✓ En attente...</span>
+        <span v-if="store.phase === 'turn_end'" class="badge badge--done">{{ $t('game.nextTurn') }}</span>
+        <span v-else-if="hasConfirmed && !currentPlayer?.hasPlaced" class="badge badge--active">{{ $t('game.placeOnGrid') }}</span>
+        <span v-else-if="hasConfirmed && currentPlayer?.hasPlaced" class="badge badge--done">{{ $t('game.waitingBadge') }}</span>
       </div>
     </div>
 
@@ -130,6 +130,7 @@
 </template>
 
 <script setup lang="ts">
+const { t } = useI18n()
 import { ref, computed, watch, nextTick } from 'vue'
 import { useGameStore, rollAllDices } from '~/stores/gameStore'
 import { COLOR_MAP } from '~/data/grids/grid-01'
@@ -172,15 +173,15 @@ const currentPlayer = computed(() =>
 const hasConfirmed = computed(() => currentPlayer.value?.hasConfirmed ?? false)
 
 const PASS_LABELS: Record<string, string> = {
-  timer: 'Temps écoulé — tour passé',
-  'no-placement': 'Aucun placement possible — tour passé',
-  manual: 'Tour passé',
+  timer: 'game.passedTimer',
+  'no-placement': 'game.passedNoPlacement',
+  manual: 'game.passedManual',
 }
 
 const passMessage = computed(() => {
   const p = currentPlayer.value
   if (!p?.hasPassed || !p.passReason) return null
-  return PASS_LABELS[p.passReason] ?? PASS_LABELS.manual
+  return t(PASS_LABELS[p.passReason] ?? PASS_LABELS.manual)
 })
 
 function resetSelection() {

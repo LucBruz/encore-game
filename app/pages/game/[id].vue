@@ -20,7 +20,7 @@
           @click="currentViewPlayer = player.id"
         >
           {{ player.name }}
-          <span v-if="player.id === sync.localPlayerId.value" class="player-chip__you">toi</span>
+          <span v-if="player.id === sync.localPlayerId.value" class="player-chip__you">{{ $t('common.youShort') }}</span>
           <span class="player-chip__score">{{ store.scoreForPlayer(player.id) }} pts</span>
         </button>
       </div>
@@ -31,7 +31,7 @@
         <span
           v-if="isLocalActivePlayer && store.phase === 'active_selecting'"
           class="badge-active-player"
-        >Joueur actif</span>
+        >{{ $t('game.activePlayer') }}</span>
         <!-- Nom + action de l'autre joueur actif -->
         <div v-else-if="activePlayer && !isLocalActivePlayer" class="active-phase-info">
           <span class="active-phase-info__name">{{ activePlayer.name }}</span>
@@ -112,7 +112,7 @@
             <div class="score-row"><span>Colonnes</span><span class="score-val">{{ columnTotal }}</span></div>
             <div class="score-row"><span>Jokers</span><span class="score-val">{{ store.grid.jokers - viewedPlayer.jokersUsed }}</span></div>
             <div class="score-row">
-              <span>Étoiles</span>
+              <span>{{ $t('game.stars') }}</span>
               <span class="score-val score-val--negative">{{ store.gameOver ? `−${uncheckedStars * 2}` : '—' }}</span>
             </div>
             <div class="score-total"><span>TOTAL</span><span class="score-total__val">{{ store.scoreForPlayer(viewedPlayer.id) }}</span></div>
@@ -149,7 +149,7 @@
 
     <!-- Game Over (fallback texte) -->
     <div v-if="store.gameOver && store.phase !== 'turn_end'" class="game-over">
-      <h2>Partie terminée !</h2>
+      <h2>{{ $t('game.over') }}</h2>
       <div
         v-for="player in store.players"
         :key="player.id"
@@ -158,14 +158,14 @@
         {{ player.name }} : <strong>{{ store.scoreForPlayer(player.id) }} pts</strong>
       </div>
       <NuxtLink :to="`/review/${route.params.id}`" class="game-over__review">
-        Analyser la partie
+        {{ $t('game.analyse') }}
       </NuxtLink>
     </div>
 
     <!-- Loader reconnexion : se termine dès que sync est prêt -->
     <LoaderScreen
       v-if="isReconnecting"
-      subtitle="Connexion à la partie..."
+      :subtitle="$t('game.connecting')"
       :duration="4000"
       :ready="loaderReady"
       @done="isReconnecting = false"
@@ -174,7 +174,7 @@
     <!-- Launch overlay (première fois) -->
     <LaunchOverlay
       v-if="showLaunchAnim"
-      :player-name="lobby.localPlayerName ?? 'Joueur'"
+      :player-name="lobby.localPlayerName ?? $t('game.player')"
       @done="showLaunchAnim = false"
     />
 
@@ -223,6 +223,7 @@
 </template>
 
 <script setup lang="ts">
+const { t } = useI18n()
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useGameStore, rollAllDices } from '~/stores/gameStore'
 import { useLobbyStore } from '~/stores/lobbyStore'
@@ -274,9 +275,9 @@ const activePlayer = computed(() =>
 )
 
 const activePhaseInfo = computed(() => {
-  if (store.phase === 'waiting_roll') return 'lance les dés...'
-  if (store.phase === 'active_selecting') return 'fait sa sélection'
-  if (store.phase === 'passive_selecting') return 'a joué — à vous'
+  if (store.phase === 'waiting_roll') return t('game.statusRolling')
+  if (store.phase === 'active_selecting') return t('game.statusChoosing')
+  if (store.phase === 'passive_selecting') return t('game.statusPlayed')
   if (store.phase === 'turn_end') return 'tour suivant...'
   return null
 })

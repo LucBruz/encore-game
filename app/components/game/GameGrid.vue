@@ -72,26 +72,26 @@
     <!-- Sélection commencée dont aucune suite n'est jouable : le joueur reste coincé
          tant qu'il n'annule pas, donc le bouton vient à lui. -->
     <div v-if="isStuck" class="placement-stuck">
-      <span class="placement-stuck__text">Aucune suite possible à partir de ces cases.</span>
+      <span class="placement-stuck__text">{{ $t('game.stuck') }}</span>
       <button class="btn-restart-placement" :disabled="readonly" @click="$emit('cancel-placement')">
-        ↺ Recommencer la sélection
+        {{ $t('game.restartSelection') }}
       </button>
     </div>
 
     <!-- Bouton confirmer placement -->
     <div v-if="pendingCells.length > 0 && confirmedCombo" class="placement-confirm">
       <span class="placement-confirm__count">
-        {{ pendingCells.length }} / {{ confirmedCombo.count }} case(s) sélectionnée(s)
+        {{ $t('game.selected', { n: pendingCells.length, total: confirmedCombo.count }) }}
       </span>
       <button
         class="btn-confirm-placement"
         :disabled="pendingCells.length !== confirmedCombo.count || readonly"
         @click="$emit('confirm-placement')"
       >
-        ✓ Valider le placement
+        {{ $t('game.validate') }}
       </button>
       <button class="btn-cancel-placement" :disabled="readonly" @click="$emit('cancel-placement')">
-        ✕ Annuler
+        {{ $t('game.cancel') }}
       </button>
     </div>
 
@@ -99,6 +99,7 @@
 </template>
 
 <script setup lang="ts">
+const { t } = useI18n()
 import { ref, computed, watch, onBeforeUnmount } from 'vue'
 import { COLS, COLUMN_POINTS, COLOR_MAP } from '~/data/grids/grid-01'
 import type { ColorKey } from '~/data/grids/grid-01'
@@ -152,26 +153,25 @@ const isStuck = computed(() =>
 
 /** null si la case est jouable, sinon la raison à montrer au joueur. */
 function rejectionReason(idx: number): string | null {
-  if (!props.confirmedCombo) return "Choisis d'abord ta combinaison de dés"
-  if (props.checkedCells.has(idx)) return 'Cette case est déjà cochée'
+  if (!props.confirmedCombo) return t('game.hintCombo')
+  if (props.checkedCells.has(idx)) return t('game.hintChecked')
   if (props.validCells.has(idx)) return null
 
   const combo = props.confirmedCombo
   const cellColor = props.grid.cells[idx]?.[0]
   if (cellColor && cellColor !== combo.color) {
-    const label = COLOR_MAP[combo.color as ColorKey]?.label?.toLowerCase() ?? combo.color
-    return `Mauvaise couleur — il te faut du ${label}`
+    return t('game.hintColor', { color: t(`colors.${combo.color}`) })
   }
   if (props.pendingCells.length >= combo.count) {
-    return `Tu ne peux cocher que ${combo.count} case(s) ce tour-ci`
+    return t('game.hintCount', { n: combo.count })
   }
   if (props.pendingCells.length > 0) {
-    return 'Pas reliée aux cases que tu viens de choisir'
+    return t('game.hintLinked')
   }
   if (props.checkedCells.size === 0) {
-    return 'Ton premier coup doit partir de la colonne H'
+    return t('game.hintStart')
   }
-  return 'Elle doit toucher une de tes cases déjà cochées'
+  return t('game.hintTouch')
 }
 
 function handleCellClick(idx: number) {
