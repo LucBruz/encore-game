@@ -209,7 +209,14 @@ import type { Verdict } from '~~/analysis/verdict'
  * directement sur l'ecran de fin de partie.
  */
 const props = defineProps<{
-    gameId: string
+    /** Partie enregistree dans Supabase. Absent quand `local` est fourni. */
+    gameId?: string
+    /**
+     * Partie qui n'existe que dans ce navigateur : le mode solo ne passe ni par
+     * Supabase ni par le reseau, et tient son propre journal de coups. Meme
+     * format que `game_events`, donc le meme rejeu et la meme analyse.
+     */
+    local?: { players: { id: string; name: string }[]; gridId: string; events: GameEvent[] }
     /**
      * Joueur local. S'il a joue cette partie, c'est la sienne qu'on analyse, sans
      * lui proposer de choix.
@@ -401,25 +408,35 @@ function primeStore() {
 }
 
 onMounted(async () => {
-    const supabase = useSupabaseClient()
+    if (props.local) {
+        if (!props.local.events.length) {
+            error.value = "Cette partie n'a aucun coup enregistré."
+            return
+        }
+        players.value = props.local.players
+        gridId.value = props.local.gridId
+        events.value = props.local.events
+    } else {
+        const supabase = useSupabaseClient()
 
-    const [{ data: rows }, { data: game }, { data: log }] = await Promise.all([
-        supabase.from('game_players').select('player_id, player_name, seat')
-            .eq('game_id', props.gameId).order('seat', { ascending: true }),
-        supabase.from('games').select('grid_id').eq('id', props.gameId).single(),
-        supabase.from('game_events').select('event_type, payload')
-            .eq('game_id', props.gameId).order('created_at', { ascending: true }),
-    ])
+        const [{ data: rows }, { data: game }, { data: log }] = await Promise.all([
+            supabase.from('game_players').select('player_id, player_name, seat')
+                .eq('game_id', props.gameId).order('seat', { ascending: true }),
+            supabase.from('games').select('grid_id').eq('id', props.gameId).single(),
+            supabase.from('game_events').select('event_type, payload')
+                .eq('game_id', props.gameId).order('created_at', { ascending: true }),
+        ])
 
-    if (!rows?.length || !log?.length) {
-        error.value = "Cette partie n'a aucun coup enregistré."
-        return
+        if (!rows?.length || !log?.length) {
+            error.value = "Cette partie n'a aucun coup enregistré."
+            return
+        }
+
+        players.value = rows.map(r => ({ id: r.player_id, name: r.player_name }))
+        // `grid_id` a ete stocke tantot « 01 », tantot « grid-01 » selon les versions.
+        gridId.value = (game?.grid_id ?? '01').replace(/^grid-/, '')
+        events.value = log as GameEvent[]
     }
-
-    players.value = rows.map(r => ({ id: r.player_id, name: r.player_name }))
-    // `grid_id` a ete stocke tantot « 01 », tantot « grid-01 » selon les versions.
-    gridId.value = (game?.grid_id ?? '01').replace(/^grid-/, '')
-    events.value = log as GameEvent[]
 
     // Lu apres le chargement : le joueur local peut n'etre connu qu'une fois la
     // page montee. On analyse la partie d'un joueur humain, jamais celle d'un

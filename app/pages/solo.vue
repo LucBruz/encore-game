@@ -93,10 +93,10 @@
             :player-id="viewed"
             :readonly="viewed !== humanId || isBotThinking"
             @roll="onRoll"
-            @confirm-active="(ci, ni, jc, jn) => store.confirmActiveCombo(ci, ni, jc, jn)"
-            @confirm-passive="(pid, ci, ni, jc, jn) => store.confirmPassiveCombo(pid, ci, ni, jc, jn)"
-            @pass-active="store.passActiveTurn()"
-            @pass-passive="(pid) => store.passPassiveTurn(pid)"
+            @confirm-active="(ci, ni, jc, jn) => play('CONFIRM_ACTIVE', { colorDiceIndex: ci, numberDiceIndex: ni, jokerColor: jc, jokerCount: jn })"
+            @confirm-passive="(pid, ci, ni, jc, jn) => play('CONFIRM_PASSIVE', { playerId: pid, colorDiceIndex: ci, numberDiceIndex: ni, jokerColor: jc, jokerCount: jn })"
+            @pass-active="play('PASS_ACTIVE', {})"
+            @pass-passive="(pid) => play('PASS_PASSIVE', { playerId: pid })"
           />
 
           <div v-if="isBotThinking" class="thinking">
@@ -130,9 +130,9 @@
             :placement-error="viewed === humanId ? store.placementError : null"
             :is-blocked-mode="!!viewedPlayer.confirmedCombo && !viewedPlayer.hasPlaced"
             :readonly="viewed !== humanId"
-            @cell-click="(idx) => store.togglePendingCell(humanId, idx)"
-            @confirm-placement="store.confirmPendingCells(humanId)"
-            @cancel-placement="store.cancelPendingCells(humanId)"
+            @cell-click="(idx) => play('TOGGLE_CELL', { playerId: humanId, cellIdx: idx })"
+            @confirm-placement="play('CONFIRM_PLACEMENT', { playerId: humanId })"
+            @cancel-placement="play('CANCEL_PLACEMENT', { playerId: humanId })"
           />
         </div>
       </div>
@@ -145,6 +145,19 @@
           </li>
         </ol>
         <button class="btn-start" @click="restart">Rejouer</button>
+
+        <!-- Analyse de la partie. Le mode solo ne passe pas par Supabase : le
+             journal des coups tenu ci-dessous suffit, c'est le meme format. -->
+        <button class="btn-review" @click="showReview = !showReview">
+          {{ showReview ? '↑ Masquer l’analyse' : 'Analyser ma partie' }}
+        </button>
+        <div v-if="showReview" class="review-section">
+          <LazyGameReview
+            :local="{ players: reviewPlayers, gridId, events: log }"
+            :default-player-id="humanId"
+            autostart
+          />
+        </div>
       </div>
     </div>
   </div>
@@ -154,6 +167,8 @@
 import { computed, ref, watch } from 'vue'
 import { useGameStore, rollAllDices } from '~/stores/gameStore'
 import type { DicesRoll } from '~/stores/gameStore'
+import { applyGameAction } from '~/utils/applyGameAction'
+import type { GameActionType } from '~/services/realtimeService'
 import { COLOR_MAP } from '~/data/grids/grid-01'
 import type { ColorKey } from '~/data/grids/grid-01'
 import { DIFFICULTIES, useBotPlayer } from '~/composables/useBotPlayer'
@@ -183,6 +198,21 @@ const ranking = computed(() =>
 
 const wait = (ms: number) => new Promise(r => setTimeout(r, ms))
 
+/**
+ * Journal des coups, au format de `game_events`. Le mode solo joue en memoire,
+ * sans reseau ni base : sans ce journal, l'analyse d'apres-partie n'aurait rien
+ * a relire. Les coups passent donc par `applyGameAction`, exactement comme en
+ * multijoueur, de sorte que ce qui est rejoue est ce qui a ete joue.
+ */
+const log = ref<{ event_type: GameActionType; payload: Record<string, unknown> }[]>([])
+const showReview = ref(false)
+const reviewPlayers = computed(() => store.players.map(p => ({ id: p.id, name: p.name })))
+
+function play(type: GameActionType, payload: Record<string, unknown> = {}) {
+  log.value.push({ event_type: type, payload })
+  applyGameAction(store, type, payload)
+}
+
 function start() {
   const players = [
     { id: humanId, name: playerName.value.trim() || 'Toi' },
@@ -195,6 +225,8 @@ function start() {
   ]
   store.initPlayers(players)
   store.initGrid(gridId.value)
+  log.value = []
+  showReview.value = false
   viewed.value = humanId
   started.value = true
   void drive()
@@ -203,11 +235,13 @@ function start() {
 function restart() {
   store.resetGame()
   store.initGrid(gridId.value)
+  log.value = []
+  showReview.value = false
   void drive()
 }
 
 function onRoll(roll: DicesRoll) {
-  store.rollDicesWithResult(roll)
+  play('ROLL_DICES', { roll })
   void drive()
 }
 
@@ -217,27 +251,24 @@ function playBot(id: string): void {
   const isActive = id === store.activePlayerId && store.phase === 'active_selecting'
 
   if (!decision) {
-    if (isActive) store.passActiveTurn('no-placement')
-    else store.passPassiveTurn(id, 'no-placement')
+    if (isActive) play('PASS_ACTIVE', { reason: 'no-placement' })
+    else play('PASS_PASSIVE', { playerId: id, reason: 'no-placement' })
     return
   }
 
-  if (isActive) {
-    store.confirmActiveCombo(
-      decision.colorDiceIndex, decision.numberDiceIndex, decision.jokerColor, decision.jokerCount,
-    )
-  } else {
-    store.confirmPassiveCombo(
-      id, decision.colorDiceIndex, decision.numberDiceIndex, decision.jokerColor, decision.jokerCount,
-    )
+  const combo = {
+    colorDiceIndex: decision.colorDiceIndex, numberDiceIndex: decision.numberDiceIndex,
+    jokerColor: decision.jokerColor, jokerCount: decision.jokerCount,
   }
+  if (isActive) play('CONFIRM_ACTIVE', combo)
+  else play('CONFIRM_PASSIVE', { playerId: id, ...combo })
 
   // Le store a pu auto-passer si la combo n'offrait aucun placement.
   const player = store.players.find(p => p.id === id)
   if (!player?.confirmedCombo) return
 
-  for (const idx of decision.placement) store.togglePendingCell(id, idx)
-  store.confirmPendingCells(id)
+  for (const idx of decision.placement) play('TOGGLE_CELL', { playerId: id, cellIdx: idx })
+  play('CONFIRM_PLACEMENT', { playerId: id })
 }
 
 /**
@@ -258,7 +289,7 @@ async function drive(): Promise<void> {
         isBotThinking.value = true
         thinkingLabel.value = 'Le bot lance les dés...'
         await wait(650)
-        store.rollDicesWithResult(rollAllDices())
+        play('ROLL_DICES', { roll: rollAllDices() })
         continue
       }
 
@@ -295,7 +326,7 @@ async function drive(): Promise<void> {
         isBotThinking.value = false
         if (store.gameOver) break
         await wait(900)
-        store.nextTurn()
+        play('NEXT_TURN', {})
         continue
       }
 
@@ -416,6 +447,22 @@ watch(() => store.players.map(p => `${p.hasPlaced}${p.hasPassed}`).join(), () =>
   transform: translateY(-1px);
 }
 .btn-start:disabled { @apply opacity-40 cursor-not-allowed; }
+
+.btn-review {
+  @apply mt-3 px-5 py-2.5 rounded-xl font-bold text-sm cursor-pointer transition-all;
+  background: #23232f;
+  color: #e8e8f0;
+  border: 1px solid #2e2e3e;
+}
+
+.btn-review:hover {
+  border-color: #f5d742;
+  color: #f5d742;
+}
+
+.review-section {
+  @apply mt-4 w-full text-left;
+}
 
 /* ── Partie ───────────────────────────────────────────────────────────────── */
 
